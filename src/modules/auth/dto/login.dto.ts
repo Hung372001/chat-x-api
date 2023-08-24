@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsEmail,
   IsNotEmpty,
@@ -18,9 +19,10 @@ export class LoginDto {
   @IsOptional()
   @ValidateIf((o) => !o.email)
   @IsPhoneNumber('VN')
+  @Transform(({ value, obj }) => (obj.email ? '' : value.trim()))
   phoneNumber: string;
 
   @ApiProperty()
   @IsNotEmpty()
-  password: number;
+  password: string;
 }

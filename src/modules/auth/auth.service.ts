@@ -7,7 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../user/user.service';
 import { LoginDto } from './dto/login.dto';
-import { omitBy, pick } from 'lodash';
+import { pick } from 'lodash';
 import { ConfigService } from '@nestjs/config';
 import {
   access_token_private_key,
@@ -29,6 +29,7 @@ export class AuthService {
   generateAccessToken(payload: TokenPayload) {
     return this.jwtService.sign(payload, {
       algorithm: 'RS256',
+
       privateKey: access_token_private_key,
       expiresIn: `${this.configService.get(
         'JWT_ACCESS_TOKEN_EXPIRATION_TIME',
