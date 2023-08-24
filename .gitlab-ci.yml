@@ -18,6 +18,5 @@ deploy development:
     - chmod u+x ./deploy/develop/build.sh
     - ./deploy/develop/build.sh
     - docker push avatarnice/api-chat-x-dev:${CI_BUILD_TOKEN}
-    - docker push avatarnice/pgsync:${CI_BUILD_TOKEN}
     - chmod u+x ./deploy/develop/run.sh
     - ./deploy/develop/run.sh
