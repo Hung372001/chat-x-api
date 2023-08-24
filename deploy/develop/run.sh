@@ -7,5 +7,5 @@ if [ -n "$OLD_CONTAINER" ]; then
   echo "...[done] remove old container ${DOCKER_CONTAINER_NAME}"
 fi
 
-docker stack deploy --compose-file docker-compose.dev.yml --with-registry-auth api-asdi-mvp
+docker stack deploy --compose-file docker-compose.dev.yml --with-registry-auth api-chat-x-dev
 echo "...[done] start new container ${DOCKER_CONTAINER_NAME}"

@@ -4,7 +4,7 @@ services:
   api-service:
     image: '${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}'
     ports:
-      - '3000:3000'
+      - '3002:3000'
     volumes:
       - /home/chat-x-api/.env:/app/.env
       - /home/chat-x-api/files:/app/files
@@ -29,7 +29,7 @@ services:
     volumes: 
       - /home/chat-x-api/postgres:/data/postgres
     ports:
-      - "5432:5432"
+      - "5434:5432"
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - PGDATA=/data/postgres
@@ -51,7 +51,7 @@ services:
       - /home/chat-x-api/redis:/data
       - /home/chat-x-api/redis/redis.conf:/usr/local/etc/redis/redis.conf
     ports:
-      - '6379:6379'
+      - '6380:6379'
     deploy:
       placement:
         constraints: [node.role == manager]

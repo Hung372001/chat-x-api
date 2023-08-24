@@ -1,0 +1,23 @@
+stages:
+  - deploy development  
+deploy development:
+  stage: deploy development
+  only:
+    - develop
+  tags:
+    - development
+  variables:
+    DOCKER_IMAGE_NAME: avatarnice/api-chat-x-dev
+    DOCKER_IMAGE_TAG: ${CI_BUILD_TOKEN}
+    DOCKER_CONTAINER_NAME: api-chat-x-container-dev
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    POSTGRES_DB: ${POSTGRES_DB}
+  before_script:
+    -  docker login -u ${DOCKER_HUB_REGISTRY_USER} -p ${DOCKER_HUB_REGISTRY_PASSWORD}
+  script:
+    - chmod u+x ./deploy/develop/build.sh
+    - ./deploy/develop/build.sh
+    - docker push avatarnice/api-chat-x-dev:${CI_BUILD_TOKEN}
+    - docker push avatarnice/pgsync:${CI_BUILD_TOKEN}
+    - chmod u+x ./deploy/develop/run.sh
+    - ./deploy/develop/run.sh
