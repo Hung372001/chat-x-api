@@ -9,16 +9,16 @@ RUN apk --no-cache \
   add --update \
   git \
   openssh-client
-
-RUN npx pnpm i
+RUN corepack enable && corepack prepare pnpm@8.6.1 --activate 
+RUN pnpm i
 
 # --no-cache: download package index on-the-fly, no need to cleanup afterwards
 # --virtual: bundle packages, remove whole bundle at once, when done
 RUN apk --no-cache --virtual build-dependencies add \
   make \
   g++ \
-  && npx pnpm run build \
+  && pnpm run build \
   && apk del build-dependencies
 
 # Running the app
-CMD [ "npx pnpm", "start" ]
+CMD [ "pnpm", "start" ]
