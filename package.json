@@ -6,9 +6,10 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build:dev": "env-cmd -f .env.dev nest build",
+    "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start:dev": "env-cmd -f .env.dev nest start --watch",
+    "start": "nest start",
+    "start:dev": "NODE_ENV=development nest start",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "typeorm:dev": "npx pnpm run build:dev & npx typeorm -d dist/database/data-source.js",

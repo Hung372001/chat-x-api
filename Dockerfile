@@ -17,7 +17,7 @@ RUN pnpm i
 RUN apk --no-cache --virtual build-dependencies add \
   make \
   g++ \
-  && pnpm run build:dev \
+  && pnpm run build \
   && apk del build-dependencies
 
 # Running the app

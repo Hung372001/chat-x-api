@@ -11,8 +11,6 @@ import { RoleModule } from './modules/role/role.module';
 import { UserModule } from './modules/user/user.module';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { JwtStrategy } from './modules/auth/jwt.strategy';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { dataSourceOptions } from './database/data-source';
 import { CustomeCacheModule } from './modules/cache/cache.module';
 import { AuthModule } from './modules/auth/auth.module';
 
@@ -20,6 +18,7 @@ import { AuthModule } from './modules/auth/auth.module';
   imports: [
     ConfigModule.forRoot({
       validationSchema: configsValidator,
+      envFilePath: process.env.NODE_ENV === 'development' ? '.env.dev' : '.env',
     }),
     CacheModule.register<RedisClientOptions>({
       isGlobal: true,

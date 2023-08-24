@@ -6,6 +6,7 @@ services:
     ports:
       - '3002:3000'
     volumes:
+      - /home/chat-x-api/.env:/app/.env
       - /home/chat-x-api/files:/app/files
     environment:
       - TZ=Asia/Bangkok
