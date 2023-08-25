@@ -1,4 +1,5 @@
 FROM node:16-alpine as build
+RUN npm i -g pnpm
 
 WORKDIR /app
 
@@ -9,7 +10,6 @@ RUN apk --no-cache \
   add --update \
   git \
   openssh-client
-RUN corepack enable && corepack prepare pnpm@8.6.1 --activate 
 RUN pnpm i
 
 # --no-cache: download package index on-the-fly, no need to cleanup afterwards
