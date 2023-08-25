@@ -13,6 +13,10 @@ import { JwtModule, JwtService } from '@nestjs/jwt';
 import { JwtStrategy } from './modules/auth/jwt.strategy';
 import { CustomeCacheModule } from './modules/cache/cache.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { ChatMessageModule } from './modules/chat-message/chat-message.module';
+import { GroupChatModule } from './modules/group-chat/group-chat.module';
+import { UploadModule } from './modules/upload/upload.module';
+import { GatewayModule } from './modules/gateway/gateway.module';
 
 @Module({
   imports: [
@@ -31,6 +35,10 @@ import { AuthModule } from './modules/auth/auth.module';
     UserModule,
     RoleModule,
     CustomeCacheModule,
+    ChatMessageModule,
+    GroupChatModule,
+    UploadModule,
+    GatewayModule,
   ],
   controllers: [AppController],
   providers: [

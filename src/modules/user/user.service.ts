@@ -43,6 +43,16 @@ export class UserService extends BaseService<User> {
   }
 
   async createUserAccount(dto: SignUpDto) {
+    const existedUsername = await this.userRepository.findOneBy({
+      username: dto.username,
+    });
+    if (existedUsername) {
+      throw new HttpException(
+        'Username has already existed.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     const foundRole = await this.roleService.findOneBy({ name: ERole.USER });
     if (!foundRole) {
       throw new HttpException(

@@ -42,7 +42,7 @@ export class RoleController {
   update(
     @Param('id') id: string,
     @Body() updateDto: Partial<Role>,
-  ): Promise<UpdateResult> {
+  ): Promise<Role> {
     return this.roleService.update(id, updateDto);
   }
 
