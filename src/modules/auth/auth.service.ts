@@ -58,18 +58,28 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const user = await this.userService.findOne([
-      { email: dto.email },
-      { phoneNumber: dto.phoneNumber },
-    ]);
+    let user = null;
+    if (dto.email) {
+      user = await this.userService.findOne({ email: dto.email });
+    } else {
+      user = await this.userService.findOne({ phoneNumber: dto.phoneNumber });
+    }
+
+    if (!user) {
+      throw new HttpException(
+        dto.email ? 'Email is not found.' : 'Phone number is not found.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
 
     // const hashedPassword = await bcrypt.hash(dto.password, SALT_ROUND);
     const passwordCompare = await bcrypt.compare(
       dto.password,
       user.hashedPassword,
     );
-    if (!user || !passwordCompare) {
-      throw new UnauthorizedException();
+
+    if (!passwordCompare) {
+      throw new HttpException('Password is incorrect.', HttpStatus.BAD_REQUEST);
     }
 
     const payload = {
@@ -89,16 +99,18 @@ export class AuthService {
   }
 
   async signUp(dto: SignUpDto) {
-    const user = await this.userService.findOne([
-      { email: dto.email },
-      { phoneNumber: dto.phoneNumber },
-    ]);
+    let user = null;
+    if (dto.email) {
+      user = await this.userService.findOne({ email: dto.email });
+    } else {
+      user = await this.userService.findOne({ phoneNumber: dto.phoneNumber });
+    }
 
     if (user) {
       throw new HttpException(
         dto.email
-          ? 'Email has already registed'
-          : 'Phone number has already registed',
+          ? 'Email has already registed.'
+          : 'Phone number has already registed.',
         HttpStatus.BAD_REQUEST,
       );
     }

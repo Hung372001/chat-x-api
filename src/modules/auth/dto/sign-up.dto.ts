@@ -13,13 +13,14 @@ export class SignUpDto {
   @IsOptional()
   @ValidateIf((o) => !o.phoneNumber)
   @IsEmail()
+  @Transform(({ value }) => (value ? value.trim() : null))
   email: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @ValidateIf((o) => !o.email)
   @IsPhoneNumber('VN')
-  @Transform(({ value, obj }) => (obj.email ? '' : value.trim()))
+  @Transform(({ value, obj }) => (obj.email ? null : value.trim()))
   phoneNumber: string;
 
   @ApiProperty()

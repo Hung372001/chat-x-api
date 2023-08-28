@@ -9,8 +9,14 @@ RUN apk --no-cache \
   add --update \
   git \
   openssh-client
-RUN corepack enable && corepack prepare pnpm@8.6.1 --activate 
-RUN pnpm i
+RUN npm install -g pnpm; \
+  pnpm --version; \
+  pnpm setup; \
+  mkdir -p /usr/local/share/pnpm &&\
+  export PNPM_HOME="/usr/local/share/pnpm" &&\
+  export PATH="$PNPM_HOME:$PATH"; \
+  pnpm bin -g &&\
+  pnpm install
 
 # --no-cache: download package index on-the-fly, no need to cleanup afterwards
 # --virtual: bundle packages, remove whole bundle at once, when done
