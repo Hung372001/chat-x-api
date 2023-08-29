@@ -8,7 +8,6 @@ services:
     volumes:
       - /home/chat-x-api/.env:/app/.env
       - /home/chat-x-api/files:/app/files
-      - ~/.aws:~/.aws
     environment:
       - TZ=Asia/Bangkok
     dns:
