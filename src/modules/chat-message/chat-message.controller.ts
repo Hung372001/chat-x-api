@@ -1,8 +1,10 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ChatMessageService } from './chat-message.service';
 import { FilterDto } from '../../common/dto/filter.dto';
+import { ApiTags } from '@nestjs/swagger';
 
 @Controller('chat-message')
+@ApiTags('chat-message')
 export class ChatMessageController {
   constructor(private readonly chatMessageService: ChatMessageService) {}
   @Get()
