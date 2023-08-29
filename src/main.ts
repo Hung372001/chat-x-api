@@ -5,7 +5,8 @@ import { AppModule } from './app.module';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
 import { initSwagger } from './swagger';
-import { config } from 'aws-sdk';
+import * as AWS from 'aws-sdk';
+import { AllExceptionsFilter } from './interceptors/all-exception.filter';
 
 async function bootstrap() {
   const logger = new Logger(bootstrap.name);
@@ -25,9 +26,10 @@ async function bootstrap() {
   app.useGlobalInterceptors(new LoggingInterceptor());
   app.useGlobalInterceptors(new TransformInterceptor());
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // AWS S3
-  config.update({
+  AWS.config.update({
     accessKeyId: appConfigs.get('AWS_ACCESS_KEY_ID'),
     secretAccessKey: appConfigs.get('AWS_SECRET_ACCESS_KEY'),
     region: appConfigs.get('AWS_REGION'),

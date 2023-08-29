@@ -1,6 +1,6 @@
 import { DataSource, DataSourceOptions } from 'typeorm';
 
-export const dataSourceOptions: DataSourceOptions = {
+const dataSource = new DataSource({
   type: 'postgres',
   host: process.env.DB_HOST,
   username: process.env.DB_USERNAME,
@@ -8,7 +8,6 @@ export const dataSourceOptions: DataSourceOptions = {
   database: process.env.DB_DATABASE,
   entities: ['dist/**/*.entity.js'],
   migrations: ['dist/migrations/*.js'],
-};
+} as DataSourceOptions);
 
-const dataSource = new DataSource(dataSourceOptions);
 export default dataSource;

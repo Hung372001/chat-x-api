@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   HttpException,
   HttpStatus,
   Injectable,
@@ -17,6 +18,7 @@ import { TokenPayload } from './interfaces/token.interface';
 import * as bcrypt from 'bcryptjs';
 import { SignUpDto } from './dto/sign-up.dto';
 import { SALT_ROUND } from '../../constraints/auth.constraint';
+import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class AuthService {
@@ -45,6 +47,31 @@ export class AuthService {
         'JWT_REFRESH_TOKEN_EXPIRATION_TIME',
       )}s`,
     });
+  }
+
+  async getUserIfRefreshTokenMatched(
+    userId: string,
+    refreshToken: string,
+  ): Promise<User> {
+    try {
+      const user = await this.userService.findOneBy({
+        id: userId,
+      });
+      if (!user) {
+        throw new UnauthorizedException();
+      }
+
+      const isMatching = await bcrypt.compare(
+        refreshToken,
+        user.currentRefreshToken,
+      );
+      if (!isMatching) {
+        throw new BadRequestException();
+      }
+      return user;
+    } catch (error) {
+      throw error;
+    }
   }
 
   async storeRefreshToken(userId: string, token: string): Promise<void> {

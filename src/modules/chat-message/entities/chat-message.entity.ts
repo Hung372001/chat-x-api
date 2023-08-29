@@ -1,4 +1,11 @@
-import { Entity, Column, JoinTable, OneToMany, ManyToMany } from 'typeorm';
+import {
+  Entity,
+  Column,
+  JoinTable,
+  OneToMany,
+  ManyToMany,
+  ManyToOne,
+} from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { GroupChat } from '../../group-chat/entities/group-chat.entity';
 import { BaseEntity } from '../../../common/entities/base.entity';
@@ -14,11 +21,11 @@ export class ChatMessage extends BaseEntity {
   @Column({ nullable: true })
   documentUrl: string;
 
-  @OneToMany(() => User, (user) => user.chatMessages)
+  @ManyToOne(() => User, (user) => user.chatMessages)
   @JoinTable()
   sender: User;
 
-  @OneToMany(() => GroupChat, (group) => group.chatMessages)
+  @ManyToOne(() => GroupChat, (group) => group.chatMessages)
   @JoinTable()
   group: GroupChat;
 

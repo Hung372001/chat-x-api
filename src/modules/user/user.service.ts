@@ -10,15 +10,15 @@ import { pick } from 'lodash';
 import { SignUpDto } from '../auth/dto/sign-up.dto';
 import * as bcrypt from 'bcryptjs';
 import { SALT_ROUND } from '../../constraints/auth.constraint';
+import { Profile } from '../profile/entities/profile.entity';
 
 export class UserService extends BaseService<User> {
-  private SALT_ROUND = 10;
-
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(Profile)
+    private profileRepository: Repository<Profile>,
     private roleService: RoleService,
-    private profileService: ProfileService,
   ) {
     super(userRepository);
   }
@@ -61,7 +61,7 @@ export class UserService extends BaseService<User> {
       );
     }
 
-    const newProfile = await this.profileService.create({});
+    const newProfile = await this.profileRepository.create({});
 
     const salt = await bcrypt.genSalt(SALT_ROUND);
     const hashedPassword = await bcrypt.hash(dto.password, salt);

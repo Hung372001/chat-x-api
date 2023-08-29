@@ -1,11 +1,11 @@
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
-import { UserService } from '../user/user.service';
 import { Cache } from 'cache-manager';
 import { flattenDeep, uniq } from 'lodash';
-import { CacheService } from '../cache/cache.service';
-import { access_token_public_key } from '../../constraints/jwt.constraint';
+import { CacheService } from '../../cache/cache.service';
+import { access_token_public_key } from 'src/constraints/jwt.constraint';
+import { UserService } from '../../user/user.service';
 
 @Injectable()
 /* It extends the PassportStrategy class and overrides the validate method */
@@ -19,8 +19,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private userService: UserService,
     private cacheService: CacheService,
-    @Inject(CACHE_MANAGER)
-    private cacheManager: Cache,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -42,15 +40,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     let permissions = await this.cacheService.get(`permissions_${id}`);
 
     if (!permissions) {
-      const user = await this.userService.findOne({ id });
+      const user = await this.userService.findOneBy({ id });
 
-      permissions = uniq(
-        flattenDeep(
-          user.roles.map((role: any) => [
-            ...JSON.parse(role.permissions).map((permission) => permission),
-          ]),
-        ),
-      );
+      permissions = uniq(flattenDeep(user.roles));
 
       await this.cacheService.set(`permissions_${id}`, permissions);
     }

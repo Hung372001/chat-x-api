@@ -40,7 +40,9 @@ export class AppGateway
   ) {}
 
   afterInit(client: Socket) {
-    this.logger.log('Gateway init!!!');
+    if (this.logger) {
+      this.logger.log('Gateway init!!!');
+    }
     client.use(WSAuthMiddleware(this.jwtService, this.userService) as any);
   }
 

@@ -1,16 +1,16 @@
-import { Column, Entity, JoinColumn, OneToMany } from 'typeorm';
-import { BaseEntity } from '@common/entities/base.entity';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
+import { BaseEntity } from '../../../common/entities/base.entity';
 
 @Entity()
 export class UploadFile extends BaseEntity {
   @Column()
-  public url: string;
+  url: string;
 
   @Column()
-  public key: string;
+  key: string;
 
-  @OneToMany(() => User, (owner) => owner.uploadFiles)
+  @ManyToOne(() => User, (owner) => owner.uploadFiles)
   @JoinColumn()
   owner: User;
 }

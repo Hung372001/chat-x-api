@@ -7,20 +7,26 @@ import {
   UploadedFiles,
 } from '@nestjs/common';
 import { UploadService } from './upload.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { JwtAccessTokenGuard } from '../auth/guards/jwt-access-token.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../../decorators/roles.decorator';
+import { ERoleType } from '../role/dto/role.enum';
 
 @Controller('upload')
 @ApiTags('upload')
-@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
+@Roles(ERoleType.USER)
+@UseGuards(RolesGuard)
+@UseGuards(JwtAccessTokenGuard)
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
   @Post()
   @UseInterceptors(FileInterceptor('file'))
   async addAvatar(@UploadedFile() file) {
-    return this.uploadService.uploadFile(file.buffer, file.originalname);
+    return this.uploadService.uploadFile(file.buffer, file);
   }
 
   @Post('files')
@@ -28,7 +34,7 @@ export class UploadController {
   multiUpload(@UploadedFiles() files) {
     return Promise.all(
       files.map((file) => {
-        this.uploadService.uploadFile(file.buffer, file.originalname);
+        this.uploadService.uploadFile(file.buffer, file);
       }),
     );
   }

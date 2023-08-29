@@ -5,6 +5,7 @@ import {
   JoinTable,
   ManyToMany,
   ManyToOne,
+  OneToMany,
   OneToOne,
 } from 'typeorm';
 import { Role } from '../../role/entities/role.entity';
@@ -40,10 +41,10 @@ export class User extends BaseEntity {
   @JoinColumn()
   profile: Profile;
 
-  @ManyToOne(() => ChatMessage, (chatMessage) => chatMessage.sender)
+  @OneToMany(() => ChatMessage, (chatMessage) => chatMessage.sender)
   @JoinTable()
   chatMessages: ChatMessage[];
 
-  @ManyToOne(() => UploadFile, (uploadFiles) => uploadFiles.owner)
+  @OneToMany(() => UploadFile, (uploadFiles) => uploadFiles.owner)
   uploadFiles: UploadFile[];
 }
