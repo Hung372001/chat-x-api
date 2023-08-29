@@ -12,8 +12,10 @@ import { FilterDto } from '../../common/dto/filter.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { RemoveMemberDto } from './dto/remove-member.dto';
 import { CreateGroupChatDto } from './dto/create-group-chat.dto';
+import { ApiTags } from '@nestjs/swagger';
 
-@Controller('group')
+@Controller('group-chat')
+@ApiTags('group-chat')
 export class GroupChatController {
   constructor(private readonly groupChatService: GroupChatService) {}
 

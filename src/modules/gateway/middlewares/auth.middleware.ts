@@ -25,11 +25,11 @@ export const WSAuthMiddleware = (
       }
 
       const decodedJwt = jwtService.decode(token) as any;
-      if (!decodedJwt?.data) {
+      if (!decodedJwt) {
         throw Error('System cannot decode the token.');
       }
 
-      const currentUser = await userService.findOne(decodedJwt.data.id);
+      const currentUser = await userService.findOne({ id: decodedJwt.id });
 
       if (!currentUser) {
         throw Error('User doesnot found.');

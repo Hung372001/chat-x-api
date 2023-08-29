@@ -98,9 +98,9 @@ export class GroupChatService extends BaseService<GroupChat> {
   async getJoinedGroups(userId: string) {
     try {
       return this.groupChatRepo
-        .createQueryBuilder('group-chat')
-        .where('group-chat.members @> :memberIds::uuid[]', {
-          memberIds: [userId],
+        .createQueryBuilder('group_chat')
+        .leftJoinAndSelect('group_chat.members', 'user', 'user.id = :userId', {
+          userId,
         })
         .getMany();
     } catch (e: any) {
