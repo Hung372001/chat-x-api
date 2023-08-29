@@ -25,7 +25,7 @@ export class ChatMessageService extends BaseService<ChatMessage> {
       const newMessage = await this.chatMessageRepo.create({
         message: dto.message,
         imageUrls: dto.imageUrls,
-        documentUrl: dto.documentUrl,
+        documentUrls: dto.documentUrls,
         sender,
         group: groupChat,
       } as ChatMessage);

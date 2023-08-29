@@ -18,8 +18,8 @@ export class ChatMessage extends BaseEntity {
   @Column({ type: 'jsonb', nullable: true })
   imageUrls: string[];
 
-  @Column({ nullable: true })
-  documentUrl: string;
+  @Column({ type: 'jsonb', nullable: true })
+  documentUrls: string[];
 
   @ManyToOne(() => User, (user) => user.chatMessages)
   @JoinTable()

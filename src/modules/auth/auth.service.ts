@@ -94,7 +94,9 @@ export class AuthService {
 
     if (!user) {
       throw new HttpException(
-        dto.email ? 'Email is not found.' : 'Phone number is not found.',
+        dto.email
+          ? 'Không tìm thấy địa chỉ email.'
+          : 'Không tìm thấy số điện thoại.',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -106,7 +108,7 @@ export class AuthService {
     );
 
     if (!passwordCompare) {
-      throw new HttpException('Password is incorrect.', HttpStatus.BAD_REQUEST);
+      throw new HttpException('Mật khẩu không đúng.', HttpStatus.BAD_REQUEST);
     }
 
     const payload = {
@@ -136,8 +138,8 @@ export class AuthService {
     if (user) {
       throw new HttpException(
         dto.email
-          ? 'Email has already registed.'
-          : 'Phone number has already registed.',
+          ? 'Địa chỉ email đã được đăng ký.'
+          : 'Số điện thoại đã được đăng ký.',
         HttpStatus.BAD_REQUEST,
       );
     }

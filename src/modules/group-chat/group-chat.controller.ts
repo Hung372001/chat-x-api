@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { GroupChatService } from './group-chat.service';
 import { FilterDto } from '../../common/dto/filter.dto';
@@ -20,7 +21,7 @@ export class GroupChatController {
   constructor(private readonly groupChatService: GroupChatService) {}
 
   @Get()
-  findAll(query: FilterDto) {
+  findAll(@Query() query: FilterDto) {
     return this.groupChatService.findAll(query);
   }
 

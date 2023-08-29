@@ -12,14 +12,14 @@ export class SignUpDto {
   @ApiPropertyOptional()
   @IsOptional()
   @ValidateIf((o) => !o.phoneNumber)
-  @IsEmail()
+  @IsEmail({}, { message: 'Địa chỉ email không hợp lệ.' })
   @Transform(({ value }) => (value ? value.trim() : null))
   email: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @ValidateIf((o) => !o.email)
-  @IsPhoneNumber('VN')
+  @IsPhoneNumber('VN', { message: 'Số điện thoại không hợp lệ.' })
   @Transform(({ value, obj }) => (obj.email ? null : value.trim()))
   phoneNumber: string;
 

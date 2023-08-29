@@ -6,7 +6,7 @@ export class FilterDto {
   @ApiPropertyOptional({
     type: 'any',
     description: 'string array or string',
-    example: '["email@gmail.com", "fullname"] or keyword',
+    example: '["keyword for field1", "keyword for field2"] or keyword',
   })
   @IsOptional()
   @Transform(({ value }) => {
@@ -21,7 +21,7 @@ export class FilterDto {
   @ApiPropertyOptional({
     isArray: true,
     description: 'search or keyword with fields in searchOrBy array',
-    example: '["email", "fullname"]',
+    example: '["field1", "field2"]',
   })
   @IsOptional()
   @Transform(({ value }) => {
@@ -38,7 +38,7 @@ export class FilterDto {
   @ApiPropertyOptional({
     type: 'any',
     description: 'string array or string',
-    example: '["email@gmail.com", "fullname"] or keyword',
+    example: '["keyword for field1", "keyword for field2"] or keyword',
   })
   @Transform(({ value }) => {
     try {
@@ -52,7 +52,7 @@ export class FilterDto {
   @ApiPropertyOptional({
     isArray: true,
     description: 'search and keyword with field in searchAndBy array',
-    example: '["email", "fullname"]',
+    example: '["field1", "field2"]',
   })
   @Transform(({ value }) => {
     try {

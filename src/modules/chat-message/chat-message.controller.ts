@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Delete, Get, Param, Query } from '@nestjs/common';
 import { ChatMessageService } from './chat-message.service';
 import { FilterDto } from '../../common/dto/filter.dto';
 import { ApiTags } from '@nestjs/swagger';
@@ -15,5 +15,10 @@ export class ChatMessageController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.chatMessageService.findOneBy({ id });
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.chatMessageService.remove(id);
   }
 }

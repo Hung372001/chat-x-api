@@ -4,7 +4,7 @@ import { IsArray, IsNotEmpty, IsOptional, IsUrl } from 'class-validator';
 export class NewMessageDto {
   @IsNotEmpty()
   @Transform((raw) => raw.value.trim())
-  groupName: string;
+  groupId: string;
 
   @IsOptional()
   message: string;
@@ -16,5 +16,6 @@ export class NewMessageDto {
 
   @IsOptional()
   @IsUrl()
-  documentUrl: string;
+  @Type(() => IsUrl)
+  documentUrls: string[];
 }

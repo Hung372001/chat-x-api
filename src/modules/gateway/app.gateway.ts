@@ -72,7 +72,7 @@ export class AppGateway
 
     this.logger.log(`${client.data?.user?.username} joined`);
 
-    client.broadcast.to(groupChat.name).emit('new-member_joined', {
+    client.broadcast.to(groupChat.id).emit('new-member_joined', {
       groupChat,
       member: client.data?.user,
     });
@@ -84,7 +84,7 @@ export class AppGateway
     @ConnectedSocket() client: Socket,
   ) {
     const groupChat = await this.groupChatService.findOneBy({
-      name: data.groupName,
+      id: data.groupId,
     });
 
     if (!groupChat) {
@@ -97,7 +97,7 @@ export class AppGateway
       groupChat,
     );
 
-    client.broadcast.to(data.groupName).emit('receive_new-message', {
+    client.broadcast.to(data.groupId).emit('receive_new-message', {
       newMessage,
     });
   }

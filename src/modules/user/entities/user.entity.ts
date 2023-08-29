@@ -47,4 +47,8 @@ export class User extends BaseEntity {
 
   @OneToMany(() => UploadFile, (uploadFiles) => uploadFiles.owner)
   uploadFiles: UploadFile[];
+
+  @ManyToMany(() => User)
+  @JoinTable()
+  friends: User[];
 }

@@ -1,8 +1,10 @@
 import {
+  Body,
   Controller,
   Delete,
   Get,
   Param,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -12,6 +14,8 @@ import { PermissionGuard } from '../permission/permissison.guard';
 import { FilterDto } from '../../common/dto/filter.dto';
 import { DeleteResult } from 'typeorm';
 import { JwtAccessTokenGuard } from '../auth/guards/jwt-access-token.guard';
+import { AddFriendsDto } from './dto/add-friends.dto';
+import { UserRequestService } from './user.request.service';
 
 @ApiTags('user')
 @Controller('user')
@@ -19,16 +23,29 @@ import { JwtAccessTokenGuard } from '../auth/guards/jwt-access-token.guard';
 @UseGuards(PermissionGuard)
 @UseGuards(JwtAccessTokenGuard)
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly userRequestService: UserRequestService,
+  ) {}
 
   @Get()
   findAll(@Query() query: FilterDto) {
-    return this.userService.findAll(query);
+    return this.userRequestService.findAll(query);
+  }
+
+  @Get('me')
+  getMe() {
+    return this.userRequestService.findMe();
   }
 
   @Get(':id')
   findById(@Param('id') id: string) {
     return this.userService.findById(id);
+  }
+
+  @Post('add-friends')
+  addFriends(@Body() addFriendsDto: AddFriendsDto) {
+    return this.userRequestService.addFriends(addFriendsDto);
   }
 
   @Delete(':id')
