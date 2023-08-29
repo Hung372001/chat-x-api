@@ -7,17 +7,17 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PermissionGuard } from '../permission/permissison.guard';
 import { FilterDto } from '../../common/dto/filter.dto';
 import { DeleteResult } from 'typeorm';
+import { JwtAccessTokenGuard } from '../auth/guards/jwt-access-token.guard';
 
 @ApiTags('user')
 @Controller('user')
 @ApiBearerAuth()
 @UseGuards(PermissionGuard)
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAccessTokenGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 

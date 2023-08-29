@@ -1,12 +1,12 @@
 import { Controller, Delete, Param, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CacheService } from './cache.service';
+import { JwtAccessTokenGuard } from '../auth/guards/jwt-access-token.guard';
 
 @ApiTags('cache')
 @Controller('cache')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAccessTokenGuard)
 export class CacheController {
   constructor(private readonly cacheService: CacheService) {}
 

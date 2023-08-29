@@ -138,8 +138,8 @@ export abstract class BaseService<T extends BaseEntity>
     return await this.repository.findOneBy({ id } as FindOptionsWhere<T>);
   }
 
-  async findMany(filter: Partial<T>) {
-    return await this.repository.find(filter as FindManyOptions<T>);
+  async findMany(filter: FindManyOptions<T>) {
+    return await this.repository.find(filter);
   }
 
   async create(createDto: any): Promise<T> {
@@ -147,7 +147,7 @@ export abstract class BaseService<T extends BaseEntity>
     return this.repository.save(newRecord);
   }
 
-  async update(id: string, updateDto: any): Promise<UpdateResult> {
+  async update(id: string, updateDto: any): Promise<T> {
     try {
       const foundRecord = await this.findById(id);
 
@@ -155,7 +155,10 @@ export abstract class BaseService<T extends BaseEntity>
         throw { message: `${this.name} is not found.` };
       }
 
-      return await this.repository.update(id, updateDto);
+      const updateObj = { ...foundRecord, ...updateDto };
+      await this.repository.update(id, updateObj);
+
+      return updateObj;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }

@@ -5,13 +5,15 @@ import { AppModule } from './app.module';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
 import { initSwagger } from './swagger';
+import * as AWS from 'aws-sdk';
+import { AllExceptionsFilter } from './interceptors/all-exception.filter';
 
 async function bootstrap() {
   const logger = new Logger(bootstrap.name);
   const app = await NestFactory.create(AppModule);
 
   // Config
-  const configs = app.get(ConfigService);
+  const appConfigs = app.get(ConfigService);
 
   // Cors
   app.enableCors({
@@ -24,12 +26,20 @@ async function bootstrap() {
   app.useGlobalInterceptors(new LoggingInterceptor());
   app.useGlobalInterceptors(new TransformInterceptor());
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
+  app.useGlobalFilters(new AllExceptionsFilter());
+
+  // AWS S3
+  AWS.config.update({
+    accessKeyId: appConfigs.get('AWS_ACCESS_KEY_ID'),
+    secretAccessKey: appConfigs.get('AWS_SECRET_ACCESS_KEY'),
+    region: appConfigs.get('AWS_REGION'),
+  });
 
   // Swagger
   initSwagger(app);
 
   // Port listener
-  const port = configs.get('PORT') ?? 3000;
+  const port = appConfigs.get('PORT') ?? 3000;
   await app.listen(port, () => {
     logger.log(`Application running on port ${port}`);
   });

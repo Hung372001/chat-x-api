@@ -8,18 +8,18 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { UpdateResult, DeleteResult } from 'typeorm';
+import { DeleteResult } from 'typeorm';
 import { RoleService } from './role.service';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Role } from './entities/role.entity';
 import { FilterDto } from '../../common/dto/filter.dto';
 import { CreateRoleDto } from './dto/create-role.dto';
+import { JwtAccessTokenGuard } from '../auth/guards/jwt-access-token.guard';
 
 @ApiTags('role')
 @Controller('role')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAccessTokenGuard)
 export class RoleController {
   constructor(private readonly roleService: RoleService) {}
 
@@ -42,7 +42,7 @@ export class RoleController {
   update(
     @Param('id') id: string,
     @Body() updateDto: Partial<Role>,
-  ): Promise<UpdateResult> {
+  ): Promise<Role> {
     return this.roleService.update(id, updateDto);
   }
 
