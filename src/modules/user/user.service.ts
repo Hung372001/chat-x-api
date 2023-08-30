@@ -48,7 +48,7 @@ export class UserService extends BaseService<User> {
     });
     if (existedUsername) {
       throw new HttpException(
-        'Username has already existed.',
+        'Tên người dùng đã tồn tại.',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -56,12 +56,12 @@ export class UserService extends BaseService<User> {
     const foundRole = await this.roleService.findOneBy({ name: ERole.USER });
     if (!foundRole) {
       throw new HttpException(
-        'User role is not found.',
+        'Vai trò của tài khoản không xác định.',
         HttpStatus.BAD_REQUEST,
       );
     }
 
-    const newProfile = await this.profileRepository.create({});
+    const newProfile = await this.profileRepository.save(new Profile());
 
     const salt = await bcrypt.genSalt(SALT_ROUND);
     const hashedPassword = await bcrypt.hash(dto.password, salt);

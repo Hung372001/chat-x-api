@@ -24,12 +24,12 @@ export abstract class BaseService<T extends BaseEntity>
 
   async findAll(query: FilterDto): Promise<FindAllResponse<T>> {
     const {
-      orKeyword = '',
+      keyword = '',
       andKeyword = '',
       searchAndBy = '',
-      searchOrBy = !query.searchOrBy && !query.searchAndBy
+      searchBy = !query.searchBy && !query.searchAndBy
         ? ['name']
-        : query.searchOrBy,
+        : query.searchBy,
       sortBy = 'createdAt',
       sortOrder = 'DESC',
       limit = 10,
@@ -37,37 +37,39 @@ export abstract class BaseService<T extends BaseEntity>
       isGetAll = false,
     } = query;
 
-    const queryBuilder = this.repository.createQueryBuilder();
+    const queryBuilder = this.repository.createQueryBuilder(
+      this.name.toString(),
+    );
 
-    if (orKeyword) {
+    if (keyword) {
       if (searchAndBy) {
         searchAndBy.forEach((item, index) => {
           const whereParams = {};
-          whereParams[`keyword_${index}`] = !Array.isArray(orKeyword)
-            ? `%${orKeyword}%`
-            : `%${orKeyword[index]}%`;
+          whereParams[`keyword_${index}`] = !Array.isArray(keyword)
+            ? `%${keyword}%`
+            : `%${keyword[index]}%`;
 
           queryBuilder.andWhere(
             `cast(${
-              !item.includes('.') ? `market_item.${item}` : item
+              !item.includes('.') ? `${this.name}.${item}` : item
             } as text) ilike :keyword_${index} `,
             whereParams,
           );
         });
       }
 
-      if (searchOrBy) {
+      if (searchBy) {
         queryBuilder.andWhere(
           new Brackets((subQuery) => {
-            searchOrBy.forEach((item, index) => {
+            searchBy.forEach((item, index) => {
               const whereParams = {};
-              whereParams[`keyword_${index}`] = !Array.isArray(orKeyword)
-                ? `%${orKeyword}%`
-                : `%${orKeyword[index]}%`;
+              whereParams[`keyword_${index}`] = !Array.isArray(keyword)
+                ? `%${keyword}%`
+                : `%${keyword[index]}%`;
 
               subQuery.orWhere(
                 `cast(${
-                  !item.includes('.') ? `market_item.${item}` : item
+                  !item.includes('.') ? `${this.name}.${item}` : item
                 } as text) ilike :keyword_${index} `,
                 whereParams,
               );
@@ -88,17 +90,17 @@ export abstract class BaseService<T extends BaseEntity>
 
           queryBuilder.andWhere(
             `cast(${
-              !item.includes('.') ? `market_item.${item}` : item
+              !item.includes('.') ? `${this.name}.${item}` : item
             } as text) ilike :andKeyword_${index} `,
             whereParams,
           );
         });
       }
 
-      if (searchOrBy) {
+      if (searchBy) {
         queryBuilder.andWhere(
           new Brackets((subQuery) => {
-            searchOrBy.forEach((item, index) => {
+            searchBy.forEach((item, index) => {
               const whereParams = {};
               whereParams[`andKeyword${index}`] = !Array.isArray(andKeyword)
                 ? `${andKeyword}`
@@ -106,7 +108,7 @@ export abstract class BaseService<T extends BaseEntity>
 
               subQuery.orWhere(
                 `cast(${
-                  !item.includes('.') ? `market_item.${item}` : item
+                  !item.includes('.') ? `${this.name}.${item}` : item
                 } as text) ilike :andKeyword_${index} `,
                 whereParams,
               );
@@ -117,7 +119,7 @@ export abstract class BaseService<T extends BaseEntity>
     }
 
     const [items, total] = await queryBuilder
-      .orderBy(`lesson.${sortBy}`, sortOrder)
+      .orderBy(`${this.name}.${sortBy}`, sortOrder)
       .take(isGetAll ? null : limit)
       .skip(isGetAll ? null : (page - 1) * limit)
       .getManyAndCount();

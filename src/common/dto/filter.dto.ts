@@ -4,9 +4,10 @@ import { IsArray, IsOptional } from 'class-validator';
 
 export class FilterDto {
   @ApiPropertyOptional({
-    type: 'any',
-    description: 'string array or string',
-    example: '["keyword for field1", "keyword for field2"] or keyword',
+    description:
+      'Keyword for searchBy (OR conditions) (type: string || string[])',
+    example:
+      'search keyword || ["search keyword for searchBy[0]", "search keyword for searchBy[1]"]',
   })
   @IsOptional()
   @Transform(({ value }) => {
@@ -16,12 +17,12 @@ export class FilterDto {
       return value;
     }
   })
-  orKeyword: any;
+  keyword: any;
 
   @ApiPropertyOptional({
-    isArray: true,
-    description: 'search or keyword with fields in searchOrBy array',
-    example: '["field1", "field2"]',
+    description:
+      'Search by fields item (OR conditions) (type: string || string[])',
+    example: 'field name || ["field1", "field2"]',
   })
   @IsOptional()
   @Transform(({ value }) => {
@@ -33,12 +34,13 @@ export class FilterDto {
   })
   @IsArray()
   @IsOptional()
-  searchOrBy: string[];
+  searchBy: string[];
 
   @ApiPropertyOptional({
-    type: 'any',
-    description: 'string array or string',
-    example: '["keyword for field1", "keyword for field2"] or keyword',
+    description:
+      'Keyword for searchAndBy (AND conditions) (type: string || string[])',
+    example:
+      'search keyword || ["search keyword for searchAndBy[0]", "search keyword for searchAndBy[1]"]',
   })
   @Transform(({ value }) => {
     try {
@@ -50,9 +52,9 @@ export class FilterDto {
   andKeyword: any;
 
   @ApiPropertyOptional({
-    isArray: true,
-    description: 'search and keyword with field in searchAndBy array',
-    example: '["field1", "field2"]',
+    description:
+      'Search by fields item (AND conditions) (type: string || string[])',
+    example: 'field name || ["field1", "field2"]',
   })
   @Transform(({ value }) => {
     try {

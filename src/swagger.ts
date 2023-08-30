@@ -1,5 +1,6 @@
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { NextFunction, Request, Response } from 'express';
+import * as fs from 'fs';
 
 const api_documentation_credentials = {
   name: 'admin',
@@ -58,6 +59,11 @@ export const initSwagger = (app: any) => {
     },
   );
 
+  if (!fs.existsSync('./swagger')) {
+    fs.mkdirSync('./swagger');
+  }
+
+  fs.writeFileSync('./swagger/swagger-spec.json', JSON.stringify(document));
   SwaggerModule.setup('api-docs', app, document, {
     swaggerOptions: { persistAuthorization: true },
   });

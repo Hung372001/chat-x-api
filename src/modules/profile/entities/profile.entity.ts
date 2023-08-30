@@ -2,26 +2,15 @@ import { Column, Entity } from 'typeorm';
 import { ProfileImageDetail } from '../types/profile-image.interface';
 import { ITelegramData } from '../interfaces/profile.interface';
 import { BaseEntity } from '../../../common/entities/base.entity';
+import { EGender } from '../dto/profile.enum';
 
 @Entity()
 export class Profile extends BaseEntity {
   @Column({ nullable: true })
-  displayName: string;
-
-  @Column({ nullable: true })
-  username: string;
-
-  @Column({ nullable: true })
   avatar: string;
-
-  @Column({ type: 'jsonb', nullable: true })
-  avatarDetail: ProfileImageDetail;
 
   @Column({ nullable: true })
   coverPhoto: string;
-
-  @Column({ type: 'jsonb', nullable: true })
-  coverPhotoDetail: ProfileImageDetail;
 
   @Column({
     type: 'text',
@@ -29,15 +18,16 @@ export class Profile extends BaseEntity {
   })
   introduce: string;
 
-  @Column({ default: 0 })
-  followerNumber: number;
+  @Column({
+    type: 'enum',
+    enum: EGender,
+    default: EGender.MALE,
+  })
+  gender: EGender;
 
-  @Column({ default: 0 })
-  followingNumber: number;
+  @Column({ type: 'decimal', default: 0 })
+  activityScore: number;
 
-  @Column({ nullable: true })
-  address: string;
-
-  @Column({ type: 'jsonb', nullable: true })
-  telegramData: ITelegramData;
+  @Column({ type: 'decimal', default: 0 })
+  creditScore: number;
 }

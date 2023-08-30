@@ -16,6 +16,7 @@ import { DeleteResult } from 'typeorm';
 import { JwtAccessTokenGuard } from '../auth/guards/jwt-access-token.guard';
 import { AddFriendsDto } from './dto/add-friends.dto';
 import { UserRequestService } from './user.request.service';
+import { GetAllUserDto } from './dto/get-all-user.dto';
 
 @ApiTags('user')
 @Controller('user')
@@ -29,8 +30,8 @@ export class UserController {
   ) {}
 
   @Get()
-  findAll(@Query() query: FilterDto) {
-    return this.userRequestService.findAll(query);
+  findAll(@Query() query: GetAllUserDto) {
+    return this.userRequestService.findAllUsers(query);
   }
 
   @Get('me')
@@ -46,6 +47,11 @@ export class UserController {
   @Post('add-friends')
   addFriends(@Body() addFriendsDto: AddFriendsDto) {
     return this.userRequestService.addFriends(addFriendsDto);
+  }
+
+  @Post('remove-friend/:friendId')
+  removeFriend(@Param('friendId') friendId: string) {
+    return this.userRequestService.removeFriend(friendId);
   }
 
   @Delete(':id')
