@@ -1,10 +1,12 @@
 import {
   Column,
   Entity,
+  JoinColumn,
   JoinTable,
   ManyToMany,
   ManyToOne,
   OneToMany,
+  OneToOne,
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { BaseEntity } from '../../../common/entities/base.entity';
@@ -17,7 +19,7 @@ export class GroupChat extends BaseEntity {
   @JoinTable()
   members: User[];
 
-  @Column()
+  @Column({ nullable: true })
   name: string;
 
   @Column({ default: false })
@@ -29,6 +31,10 @@ export class GroupChat extends BaseEntity {
   @OneToMany(() => ChatMessage, (chatMessage) => chatMessage.group)
   @JoinTable()
   chatMessages: ChatMessage[];
+
+  @OneToOne(() => ChatMessage, (message) => message.id)
+  @JoinColumn()
+  latestMessage: ChatMessage;
 
   @Column({
     type: 'enum',

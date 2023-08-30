@@ -7,16 +7,22 @@ import {
   Param,
   Delete,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { GroupChatService } from './group-chat.service';
 import { FilterDto } from '../../common/dto/filter.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { RemoveMemberDto } from './dto/remove-member.dto';
 import { CreateGroupChatDto } from './dto/create-group-chat.dto';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { JwtAccessTokenGuard } from '../auth/guards/jwt-access-token.guard';
+import { PermissionGuard } from '../permission/permissison.guard';
 
 @Controller('group-chat')
 @ApiTags('group-chat')
+@ApiBearerAuth()
+@UseGuards(PermissionGuard)
+@UseGuards(JwtAccessTokenGuard)
 export class GroupChatController {
   constructor(private readonly groupChatService: GroupChatService) {}
 

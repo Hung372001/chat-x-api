@@ -1,10 +1,19 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsEnum, IsNotEmpty } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsArray,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  ValidateIf,
+} from 'class-validator';
 import { EGroupChatType } from './group-chat.enum';
 
 export class CreateGroupChatDto {
-  @ApiProperty({ description: 'Group name' })
-  @IsNotEmpty()
+  @ApiPropertyOptional({ description: 'Group name' })
+  @ValidateIf((o) => o.type === EGroupChatType.GROUP)
+  @IsNotEmpty({
+    message: 'Tên nhóm chat không được để trống',
+  })
   name: string;
 
   @ApiProperty({
