@@ -3,6 +3,7 @@ import {
   DeleteResult,
   FindOptionsWhere,
   FindManyOptions,
+  FindOneOptions,
 } from 'typeorm';
 import { FilterDto } from '../dto/filter.dto';
 import { FindAllResponse } from '../responses/find-all.response';

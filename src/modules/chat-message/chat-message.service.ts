@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { ChatMessage } from './entities/chat-message.entity';
 import { BaseService } from '../../common/services/base.service';
 import { NewMessageDto } from './dto/new-message.dto';
@@ -6,6 +6,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../user/entities/user.entity';
 import { GroupChat } from '../group-chat/entities/group-chat.entity';
+import { GroupChatService } from '../group-chat/group-chat.service';
 
 @Injectable()
 export class ChatMessageService extends BaseService<ChatMessage> {
@@ -50,7 +51,7 @@ export class ChatMessageService extends BaseService<ChatMessage> {
       });
 
       if (!chatMessage || sender.id !== chatMessage.sender.id) {
-        throw { message: 'Chat message is not found.' };
+        throw { message: 'Không tìm thấy nhóm chat.' };
       }
 
       chatMessage.unsend = true;

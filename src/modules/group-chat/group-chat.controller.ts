@@ -17,6 +17,7 @@ import { CreateGroupChatDto } from './dto/create-group-chat.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAccessTokenGuard } from '../auth/guards/jwt-access-token.guard';
 import { PermissionGuard } from '../permission/permissison.guard';
+import { GroupChatRequestService } from './group-chat.request.service';
 
 @Controller('group-chat')
 @ApiTags('group-chat')
@@ -24,30 +25,33 @@ import { PermissionGuard } from '../permission/permissison.guard';
 @UseGuards(PermissionGuard)
 @UseGuards(JwtAccessTokenGuard)
 export class GroupChatController {
-  constructor(private readonly groupChatService: GroupChatService) {}
+  constructor(
+    private readonly groupChatService: GroupChatService,
+    private readonly requestService: GroupChatRequestService,
+  ) {}
 
   @Get()
   findAll(@Query() query: FilterDto) {
-    return this.groupChatService.findAll(query);
+    return this.requestService.findAll(query);
   }
 
   @Get(':id')
-  findByRoomId(@Param('id') id: string) {
-    return this.groupChatService.findOneBy({ id });
+  findById(@Param('id') id: string) {
+    return this.requestService.findById(id);
   }
 
   @Post()
   create(@Body() dto: CreateGroupChatDto) {
-    return this.groupChatService.create(dto);
+    return this.requestService.create(dto);
   }
 
   @Patch('add-members/:id')
   addMember(@Param('id') roomId: string, @Body() dto: AddMemberDto) {
-    return this.groupChatService.addMember(roomId, dto);
+    return this.requestService.addMember(roomId, dto);
   }
 
   @Patch('remove-members/:id')
   removeMember(@Param('id') roomId: string, @Body() dto: RemoveMemberDto) {
-    return this.groupChatService.removeMember(roomId, dto);
+    return this.requestService.removeMember(roomId, dto);
   }
 }

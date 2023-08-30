@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { FindOptionsWhere, Repository } from 'typeorm';
@@ -12,6 +12,7 @@ import * as bcrypt from 'bcryptjs';
 import { SALT_ROUND } from '../../constraints/auth.constraint';
 import { Profile } from '../profile/entities/profile.entity';
 
+@Injectable()
 export class UserService extends BaseService<User> {
   constructor(
     @InjectRepository(User)
