@@ -2,14 +2,14 @@ import { JwtModule } from '@nestjs/jwt';
 import { UserModule } from '../user/user.module';
 import { AppGateway } from './app.gateway';
 import { Module } from '@nestjs/common';
-import { CustomeCacheModule } from '../cache/cache.module';
-import { GroupChatModule } from '../group-chat/group-chat.module';
-import { ChatMessageModule } from '../chat-message/chat-message.module';
 import { GatewaySessionManager } from './gateway.session';
+import { GroupChatGatewayService } from './group-chat.gateway.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { GroupChat } from '../group-chat/entities/group-chat.entity';
 
 @Module({
-  imports: [UserModule, JwtModule, GroupChatModule, ChatMessageModule],
-  providers: [AppGateway, GatewaySessionManager],
-  exports: [AppGateway, GatewaySessionManager],
+  imports: [TypeOrmModule.forFeature([GroupChat]), UserModule, JwtModule],
+  providers: [AppGateway, GatewaySessionManager, GroupChatGatewayService],
+  exports: [AppGateway, GatewaySessionManager, GroupChatGatewayService],
 })
 export class GatewayModule {}

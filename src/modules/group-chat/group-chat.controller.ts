@@ -9,7 +9,6 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { GroupChatService } from './group-chat.service';
 import { FilterDto } from '../../common/dto/filter.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { RemoveMemberDto } from './dto/remove-member.dto';
@@ -18,17 +17,17 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAccessTokenGuard } from '../auth/guards/jwt-access-token.guard';
 import { PermissionGuard } from '../permission/permissison.guard';
 import { GroupChatRequestService } from './group-chat.request.service';
+import { Roles } from '../../decorators/roles.decorator';
+import { ERole } from '../../common/enums/role.enum';
 
 @Controller('group-chat')
 @ApiTags('group-chat')
 @ApiBearerAuth()
+@Roles(ERole.USER)
 @UseGuards(PermissionGuard)
 @UseGuards(JwtAccessTokenGuard)
 export class GroupChatController {
-  constructor(
-    private readonly groupChatService: GroupChatService,
-    private readonly requestService: GroupChatRequestService,
-  ) {}
+  constructor(private readonly requestService: GroupChatRequestService) {}
 
   @Get()
   findAll(@Query() query: FilterDto) {

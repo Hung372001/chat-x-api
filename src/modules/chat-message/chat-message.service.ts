@@ -1,12 +1,8 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ChatMessage } from './entities/chat-message.entity';
 import { BaseService } from '../../common/services/base.service';
-import { NewMessageDto } from './dto/new-message.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from '../user/entities/user.entity';
-import { GroupChat } from '../group-chat/entities/group-chat.entity';
-import { GroupChatService } from '../group-chat/group-chat.service';
 
 @Injectable()
 export class ChatMessageService extends BaseService<ChatMessage> {
@@ -15,51 +11,5 @@ export class ChatMessageService extends BaseService<ChatMessage> {
     private chatMessageRepo: Repository<ChatMessage>,
   ) {
     super(chatMessageRepo);
-  }
-
-  async createWithSender(
-    dto: NewMessageDto,
-    sender: User,
-    groupChat: GroupChat,
-  ): Promise<ChatMessage> {
-    try {
-      const newMessage = await this.chatMessageRepo.create({
-        message: dto.message,
-        imageUrls: dto.imageUrls,
-        documentUrls: dto.documentUrls,
-        sender,
-        group: groupChat,
-      } as ChatMessage);
-
-      return this.chatMessageRepo.save(newMessage);
-    } catch (e: any) {
-      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
-    }
-  }
-
-  async updateWithSender(
-    id: string,
-    updateObj: Partial<ChatMessage>,
-    sender: User,
-  ) {
-    try {
-      const chatMessage = await this.chatMessageRepo.findOne({
-        where: {
-          id,
-        },
-        relations: ['sender', 'group'],
-      });
-
-      if (!chatMessage || sender.id !== chatMessage.sender.id) {
-        throw { message: 'Không tìm thấy nhóm chat.' };
-      }
-
-      chatMessage.unsend = true;
-      this.chatMessageRepo.save(chatMessage);
-
-      return chatMessage;
-    } catch (e: any) {
-      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
-    }
   }
 }

@@ -11,14 +11,14 @@ import {
 } from '@nestjs/websockets';
 import { WSAuthMiddleware } from './middlewares/auth.middleware';
 import { Server, Socket } from 'socket.io';
-import { CacheService } from '../cache/cache.service';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../user/user.service';
-import { GroupChatService } from '../group-chat/group-chat.service';
-import { ChatMessageService } from '../chat-message/chat-message.service';
-import { NewMessageDto } from '../chat-message/dto/new-message.dto';
+import { GroupChatGatewayService } from './group-chat.gateway.service';
 import { GatewaySessionManager } from './gateway.session';
 import { AuthSocket } from './interfaces/auth.interface';
+import { GroupChat } from '../group-chat/entities/group-chat.entity';
+import { User } from '../user/entities/user.entity';
+import { ChatMessage } from '../chat-message/entities/chat-message.entity';
 
 @WebSocketGateway({
   namespace: 'socket/chats',
@@ -41,8 +41,8 @@ export class AppGateway
     private readonly sessions: GatewaySessionManager,
     @Inject(JwtService) private jwtService: JwtService,
     @Inject(UserService) private userService: UserService,
-    @Inject(GroupChatService) private groupChatService: GroupChatService,
-    @Inject(ChatMessageService) private chatMessageService: ChatMessageService,
+    @Inject(GroupChatGatewayService)
+    private groupChatService: GroupChatGatewayService,
   ) {}
 
   afterInit(client: Socket) {
@@ -55,7 +55,7 @@ export class AppGateway
   // Connection and disconnect socket
   async handleConnection(client: AuthSocket) {
     this.logger.log(client.id, 'Connected..............................');
-    this.sessions.setUserSocket(client?.data?.user.id, client);
+    this.sessions.setUserSocket(client?.user?.id, client);
     this.groupChatService.emitOnlineGroupMember(client, client?.user);
   }
 
@@ -82,80 +82,76 @@ export class AppGateway
     @ConnectedSocket() client: AuthSocket,
   ) {
     const groupChat = await this.groupChatService.findOne({ id: groupId });
+    if (groupChat) {
+      const onlineMembers = groupChat.members.map((member) =>
+        this.sessions.getUserSocket(member.id) ? member : null,
+      );
+
+      client.emit('onlineGroupMembersResponse', {
+        onlineMembers,
+        allMembers: groupChat.members,
+      });
+    }
   }
 
-  // Group chat
-  @SubscribeMessage('onJoinGroup')
-  async handleJoinGroup(
-    @MessageBody() groupId: string,
-    @ConnectedSocket() client: AuthSocket,
-  ) {
-    const groupChat = await this.groupChatService.findOneBy({ id: groupId });
-    if (!groupChat) {
-      client.emit('onSockerError', 'Group chat is not found.');
+  joinGroup(groupChatId: string, groupMembers: User[]) {
+    return Promise.all(
+      groupMembers.map((member) => {
+        const client = this.sessions.getUserSocket(member.id);
+        if (client) {
+          client.join(groupChatId);
+        }
+      }),
+    );
+  }
+
+  // Call socket after group chat created successfully
+  async createGroupChat(groupChat: GroupChat) {
+    if (groupChat && groupChat.members?.length > 0) {
+      await this.joinGroup(groupChat.id, groupChat.members);
+
+      this.server.to(groupChat.id).emit('newGroupChatCreated', {
+        groupChat,
+      });
     }
+  }
 
-    this.logger.log(`${client?.user?.username} joined`);
+  // Call socket after add user into group chat successfully
+  async addNewGroupMember(groupChat: GroupChat, newMembers: User[]) {
+    if (groupChat && newMembers?.length > 0) {
+      await this.joinGroup(groupChat.id, newMembers);
 
-    client.broadcast.to(groupChat.id).emit('newMemberJoined', {
-      groupChat,
-      member: client?.user,
-    });
+      this.server.to(groupChat.id).emit('newMembersJoined', {
+        groupChat,
+        newMembers,
+      });
+    }
   }
 
   // Chat message
-  @SubscribeMessage('onSendMessage')
-  async newMessage(
-    @MessageBody() data: NewMessageDto,
-    @ConnectedSocket() client: AuthSocket,
-  ) {
-    const groupChat = await this.groupChatService.findOneBy({
-      id: data.groupId,
-    });
+  async createNewMessage(newMessage: ChatMessage) {
+    if (newMessage) {
+      const client = this.sessions.getUserSocket(newMessage.sender.id);
 
-    if (!groupChat) {
-      return client.emit('onSockerError', 'Group chat is not found.');
+      if (client) {
+        client.broadcast.to(newMessage.group.id).emit('newMessageReceived', {
+          newMessage,
+        });
+      }
     }
-
-    const newMessage = await this.chatMessageService.createWithSender(
-      data,
-      client?.data?.user,
-      groupChat,
-    );
-
-    client.broadcast.to(data.groupId).emit('newMessageReceived', {
-      newMessage,
-    });
   }
 
-  @SubscribeMessage('onUnsendMessage')
-  async unsendMessage(
-    @MessageBody() messageId: string,
-    @ConnectedSocket() client: AuthSocket,
-  ) {
-    try {
-      const chatMessage = await this.chatMessageService.updateWithSender(
-        messageId,
-        {
-          unsend: true,
-        },
-        client?.data?.user,
-      );
+  async unsendMessage(unsendMessage: ChatMessage) {
+    if (unsendMessage) {
+      const client = this.sessions.getUserSocket(unsendMessage.sender.id);
 
-      client.broadcast
-        .to(chatMessage.group.name)
-        .emit('unsendMessageReceived', {
-          chatMessage,
-        });
-    } catch (e: any) {
-      return client.emit('onSockerError', e.message);
-    }
-    const message = await this.chatMessageService.findOneBy({
-      id: messageId,
-    });
-
-    if (!message) {
-      return client.emit('onSockerError', 'Chat message is not found.');
+      if (client) {
+        client.broadcast
+          .to(unsendMessage.group.id)
+          .emit('unsendMessageReceived', {
+            unsendMessage,
+          });
+      }
     }
   }
 }
