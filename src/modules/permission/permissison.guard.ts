@@ -9,7 +9,7 @@ export class PermissionGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const requiredPermissions = this.reflector.getAllAndMerge<string[]>(
       PERMISSION_KEY,
-      [context.getHandler(), context.getClass()]
+      [context.getHandler(), context.getClass()],
     );
 
     if (!requiredPermissions.length) {
@@ -19,7 +19,7 @@ export class PermissionGuard implements CanActivate {
     const { user } = context.switchToHttp().getRequest();
 
     const result = requiredPermissions.some((permission) =>
-      user?.permissions?.includes(permission)
+      user?.permissions?.includes(permission),
     );
     return result;
   }

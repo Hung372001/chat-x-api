@@ -9,17 +9,17 @@ import { BaseService } from '../../common/services/base.service';
 import { AddMemberDto } from './dto/add-member.dto';
 import { CreateGroupChatDto } from './dto/create-group-chat.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, FindOptionsWhere, In, Repository } from 'typeorm';
+import { Brackets, In, Repository } from 'typeorm';
 import { UserService } from '../user/user.service';
 import { GroupChat } from './entities/group-chat.entity';
 import { RemoveMemberDto } from './dto/remove-member.dto';
 import { different } from 'lodash';
-import { Socket } from 'socket.io';
 import { User } from '../user/entities/user.entity';
 import { EGroupChatType } from './dto/group-chat.enum';
 import { FilterDto } from '../../common/dto/filter.dto';
 import { REQUEST } from '@nestjs/core';
 import { Request } from 'express';
+import { AppGateway } from '../gateway/app.gateway';
 
 @Injectable({ scope: Scope.REQUEST })
 export class GroupChatRequestService extends BaseService<GroupChat> {
@@ -27,6 +27,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     @Inject(REQUEST) private request: Request,
     @InjectRepository(GroupChat) private groupChatRepo: Repository<GroupChat>,
     @Inject(UserService) private userService: UserService,
+    @Inject(AppGateway) private readonly gateway: AppGateway,
   ) {
     super(groupChatRepo);
   }
@@ -188,16 +189,24 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
 
       const members = await this.userService.findMany({
         where: { id: In(dto.members) },
+        relations: ['profile'],
       });
       if (members?.length > 0 && dto.members.length !== members.length) {
         throw { message: 'Không tìm thấy thành viên nhóm.' };
       }
 
-      return this.groupChatRepo.save({
+      const newGroupChat = {
         members: members,
         name: dto.name,
         type: dto.type,
-      } as unknown as GroupChat);
+      } as unknown as GroupChat;
+
+      await this.groupChatRepo.save(newGroupChat);
+
+      // Call socket to create group chat
+      await this.gateway.createGroupChat(newGroupChat);
+
+      return newGroupChat;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
@@ -217,10 +226,15 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         throw { message: 'Không tìm thấy thành viên nhóm.' };
       }
 
-      return this.groupChatRepo.save({
+      const res = await this.groupChatRepo.save({
         ...foundGroupChat,
         members: [...foundGroupChat.members, ...members],
       });
+
+      // Call socket to create group chat
+      await this.gateway.addNewGroupMember(foundGroupChat, members);
+
+      return res;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
