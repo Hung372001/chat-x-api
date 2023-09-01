@@ -7,6 +7,8 @@ import { TransformInterceptor } from './interceptors/transform.interceptor';
 import { initSwagger } from './swagger';
 import * as AWS from 'aws-sdk';
 import { AllExceptionsFilter } from './interceptors/all-exception.filter';
+import { RmqService } from './modules/rmq/rmq.service';
+import { MicroserviceOptions } from '@nestjs/microservices';
 
 async function bootstrap() {
   const logger = new Logger(bootstrap.name);
@@ -34,6 +36,12 @@ async function bootstrap() {
     secretAccessKey: appConfigs.get('AWS_SECRET_ACCESS_KEY'),
     region: appConfigs.get('AWS_REGION'),
   });
+
+  // Init rabbitMQ microservice
+  const rmqService = app.get<RmqService>(RmqService);
+  app.connectMicroservice<MicroserviceOptions>(
+    rmqService.getOptions(appConfigs.get('RABBITMQ_QUEUE_NAME')),
+  );
 
   // Swagger
   initSwagger(app);

@@ -62,6 +62,20 @@ services:
         condition: any
     networks:
       - chat-x_net
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: 'rabbitmq'
+    environment:
+        - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+        - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+    ports:
+        - 5674:5672
+        - 15674:15672
+    volumes:
+        - /home/chat-x-api/rabbitmq/data/:/var/lib/rabbitmq/
+        - /home/chat-x-api/rabbitmq/log/:/var/log/rabbitmq
+    networks:
+        - chat-x_net
 networks:
   chat-x_net:
     driver: overlay

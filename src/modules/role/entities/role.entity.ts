@@ -1,6 +1,6 @@
 import { Column, Entity } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
-import { ERoleType } from '../dto/role.enum';
+import { ERole } from '../../../common/enums/role.enum';
 
 @Entity()
 export class Role extends BaseEntity {
@@ -18,8 +18,8 @@ export class Role extends BaseEntity {
 
   @Column({
     type: 'enum',
-    enum: ERoleType,
-    default: ERoleType.USER,
+    enum: ERole,
+    default: ERole.USER,
   })
-  type: ERoleType;
+  type: ERole;
 }

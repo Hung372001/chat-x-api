@@ -15,6 +15,9 @@ import { ChatMessageModule } from './modules/chat-message/chat-message.module';
 import { GroupChatModule } from './modules/group-chat/group-chat.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { GatewayModule } from './modules/gateway/gateway.module';
+import { RmqModule } from './modules/rmq/rmq.module';
+import { FCMTokenModule } from './modules/fcm-token/fcm-token.module';
+import { NotificationModule } from './modules/notification/notification.module';
 
 const apiV1Modules = [
   UserModule,
@@ -22,6 +25,8 @@ const apiV1Modules = [
   ChatMessageModule,
   GroupChatModule,
   UploadModule,
+  FCMTokenModule,
+  NotificationModule,
 ];
 
 @Module({
@@ -33,6 +38,7 @@ const apiV1Modules = [
       },
     ]),
     ConfigModule.forRoot({
+      isGlobal: true,
       validationSchema: configsValidator,
       envFilePath: process.env.NODE_ENV === 'development' ? '.env.dev' : '.env',
     }),
@@ -46,6 +52,7 @@ const apiV1Modules = [
     AuthModule,
     CustomeCacheModule,
     GatewayModule,
+    RmqModule,
     ...apiV1Modules,
   ],
   controllers: [AppController],

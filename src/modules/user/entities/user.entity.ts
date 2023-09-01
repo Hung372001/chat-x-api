@@ -4,7 +4,6 @@ import {
   JoinColumn,
   JoinTable,
   ManyToMany,
-  ManyToOne,
   OneToMany,
   OneToOne,
 } from 'typeorm';
@@ -14,6 +13,8 @@ import { BaseEntity } from '../../../common/entities/base.entity';
 import { Exclude } from 'class-transformer';
 import { ChatMessage } from '../../chat-message/entities/chat-message.entity';
 import { UploadFile } from '../../upload/entities/upload.entity';
+import { FCMToken } from '../../fcm-token/entities/fcm-token.entity';
+import { Notification } from '../../notification/entities/notification.entity';
 
 @Entity()
 export class User extends BaseEntity {
@@ -51,4 +52,10 @@ export class User extends BaseEntity {
   @ManyToMany(() => User)
   @JoinTable()
   friends: User[];
+
+  @OneToMany(() => FCMToken, () => (deviceTokens) => deviceTokens.user)
+  deviceTokens: FCMToken[];
+
+  @OneToMany(() => Notification, () => (deviceTokens) => deviceTokens.user)
+  notifications: Notification[];
 }
