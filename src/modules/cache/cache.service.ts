@@ -1,17 +1,18 @@
-import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { compact, flattenDeep, uniq } from 'lodash';
 
 const relativeKeys = {
   UserController: ['permissions'],
-  RoleController: ['permissions']
+  RoleController: ['permissions'],
 };
 
 @Injectable()
 export class CacheService {
   constructor(
     @Inject(CACHE_MANAGER)
-    private cacheManager: Cache
+    private cacheManager: Cache,
   ) {}
 
   async set(key: string, data: any, deleteRelative?: boolean) {
@@ -24,20 +25,20 @@ export class CacheService {
           await Promise.all(
             [controller, ...(relatives || [])].map((item) => {
               return this.get(item);
-            })
-          )
-        )
+            }),
+          ),
+        ),
       );
 
       await Promise.all(
         keys.map((key) => {
           return this.del(key);
-        })
+        }),
       );
     }
     const res = await Promise.all([
       this.cacheManager.set(controller, [key]),
-      this.cacheManager.set(key, JSON.stringify(data))
+      this.cacheManager.set(key, JSON.stringify(data)),
     ]);
     return res;
   }
@@ -64,16 +65,16 @@ export class CacheService {
           await Promise.all(
             [controller, ...(relatives || [])].map((item) => {
               return this.get(item);
-            })
-          )
-        )
-      )
+            }),
+          ),
+        ),
+      ),
     );
 
     await Promise.all(
       keys.map((key) => {
         return this.del(key);
-      })
+      }),
     );
     return null;
   }

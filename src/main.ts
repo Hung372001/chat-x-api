@@ -9,6 +9,7 @@ import * as AWS from 'aws-sdk';
 import { AllExceptionsFilter } from './interceptors/all-exception.filter';
 import { RmqService } from './modules/rmq/rmq.service';
 import { MicroserviceOptions } from '@nestjs/microservices';
+import { CacheInterceptor } from './interceptors/cache.interceptor';
 
 async function bootstrap() {
   const logger = new Logger(bootstrap.name);

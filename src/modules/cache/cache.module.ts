@@ -5,6 +5,6 @@ import { CacheService } from './cache.service';
 @Module({
   controllers: [CacheController],
   providers: [CacheService],
-  exports: [CacheService]
+  exports: [CacheService],
 })
 export class CustomeCacheModule {}

@@ -104,7 +104,7 @@ export class AppGateway
   }
 
   // Chat message
-  @SubscribeMessage('send_new-message')
+  @SubscribeMessage('onSendMessage')
   async newMessage(
     @MessageBody() data: NewMessageDto,
     @ConnectedSocket() client: AuthSocket,
@@ -123,12 +123,12 @@ export class AppGateway
       groupChat,
     );
 
-    client.broadcast.to(data.groupId).emit('receive_new-message', {
+    client.broadcast.to(data.groupId).emit('newMessageReceived', {
       newMessage,
     });
   }
 
-  @SubscribeMessage('unsend_message')
+  @SubscribeMessage('onUnsendMessage')
   async unsendMessage(
     @MessageBody() messageId: string,
     @ConnectedSocket() client: AuthSocket,
@@ -142,9 +142,11 @@ export class AppGateway
         client?.data?.user,
       );
 
-      client.broadcast.to(chatMessage.group.name).emit('receive_new-message', {
-        chatMessage,
-      });
+      client.broadcast
+        .to(chatMessage.group.name)
+        .emit('unsendMessageReceived', {
+          chatMessage,
+        });
     } catch (e: any) {
       return client.emit('onSockerError', e.message);
     }

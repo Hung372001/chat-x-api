@@ -1,6 +1,6 @@
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
-import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Cache } from 'cache-manager';
 import { flattenDeep, uniq } from 'lodash';
 import { CacheService } from '../../cache/cache.service';

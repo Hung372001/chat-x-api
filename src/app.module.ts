@@ -1,4 +1,5 @@
-import { CacheModule, CacheInterceptor, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
+import { CacheModule } from '@nestjs/cache-manager';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
@@ -18,6 +19,7 @@ import { GatewayModule } from './modules/gateway/gateway.module';
 import { RmqModule } from './modules/rmq/rmq.module';
 import { FCMTokenModule } from './modules/fcm-token/fcm-token.module';
 import { NotificationModule } from './modules/notification/notification.module';
+import { CacheInterceptor } from './interceptors/cache.interceptor';
 
 const apiV1Modules = [
   UserModule,

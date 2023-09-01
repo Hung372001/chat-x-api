@@ -46,7 +46,7 @@ export class NotificationService {
       const foundUser = await this.userService.findOne({ id: dto.userId });
 
       if (!foundUser) {
-        throw { message: 'User is not found.' };
+        throw { message: 'Không tìm thấy người dùng.' };
       }
 
       const newNotification = await this.notificationRepository.create({
@@ -79,7 +79,7 @@ export class NotificationService {
         dto.deviceToken,
       );
 
-      return { message: 'Send message is successful' };
+      return { message: 'Thông báo được gửi thành công.' };
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
