@@ -5,10 +5,11 @@ import { Module } from '@nestjs/common';
 import { CustomeCacheModule } from '../cache/cache.module';
 import { GroupChatModule } from '../group-chat/group-chat.module';
 import { ChatMessageModule } from '../chat-message/chat-message.module';
+import { GatewaySessionManager } from './gateway.session';
 
 @Module({
   imports: [UserModule, JwtModule, GroupChatModule, ChatMessageModule],
-  providers: [AppGateway],
-  exports: [AppGateway],
+  providers: [AppGateway, GatewaySessionManager],
+  exports: [AppGateway, GatewaySessionManager],
 })
 export class GatewayModule {}

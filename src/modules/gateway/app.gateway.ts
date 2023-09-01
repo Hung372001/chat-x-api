@@ -17,10 +17,14 @@ import { UserService } from '../user/user.service';
 import { GroupChatService } from '../group-chat/group-chat.service';
 import { ChatMessageService } from '../chat-message/chat-message.service';
 import { NewMessageDto } from '../chat-message/dto/new-message.dto';
+import { GatewaySessionManager } from './gateway.session';
+import { AuthSocket } from './interfaces/auth.interface';
 
 @WebSocketGateway({
   namespace: 'socket/chats',
   transports: ['websocket'],
+  pingInterval: 10000,
+  pingTimeout: 15000,
   cors: {
     origin: ['http://localhost:3000', 'http://localhost:4000'],
     methods: ['GET', 'POST'],
@@ -33,6 +37,8 @@ export class AppGateway
   @WebSocketServer() server: Server;
   private logger: Logger = new Logger(AppGateway.name);
   constructor(
+    @Inject(GatewaySessionManager)
+    private readonly sessions: GatewaySessionManager,
     @Inject(JwtService) private jwtService: JwtService,
     @Inject(UserService) private userService: UserService,
     @Inject(GroupChatService) private groupChatService: GroupChatService,
@@ -46,49 +52,69 @@ export class AppGateway
     client.use(WSAuthMiddleware(this.jwtService, this.userService) as any);
   }
 
-  async handleConnection(client: Socket) {
+  // Connection and disconnect socket
+  async handleConnection(client: AuthSocket) {
     this.logger.log(client.id, 'Connected..............................');
-    this.groupChatService.emitOnlineGroupMember(client, client.data?.user);
+    this.sessions.setUserSocket(client?.data?.user.id, client);
+    this.groupChatService.emitOnlineGroupMember(client, client?.user);
   }
 
+  async handleDisconnect(client: AuthSocket) {
+    this.logger.log(client.id, 'Disconnected..............................');
+    this.groupChatService.emitOnlineGroupMember(client, client?.user);
+    this.sessions.removeUserSocket(client.user.id);
+  }
+
+  // Online and offile status of group member
   @SubscribeMessage('online')
-  async online(@ConnectedSocket() client: Socket) {
-    this.groupChatService.emitOnlineGroupMember(
-      client,
-      client.data?.user,
-      false,
-    );
+  async handleMemberOnline(@ConnectedSocket() client: AuthSocket) {
+    this.groupChatService.emitOnlineGroupMember(client, client?.user, false);
   }
 
-  @SubscribeMessage('join_group-chat')
-  async joinGroup(
+  @SubscribeMessage('offline')
+  async handleMemberOffline(@ConnectedSocket() client: AuthSocket) {
+    this.groupChatService.emitOnlineGroupMember(client, client?.user, false);
+  }
+
+  @SubscribeMessage('getOnlineGroupMembers')
+  async getOnlineGroupMembers(
     @MessageBody() groupId: string,
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: AuthSocket,
+  ) {
+    const groupChat = await this.groupChatService.findOne({ id: groupId });
+  }
+
+  // Group chat
+  @SubscribeMessage('onJoinGroup')
+  async handleJoinGroup(
+    @MessageBody() groupId: string,
+    @ConnectedSocket() client: AuthSocket,
   ) {
     const groupChat = await this.groupChatService.findOneBy({ id: groupId });
     if (!groupChat) {
-      client.emit('socker-error', 'Group chat is not found.');
+      client.emit('onSockerError', 'Group chat is not found.');
     }
 
-    this.logger.log(`${client.data?.user?.username} joined`);
+    this.logger.log(`${client?.user?.username} joined`);
 
-    client.broadcast.to(groupChat.id).emit('new-member_joined', {
+    client.broadcast.to(groupChat.id).emit('newMemberJoined', {
       groupChat,
-      member: client.data?.user,
+      member: client?.user,
     });
   }
 
+  // Chat message
   @SubscribeMessage('send_new-message')
   async newMessage(
     @MessageBody() data: NewMessageDto,
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: AuthSocket,
   ) {
     const groupChat = await this.groupChatService.findOneBy({
       id: data.groupId,
     });
 
     if (!groupChat) {
-      return client.emit('socker-error', 'Group chat is not found.');
+      return client.emit('onSockerError', 'Group chat is not found.');
     }
 
     const newMessage = await this.chatMessageService.createWithSender(
@@ -105,7 +131,7 @@ export class AppGateway
   @SubscribeMessage('unsend_message')
   async unsendMessage(
     @MessageBody() messageId: string,
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: AuthSocket,
   ) {
     try {
       const chatMessage = await this.chatMessageService.updateWithSender(
@@ -120,28 +146,14 @@ export class AppGateway
         chatMessage,
       });
     } catch (e: any) {
-      return client.emit('socker-error', e.message);
+      return client.emit('onSockerError', e.message);
     }
     const message = await this.chatMessageService.findOneBy({
       id: messageId,
     });
 
     if (!message) {
-      return client.emit('socker-error', 'Chat message is not found.');
+      return client.emit('onSockerError', 'Chat message is not found.');
     }
-  }
-
-  @SubscribeMessage('offline')
-  async offline(@ConnectedSocket() client: Socket) {
-    this.groupChatService.emitOnlineGroupMember(
-      client,
-      client.data?.user,
-      false,
-    );
-  }
-
-  async handleDisconnect(client: Socket) {
-    this.logger.log(client.id, 'Disconnected..............................');
-    this.groupChatService.emitOnlineGroupMember(client, client.data?.user);
   }
 }

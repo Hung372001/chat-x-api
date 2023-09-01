@@ -62,7 +62,7 @@ export class GroupChatService extends BaseService<GroupChat> {
           if (joinGroup) {
             await client.join(group.name);
           }
-          client.emit('member_online', {
+          client.emit('groupMemberOnline', {
             groupChat: group,
             member,
           });
@@ -85,7 +85,7 @@ export class GroupChatService extends BaseService<GroupChat> {
           if (leaveGroup) {
             await client.leave(group.name);
           }
-          client.emit('member_offline', {
+          client.emit('groupMemberOffline', {
             groupChat: group,
             member: client.data?.user,
           });

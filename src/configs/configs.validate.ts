@@ -20,4 +20,10 @@ export const configsValidator = Joi.object({
   AWS_BUCKET_NAME: Joi.string().required(),
   AWS_REGION: Joi.string().required(),
   AWS_SECRET_ACCESS_KEY: Joi.string().required(),
+
+  // RabbitMQ
+  RABBITMQ_HOST: Joi.string().required(),
+  RABBITMQ_QUEUE_NAME: Joi.string().required(),
+  RABBITMQ_USER: Joi.string().required(),
+  RABBITMQ_PASSWORD: Joi.string().required(),
 });

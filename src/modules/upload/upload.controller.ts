@@ -12,12 +12,12 @@ import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { JwtAccessTokenGuard } from '../auth/guards/jwt-access-token.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../../decorators/roles.decorator';
-import { ERoleType } from '../role/dto/role.enum';
+import { ERole } from '../../common/enums/role.enum';
 
 @Controller('upload')
 @ApiTags('upload')
 @ApiBearerAuth()
-@Roles(ERoleType.USER)
+@Roles(ERole.USER)
 @UseGuards(RolesGuard)
 @UseGuards(JwtAccessTokenGuard)
 export class UploadController {

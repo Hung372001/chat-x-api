@@ -35,7 +35,7 @@ export const WSAuthMiddleware = (
         throw Error('User doesnot found.');
       }
 
-      socket.data.user = currentUser;
+      socket.user = currentUser;
       next();
     } catch (e) {
       next({

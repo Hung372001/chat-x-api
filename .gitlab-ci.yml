@@ -12,6 +12,8 @@ deploy development:
     DOCKER_CONTAINER_NAME: api-chat-x-container-dev
     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     POSTGRES_DB: ${POSTGRES_DB}
+    RABBITMQ_USER: ${RABBITMQ_USER}
+    RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
   before_script:
     -  docker login -u ${DOCKER_HUB_REGISTRY_USER} -p ${DOCKER_HUB_REGISTRY_PASSWORD}
   script:
