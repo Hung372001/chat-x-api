@@ -1,11 +1,11 @@
 import {
-  CACHE_MANAGER,
   CallHandler,
   ExecutionContext,
   Inject,
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
@@ -37,11 +37,12 @@ export class CacheInterceptor implements NestInterceptor {
   ): Promise<Observable<any>> {
     /* Getting the request object. */
     const req = context.switchToHttp().getRequest();
-    const [module, method, params = {}, query = {}] = [
+    const [module, method, params = {}, query = {}, user] = [
       context.getClass().name,
       context.getHandler().name,
       req.params,
       req.query,
+      req.user,
     ];
 
     const isCachedMethod = [].includes(req.method);
@@ -68,6 +69,7 @@ export class CacheInterceptor implements NestInterceptor {
     const key = compact([
       module,
       method,
+      user?.id ?? '',
       !isEmpty(params) ? JSON.stringify({ params }) : null,
       !isEmpty(query) ? JSON.stringify({ query }) : null,
     ]).join('_');

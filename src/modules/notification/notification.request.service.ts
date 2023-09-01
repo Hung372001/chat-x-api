@@ -40,6 +40,7 @@ export class NotificationRequestService extends BaseService<Notification> {
 
     const queryBuilder = this.notificationRepository
       .createQueryBuilder('notification')
+      .leftJoinAndSelect('notification.user', 'user')
       .where('user.id = :userId', { userId: currentUser.id });
 
     if (keyword) {

@@ -8,6 +8,7 @@ import {
   Delete,
   UseInterceptors,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from 'src/decorators/roles.decorator';
@@ -18,6 +19,7 @@ import { ERole } from '../../common/enums/role.enum';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { JwtAccessTokenGuard } from '../auth/guards/jwt-access-token.guard';
 import { FilterDto } from '../../common/dto/filter.dto';
+import { CreateNotificationDto } from './dto/create-notification.dto';
 
 @Controller('notifications')
 @ApiTags('notifications')
@@ -32,8 +34,8 @@ export class NotificationController {
   ) {}
 
   @Get()
-  findAll(@Body() query: FilterDto) {
-    this.requestService.findAll(query);
+  findAll(@Query() query: FilterDto) {
+    return this.requestService.findAll(query);
   }
 
   @Post('test')
@@ -41,13 +43,16 @@ export class NotificationController {
     return this.notificationService.testing(dto);
   }
 
-  @ApiBearerAuth()
+  @Post()
+  create(@Body() dto: CreateNotificationDto) {
+    return this.notificationService.create(dto);
+  }
+
   @Patch('read-all')
   updateReadAll() {
     return this.requestService.updateReadAll();
   }
 
-  @ApiBearerAuth()
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.requestService.remove(id);

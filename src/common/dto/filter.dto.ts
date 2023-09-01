@@ -4,6 +4,7 @@ import { IsArray, IsOptional } from 'class-validator';
 
 export class FilterDto {
   @ApiPropertyOptional({
+    type: 'string',
     description:
       'Keyword for searchBy (OR conditions) (type: string || string[])',
     example:
@@ -37,6 +38,7 @@ export class FilterDto {
   searchBy: string[];
 
   @ApiPropertyOptional({
+    type: 'string',
     description:
       'Keyword for searchAndBy (AND conditions) (type: string || string[])',
     example:

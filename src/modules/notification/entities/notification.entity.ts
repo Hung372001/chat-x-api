@@ -14,7 +14,11 @@ export class Notification extends BaseEntity {
   @Column({ default: '' })
   imageUrl: string;
 
-  @Column({ type: 'enum', enum: ENotificationType })
+  @Column({
+    type: 'enum',
+    enum: ENotificationType,
+    default: ENotificationType.NORMAL,
+  })
   type: ENotificationType;
 
   @ManyToOne(() => User, (receiver) => receiver.notifications)
