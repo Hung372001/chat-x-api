@@ -167,6 +167,12 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
 
   override async create(dto: CreateGroupChatDto): Promise<GroupChat> {
     try {
+      const currentUser = this.request.user as User;
+
+      if (!dto.members.some((x) => x === currentUser.id)) {
+        throw { message: 'Bạn không có quyền tạo nhóm chat.' };
+      }
+
       if (dto.type === EGroupChatType.GROUP) {
         const existedGroupName = await this.groupChatRepo.findOneBy({
           name: dto.name,
@@ -185,6 +191,21 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         if (dto.members.length !== 2) {
           throw { message: 'Số thành viên không hợp lệ.' };
         }
+
+        const existedGroupChat = await this.groupChatRepo
+          .createQueryBuilder('group_chat')
+          .select('group_chat.id')
+          .leftJoin('group_chat.members', 'user')
+          .where('group_chat.type = :type', { type: EGroupChatType.DOU })
+          .addGroupBy('group_chat.id')
+          .having(`array_agg(user.id) @> :userIds::uuid[]`, {
+            userIds: dto.members,
+          })
+          .getOne();
+
+        if (existedGroupChat) {
+          throw { message: 'Hội thoại đã tồn tại.' };
+        }
       }
 
       const members = await this.userService.findMany({
@@ -199,6 +220,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         members: members,
         name: dto.name,
         type: dto.type,
+        admins: [currentUser],
       } as unknown as GroupChat;
 
       await this.groupChatRepo.save(newGroupChat);
@@ -214,13 +236,27 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
 
   async addMember(id: string, dto: AddMemberDto) {
     try {
-      const foundGroupChat = await this.groupChatRepo.findOneBy({ id });
+      const currentUser = this.request.user as User;
+
+      const foundGroupChat = await this.groupChatRepo.findOne({
+        where: { id },
+        relations: ['admins'],
+      });
       if (foundGroupChat) {
         throw { message: 'Không tìm thấy nhóm chat.' };
       }
 
+      if (foundGroupChat.type === EGroupChatType.DOU) {
+        throw { message: 'Vui lòng tạo nhóm chat để thêm thành viên.' };
+      }
+
+      if (!foundGroupChat.admins.some((x) => x.id === currentUser.id)) {
+        throw { message: 'Bạn không có quyền thêm thành viên nhóm.' };
+      }
+
       const members = await this.userService.findMany({
         where: { id: In(dto.members) },
+        relations: ['profile'],
       });
       if (members?.length > 0 && dto.members.length !== members.length) {
         throw { message: 'Không tìm thấy thành viên nhóm.' };
@@ -242,13 +278,24 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
 
   async removeMember(id: string, dto: RemoveMemberDto) {
     try {
-      const foundGroupChat = await this.groupChatRepo.findOneBy({ id });
+      const currentUser = this.request.user as User;
+
+      const foundGroupChat = await this.groupChatRepo.findOne({
+        where: { id },
+        relations: ['admins'],
+      });
+
       if (foundGroupChat) {
         throw { message: 'Không tìm thấy nhóm chat.' };
       }
 
+      if (!foundGroupChat.admins.some((x) => x.id === currentUser.id)) {
+        throw { message: 'Bạn không có quyền thêm thành viên nhóm.' };
+      }
+
       const members = await this.userService.findMany({
         where: { id: In(dto.members) },
+        relations: ['profile'],
       });
       if (members?.length > 0 && dto.members.length !== members.length) {
         throw { message: 'Không tìm thấy thành viên nhóm.' };

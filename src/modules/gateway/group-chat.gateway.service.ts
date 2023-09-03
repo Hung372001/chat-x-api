@@ -44,7 +44,7 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
       Promise.all(
         groupChats.map(async (group: GroupChat) => {
           if (joinGroup) {
-            await client.join(group.name);
+            await client.join(group.id);
           }
           client.emit('groupMemberOnline', {
             groupChat: group,
@@ -67,7 +67,7 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
       Promise.all(
         groupChats.map(async (group: GroupChat) => {
           if (leaveGroup) {
-            await client.leave(group.name);
+            await client.leave(group.id);
           }
           client.emit('groupMemberOffline', {
             groupChat: group,

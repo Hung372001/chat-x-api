@@ -36,6 +36,10 @@ export class GroupChat extends BaseEntity {
   @JoinColumn()
   latestMessage: ChatMessage;
 
+  @ManyToMany(() => User)
+  @JoinTable()
+  admins: User[];
+
   @Column({
     type: 'enum',
     enum: EGroupChatType,
