@@ -170,6 +170,10 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
 
       this.chatMessageRepo.save(newMessage);
 
+      // Save latest message for group
+      groupChat.latestMessage = newMessage;
+      await this.groupChatService.update(groupChat.id, groupChat);
+
       // Call socket to group
       await this.gateway.createNewMessage(newMessage);
 
