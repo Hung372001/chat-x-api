@@ -15,7 +15,6 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAccessTokenGuard } from '../auth/guards/jwt-access-token.guard';
 import { PermissionGuard } from '../permission/permissison.guard';
 import { ChatMessageRequestService } from './chat-message.request.service';
-import { SendNewMessageDto } from './dto/send-new-message.dto';
 
 @Controller('chat-message')
 @ApiTags('chat-message')
@@ -38,20 +37,5 @@ export class ChatMessageController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.chatMessageService.findOneBy({ id });
-  }
-
-  @Post('send')
-  sendNewMessage(@Body() dto: SendNewMessageDto) {
-    this.requestService.sendNewMessage(dto);
-  }
-
-  @Patch('unsend/:id')
-  unsendMessage(@Param('id') chatMessageId: string) {
-    this.requestService.unsendMessage(chatMessageId);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') chatMessageId: string) {
-    return this.requestService.remove(chatMessageId);
   }
 }

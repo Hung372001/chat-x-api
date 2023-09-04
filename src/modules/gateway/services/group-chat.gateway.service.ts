@@ -1,10 +1,10 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { BaseService } from '../../common/services/base.service';
+import { BaseService } from '../../../common/services/base.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, Repository } from 'typeorm';
-import { GroupChat } from '../group-chat/entities/group-chat.entity';
+import { GroupChat } from '../../group-chat/entities/group-chat.entity';
 import { Socket } from 'socket.io';
-import { User } from '../user/entities/user.entity';
+import { User } from '../../user/entities/user.entity';
 
 @Injectable()
 export class GroupChatGatewayService extends BaseService<GroupChat> {

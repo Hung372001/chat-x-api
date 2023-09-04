@@ -4,7 +4,6 @@ import {
   JoinColumn,
   JoinTable,
   ManyToMany,
-  ManyToOne,
   OneToMany,
   OneToOne,
 } from 'typeorm';
@@ -21,12 +20,6 @@ export class GroupChat extends BaseEntity {
 
   @Column({ nullable: true })
   name: string;
-
-  @Column({ default: false })
-  pinned: boolean;
-
-  @Column({ default: 0 })
-  unReads: number;
 
   @OneToMany(() => ChatMessage, (chatMessage) => chatMessage.group)
   @JoinTable()

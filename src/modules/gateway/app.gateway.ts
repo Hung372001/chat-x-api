@@ -13,12 +13,14 @@ import { WSAuthMiddleware } from './middlewares/auth.middleware';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../user/user.service';
-import { GroupChatGatewayService } from './group-chat.gateway.service';
+import { GroupChatGatewayService } from './services/group-chat.gateway.service';
 import { GatewaySessionManager } from './gateway.session';
 import { AuthSocket } from './interfaces/auth.interface';
 import { GroupChat } from '../group-chat/entities/group-chat.entity';
 import { User } from '../user/entities/user.entity';
 import { ChatMessage } from '../chat-message/entities/chat-message.entity';
+import { SendMessageDto } from '../chat-message/dto/send-message.dto';
+import { ChatMessageGatewayService } from './services/chat-message.request.service';
 
 @WebSocketGateway({
   namespace: 'socket/chats',
@@ -43,6 +45,8 @@ export class AppGateway
     @Inject(UserService) private userService: UserService,
     @Inject(GroupChatGatewayService)
     private groupChatService: GroupChatGatewayService,
+    @Inject(ChatMessageGatewayService)
+    private chatMessageService: ChatMessageGatewayService,
   ) {}
 
   afterInit(client: Socket) {
@@ -94,6 +98,34 @@ export class AppGateway
     }
   }
 
+  @SubscribeMessage('onTypingStart')
+  async onTypingStart(
+    @MessageBody() groupId: string,
+    @ConnectedSocket() client: AuthSocket,
+  ) {
+    const groupChat = await this.groupChatService.findOne({ id: groupId });
+    if (groupChat && groupChat.members.some((x) => x.id === client.user.id)) {
+      client.broadcast.to(groupId).emit('onTypingStart', {
+        typingMember: client.user,
+        groupChat: groupChat,
+      });
+    }
+  }
+
+  @SubscribeMessage('onTypingStop')
+  async onTypingStop(
+    @MessageBody() groupId: string,
+    @ConnectedSocket() client: AuthSocket,
+  ) {
+    const groupChat = await this.groupChatService.findOne({ id: groupId });
+    if (groupChat && groupChat.members.some((x) => x.id === client.user.id)) {
+      client.broadcast.to(groupId).emit('onTypingStop', {
+        typingMember: client.user,
+        groupChat: groupChat,
+      });
+    }
+  }
+
   joinGroup(groupChatId: string, groupMembers: User[]) {
     return Promise.all(
       groupMembers.map((member) => {
@@ -129,29 +161,53 @@ export class AppGateway
   }
 
   // Chat message
-  async createNewMessage(newMessage: ChatMessage) {
+  @SubscribeMessage('onSendMessage')
+  async onSendMessage(
+    @MessageBody() data: SendMessageDto,
+    @ConnectedSocket() client: AuthSocket,
+  ) {
+    const newMessage = await this.chatMessageService.sendMessage(
+      data,
+      client.user,
+    );
     if (newMessage) {
-      const client = this.sessions.getUserSocket(newMessage.sender.id);
-
-      if (client) {
-        client.broadcast.to(newMessage.group.id).emit('newMessageReceived', {
-          newMessage,
-        });
-      }
+      client.broadcast.to(newMessage.group.id).emit('newMessageReceived', {
+        newMessage,
+      });
     }
   }
 
-  async unsendMessage(unsendMessage: ChatMessage) {
-    if (unsendMessage) {
-      const client = this.sessions.getUserSocket(unsendMessage.sender.id);
+  @SubscribeMessage('onUnsendMessage')
+  async onUnsendMessage(
+    @MessageBody() chatMessageId: string,
+    @ConnectedSocket() client: AuthSocket,
+  ) {
+    const unsendMessage = await this.chatMessageService.unsendMessage(
+      chatMessageId,
+      client.user,
+    );
 
-      if (client) {
-        client.broadcast
-          .to(unsendMessage.group.id)
-          .emit('unsendMessageReceived', {
-            unsendMessage,
-          });
-      }
+    if (unsendMessage) {
+      client.broadcast.to(unsendMessage.group.id).emit('messageUnsent', {
+        unsendMessage,
+      });
+    }
+  }
+
+  @SubscribeMessage('onDeleteMessage')
+  async onDeleteMessage(
+    @MessageBody() chatMessageId: string,
+    @ConnectedSocket() client: AuthSocket,
+  ) {
+    const deletedMessage = await this.chatMessageService.remove(
+      chatMessageId,
+      client.user,
+    );
+
+    if (deletedMessage) {
+      client.emit('messageDeleted', {
+        deletedMessage,
+      });
     }
   }
 }
