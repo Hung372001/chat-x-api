@@ -5,6 +5,7 @@ import { User } from '../../user/entities/user.entity';
 import { ChatMessage } from '../../chat-message/entities/chat-message.entity';
 import { GroupChatGatewayService } from './group-chat.gateway.service';
 import { SendMessageDto } from '../../chat-message/dto/send-message.dto';
+import { GroupChat } from '../../group-chat/entities/group-chat.entity';
 
 @Injectable()
 export class ChatMessageGatewayService {
@@ -15,11 +16,13 @@ export class ChatMessageGatewayService {
     private groupChatService: GroupChatGatewayService,
   ) {}
 
-  async sendMessage(dto: SendMessageDto, sender: User) {
+  async sendMessage(dto: SendMessageDto, sender: User, groupChat?: GroupChat) {
     try {
-      const groupChat = await this.groupChatService.findOne({
-        id: dto.groupId,
-      });
+      if (groupChat) {
+        groupChat = await this.groupChatService.findOne({
+          id: dto.groupId,
+        });
+      }
 
       if (!groupChat) {
         throw { message: 'Không tìm thấy nhóm chat.' };
