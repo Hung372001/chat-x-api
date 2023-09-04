@@ -48,12 +48,25 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       isGetAll = false,
     } = query;
 
+    const groupChatIds = await this.groupChatRepo
+      .createQueryBuilder('group_chat')
+      .select('group_chat.id')
+      .leftJoin('group_chat.members', 'user')
+      .where('group_chat.type = :type', { type: EGroupChatType.DOU })
+      .addGroupBy('group_chat.id')
+      .having(`array_agg(user.id) @> :userIds::uuid[]`, {
+        userIds: [currentUser.id],
+      })
+      .getMany();
+
     const queryBuilder = this.groupChatRepo
       .createQueryBuilder('group_chat')
       .leftJoinAndSelect('group_chat.members', 'user')
       .leftJoinAndSelect('user.profile', 'profile')
       .leftJoinAndSelect('group_chat.latestMessage', 'chat_message')
-      .where('user.id = :userId', { userId: currentUser.id });
+      .where('group_chat.id In(:...groupChatIds)', {
+        groupChatIds: groupChatIds.map((x) => x.id),
+      });
 
     if (keyword) {
       if (searchAndBy) {
