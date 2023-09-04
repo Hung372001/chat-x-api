@@ -22,10 +22,24 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
     super(chatMessageRepo);
   }
 
-  async findAllForGroupChat(groupChatId: string, query: FilterDto) {
+  async findAllForGroupChat(
+    groupChatId: string,
+    contactUserId: string,
+    query: FilterDto,
+  ) {
     const currentUser = this.request.user as User;
 
-    const groupChat = await this.groupChatService.findOne({ id: groupChatId });
+    let groupChat = null;
+    if (groupChatId) {
+      groupChat = await this.groupChatService.findOne({ id: groupChatId });
+    }
+
+    if (contactUserId) {
+      groupChat = await this.groupChatService.getGroupChatDou([
+        currentUser.id,
+        contactUserId,
+      ]);
+    }
 
     if (!groupChat || !groupChat.members.some((x) => x.id === currentUser.id)) {
       throw { message: 'Không tìm thấy nhóm chat.' };
@@ -50,7 +64,7 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       .leftJoin('chat_message.group', 'group_chat')
       .leftJoinAndSelect('chat_message.sender', 'user')
       .leftJoinAndSelect('user.profile', 'profile')
-      .where('group_chat.id = :groupChatId', { groupChatId });
+      .where('group_chat.id = :groupChatId', { groupChatId: groupChat.id });
 
     if (keyword) {
       if (searchAndBy) {

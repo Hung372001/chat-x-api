@@ -26,12 +26,21 @@ export class ChatMessageController {
     private readonly chatMessageService: ChatMessageService,
     private readonly requestService: ChatMessageRequestService,
   ) {}
+
   @Get('group-chat/:groupChatId')
-  findAll(
+  findAllForGroupChat(
     @Param('groupChatId') groupChatId: string,
     @Query() query: FilterDto,
   ) {
-    return this.requestService.findAllForGroupChat(groupChatId, query);
+    return this.requestService.findAllForGroupChat(groupChatId, null, query);
+  }
+
+  @Get('contact/:contactUserId')
+  findAllForContact(
+    @Param('contactUserId') contactUserId: string,
+    @Query() query: FilterDto,
+  ) {
+    return this.requestService.findAllForGroupChat(null, contactUserId, query);
   }
 
   @Get(':id')
