@@ -18,9 +18,9 @@ import { GatewaySessionManager } from './gateway.session';
 import { AuthSocket } from './interfaces/auth.interface';
 import { GroupChat } from '../group-chat/entities/group-chat.entity';
 import { User } from '../user/entities/user.entity';
-import { ChatMessage } from '../chat-message/entities/chat-message.entity';
 import { SendMessageDto } from '../chat-message/dto/send-message.dto';
 import { ChatMessageGatewayService } from './services/chat-message.request.service';
+import { SendConversationMessageDto } from '../chat-message/dto/send-conversation-message.dto';
 
 @WebSocketGateway({
   namespace: 'socket/chats',
@@ -174,6 +174,30 @@ export class AppGateway
       client.broadcast.to(newMessage.group.id).emit('newMessageReceived', {
         newMessage,
       });
+    }
+  }
+
+  @SubscribeMessage('onSendConversationMessage')
+  async onSendConversationMessage(
+    @MessageBody() data: SendConversationMessageDto,
+    @ConnectedSocket() client: AuthSocket,
+  ) {
+    const groupChatDou = await this.groupChatService.getGroupChatDou(
+      [data.receiverId, client.user.id],
+      this,
+    );
+
+    if (groupChatDou) {
+      const newMessage = await this.chatMessageService.sendMessage(
+        { ...data, groupId: groupChatDou.id },
+        client.user,
+        groupChatDou,
+      );
+      if (newMessage) {
+        client.broadcast.to(newMessage.group.id).emit('newMessageReceived', {
+          newMessage,
+        });
+      }
     }
   }
 
