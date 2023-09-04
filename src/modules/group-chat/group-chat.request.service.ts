@@ -240,9 +240,9 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
 
       const foundGroupChat = await this.groupChatRepo.findOne({
         where: { id },
-        relations: ['admins'],
+        relations: ['admins', 'members'],
       });
-      if (foundGroupChat) {
+      if (!foundGroupChat) {
         throw { message: 'Không tìm thấy nhóm chat.' };
       }
 
