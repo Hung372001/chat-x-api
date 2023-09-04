@@ -1,0 +1,116 @@
+import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from '../../user/entities/user.entity';
+import { ChatMessage } from '../../chat-message/entities/chat-message.entity';
+import { GroupChatGatewayService } from './group-chat.gateway.service';
+import { SendMessageDto } from '../../chat-message/dto/send-message.dto';
+
+@Injectable()
+export class ChatMessageGatewayService {
+  constructor(
+    @InjectRepository(ChatMessage)
+    private chatMessageRepo: Repository<ChatMessage>,
+    @Inject(GroupChatGatewayService)
+    private groupChatService: GroupChatGatewayService,
+  ) {}
+
+  async sendMessage(dto: SendMessageDto, sender: User) {
+    try {
+      const groupChat = await this.groupChatService.findOne({
+        id: dto.groupId,
+      });
+
+      if (!groupChat) {
+        throw { message: 'Không tìm thấy nhóm chat.' };
+      }
+
+      if (!groupChat.members.some((x) => x.id === sender.id)) {
+        throw {
+          message: 'Phải là thành viên nhóm chat mới được gửi tin nhắn.',
+        };
+      }
+
+      const newMessage = await this.chatMessageRepo.create({
+        message: dto.message,
+        imageUrls: dto.imageUrls,
+        documentUrls: dto.documentUrls,
+        sender,
+        group: groupChat,
+      } as ChatMessage);
+
+      await this.chatMessageRepo.save(newMessage);
+
+      // Save latest message for group
+      groupChat.latestMessage = newMessage;
+      await this.groupChatService.update(groupChat.id, {
+        latestMessage: groupChat.latestMessage,
+      });
+
+      return newMessage;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async unsendMessage(chatMessageId: string, sender: User) {
+    try {
+      const chatMessage = await this.chatMessageRepo.findOne({
+        where: {
+          id: chatMessageId,
+        },
+        relations: ['sender', 'group'],
+      });
+
+      if (!chatMessage) {
+        throw { message: 'Không tìm thấy tin nhắn.' };
+      }
+
+      if (sender.id !== chatMessage.sender.id) {
+        throw { message: 'Tin nhắn chỉ được thu hồi bởi người gửi.' };
+      }
+
+      chatMessage.unsend = true;
+      this.chatMessageRepo.save(chatMessage);
+
+      return chatMessage;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async remove(chatMessageId: string, deleteBy: User) {
+    try {
+      const chatMessage = await this.chatMessageRepo.findOne({
+        where: {
+          id: chatMessageId,
+        },
+        relations: ['sender', 'group', 'group.members', 'deleteBy'],
+      });
+
+      if (!chatMessage) {
+        throw { message: 'Không tìm thấy tin nhắn.' };
+      }
+
+      if (!chatMessage.group.members.some((x) => x.id === deleteBy.id)) {
+        throw {
+          message: 'Bạn không phải là thành viên nhóm chat.',
+        };
+      }
+
+      if (chatMessage.deletesBy.some((x) => x.id === deleteBy.id)) {
+        throw {
+          message: 'Tin nhắn này đã được xoá.',
+        };
+      }
+
+      chatMessage.deletesBy.push(deleteBy);
+
+      return this.chatMessageRepo.update(chatMessage.id, {
+        deletesBy: chatMessage.deletesBy,
+      });
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+}

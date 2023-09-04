@@ -1,10 +1,4 @@
-import {
-  HttpException,
-  HttpStatus,
-  Inject,
-  Injectable,
-  Scope,
-} from '@nestjs/common';
+import { Inject, Injectable, Scope } from '@nestjs/common';
 import { ChatMessage } from './entities/chat-message.entity';
 import { BaseService } from '../../common/services/base.service';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -15,7 +9,6 @@ import { REQUEST } from '@nestjs/core';
 import { Request } from 'express';
 import { GroupChatService } from '../group-chat/group-chat.service';
 import { AppGateway } from '../gateway/app.gateway';
-import { SendNewMessageDto } from './dto/send-new-message.dto';
 
 @Injectable({ scope: Scope.REQUEST })
 export class ChatMessageRequestService extends BaseService<ChatMessage> {
@@ -146,88 +139,5 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       items,
       total,
     };
-  }
-
-  async sendNewMessage(dto: SendNewMessageDto) {
-    try {
-      const currentUser = this.request.user as User;
-
-      const groupChat = await this.groupChatService.findOneBy({
-        id: dto.groupId,
-      });
-
-      if (!groupChat) {
-        throw { message: 'Không tìm thấy nhóm chat.' };
-      }
-
-      const newMessage = await this.chatMessageRepo.create({
-        message: dto.message,
-        imageUrls: dto.imageUrls,
-        documentUrls: dto.documentUrls,
-        sender: currentUser,
-        group: groupChat,
-      } as ChatMessage);
-
-      this.chatMessageRepo.save(newMessage);
-
-      // Save latest message for group
-      groupChat.latestMessage = newMessage;
-      await this.groupChatService.update(groupChat.id, groupChat);
-
-      // Call socket to group
-      await this.gateway.createNewMessage(newMessage);
-
-      return newMessage;
-    } catch (e: any) {
-      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
-    }
-  }
-
-  async unsendMessage(chatMessageId) {
-    try {
-      const currentUser = this.request.user as User;
-
-      const chatMessage = await this.chatMessageRepo.findOne({
-        where: {
-          id: chatMessageId,
-        },
-        relations: ['sender', 'group'],
-      });
-
-      if (!chatMessage || currentUser.id !== chatMessage.sender.id) {
-        throw { message: 'Không tìm thấy nhóm chat.' };
-      }
-
-      chatMessage.unsend = true;
-      this.chatMessageRepo.save(chatMessage);
-
-      // Call socket to group
-      await this.gateway.unsendMessage(chatMessage);
-
-      return chatMessage;
-    } catch (e: any) {
-      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
-    }
-  }
-
-  override async remove(chatMessageId: string) {
-    try {
-      const currentUser = this.request.user as User;
-
-      const chatMessage = await this.chatMessageRepo.findOne({
-        where: {
-          id: chatMessageId,
-        },
-        relations: ['sender', 'group'],
-      });
-
-      if (!chatMessage || currentUser.id !== chatMessage.sender.id) {
-        throw { message: 'Không tìm thấy nhóm chat.' };
-      }
-
-      return this.chatMessageRepo.softDelete(chatMessage.id);
-    } catch (e: any) {
-      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
-    }
   }
 }

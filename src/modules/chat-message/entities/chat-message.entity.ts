@@ -29,12 +29,13 @@ export class ChatMessage extends BaseEntity {
   @JoinTable()
   group: GroupChat;
 
-  @Column({ default: false })
-  isRead: boolean;
+  @ManyToMany(() => User)
+  @JoinTable()
+  readsBy: User[];
 
   @ManyToMany(() => User)
   @JoinTable()
-  readBy: User[];
+  deletesBy: User[];
 
   @Column({ default: false })
   pinned: boolean;

@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import { IsArray, IsNotEmpty, IsOptional, IsUrl } from 'class-validator';
 
-export class SendNewMessageDto {
+export class SendMessageDto {
   @ApiProperty({ description: 'Group chat id get from get list api' })
   @IsNotEmpty()
   @Transform((raw) => raw.value.trim())
