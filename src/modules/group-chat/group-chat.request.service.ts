@@ -52,7 +52,6 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       .createQueryBuilder('group_chat')
       .select('group_chat.id')
       .leftJoin('group_chat.members', 'user')
-      .where('group_chat.type = :type', { type: EGroupChatType.DOU })
       .addGroupBy('group_chat.id')
       .having(`array_agg(user.id) @> :userIds::uuid[]`, {
         userIds: [currentUser.id],
