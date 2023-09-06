@@ -33,6 +33,10 @@ export class GroupChat extends BaseEntity {
   @JoinTable()
   admins: User[];
 
+  @OneToOne(() => ChatMessage, (message) => message.id)
+  @JoinColumn()
+  owner: User;
+
   @Column({
     type: 'enum',
     enum: EGroupChatType,

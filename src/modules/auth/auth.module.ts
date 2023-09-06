@@ -8,6 +8,7 @@ import { CustomeCacheModule } from '../cache/cache.module';
 import { ConfigModule } from '@nestjs/config';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAccessTokenStrategy } from './strategies/jwt-access-token.strategy';
+import { AuthRequestService } from './auth.request.service';
 
 @Module({
   imports: [
@@ -20,10 +21,11 @@ import { JwtAccessTokenStrategy } from './strategies/jwt-access-token.strategy';
   controllers: [AuthController],
   providers: [
     AuthService,
+    AuthRequestService,
     JwtStrategy,
     JwtAccessTokenStrategy,
     // JwtRefreshTokenStrategy,
   ],
-  exports: [AuthService],
+  exports: [AuthRequestService, AuthService],
 })
 export class AuthModule {}

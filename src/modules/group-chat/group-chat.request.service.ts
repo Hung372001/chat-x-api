@@ -20,6 +20,7 @@ import { FilterDto } from '../../common/dto/filter.dto';
 import { REQUEST } from '@nestjs/core';
 import { Request } from 'express';
 import { AppGateway } from '../gateway/app.gateway';
+import { RenameGroupChatDto } from './dto/rename-group-chat.dto';
 
 @Injectable({ scope: Scope.REQUEST })
 export class GroupChatRequestService extends BaseService<GroupChat> {
@@ -288,12 +289,84 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     }
   }
 
+  async addAdmin(id: string, userId: string) {
+    try {
+      const currentUser = this.request.user as User;
+
+      const newAdmin = await this.userService.findOne({ id: userId });
+      if (!newAdmin) {
+        throw { message: 'Không tìm thấy quản trị viên này.' };
+      }
+
+      const foundGroupChat = await this.groupChatRepo.findOne({
+        where: { id, type: EGroupChatType.GROUP },
+        relations: ['admins', 'members', 'owner'],
+      });
+
+      if (!foundGroupChat) {
+        throw { message: 'Không tìm thấy nhóm chat.' };
+      }
+
+      if (foundGroupChat.owner?.id !== currentUser.id) {
+        throw { message: 'Chủ nhóm mới có quyền thêm quản trị viên.' };
+      }
+
+      if (foundGroupChat.admins.some((x) => x.id === newAdmin.id)) {
+        throw { message: 'Tài khoản này đã là quản trị viên của nhóm.' };
+      }
+
+      foundGroupChat.admins.push(newAdmin);
+      const res = await this.groupChatRepo.save({
+        ...foundGroupChat,
+        admins: foundGroupChat.admins,
+      });
+
+      // Call socket to create group chat
+      await this.gateway.addNewGroupAdmin(foundGroupChat, newAdmin);
+
+      return res;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async rename(id: string, dto: RenameGroupChatDto) {
+    try {
+      const currentUser = this.request.user as User;
+
+      const foundGroupChat = await this.groupChatRepo.findOne({
+        where: { id, type: EGroupChatType.GROUP },
+        relations: ['admins'],
+      });
+
+      if (foundGroupChat) {
+        throw { message: 'Không tìm thấy nhóm chat.' };
+      }
+
+      if (!foundGroupChat.admins.some((x) => x.id === currentUser.id)) {
+        throw { message: 'Bạn không có quyền đổi tên nhóm.' };
+      }
+
+      foundGroupChat.name = dto.newName;
+      await this.groupChatRepo.update(foundGroupChat.id, {
+        name: foundGroupChat.name,
+      });
+
+      // Call socket to create group chat
+      await this.gateway.renameGroupChat(foundGroupChat, dto.newName);
+
+      return foundGroupChat;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
   async removeMember(id: string, dto: RemoveMemberDto) {
     try {
       const currentUser = this.request.user as User;
 
       const foundGroupChat = await this.groupChatRepo.findOne({
-        where: { id },
+        where: { id, type: EGroupChatType.GROUP },
         relations: ['admins'],
       });
 

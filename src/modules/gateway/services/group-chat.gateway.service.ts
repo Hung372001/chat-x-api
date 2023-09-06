@@ -23,7 +23,7 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
   ): Promise<GroupChat | null> {
     return this.groupChatRepo.findOne({
       where: query,
-      relations: ['members'],
+      relations: ['members', 'admins'],
     });
   }
 
@@ -86,7 +86,7 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
           if (joinGroup) {
             await client.join(group.id);
           }
-          client.emit('groupMemberOnline', {
+          client.broadcast.to(group.id).emit('someoneOnline', {
             groupChat: group,
             member,
           });
@@ -109,7 +109,7 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
           if (leaveGroup) {
             await client.leave(group.id);
           }
-          client.emit('groupMemberOffline', {
+          client.broadcast.to(group.id).emit('someoneOffline', {
             groupChat: group,
             member,
           });

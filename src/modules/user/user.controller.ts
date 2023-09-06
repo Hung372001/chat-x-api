@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -17,6 +18,7 @@ import { JwtAccessTokenGuard } from '../auth/guards/jwt-access-token.guard';
 import { AddFriendsDto } from './dto/add-friends.dto';
 import { UserRequestService } from './user.request.service';
 import { GetAllUserDto } from './dto/get-all-user.dto';
+import { EFriendRequestStatus } from './dto/friend-request.enum';
 
 @ApiTags('user')
 @Controller('user')
@@ -46,7 +48,23 @@ export class UserController {
 
   @Post('add-friends')
   addFriends(@Body() addFriendsDto: AddFriendsDto) {
-    return this.userRequestService.addFriends(addFriendsDto);
+    return this.userRequestService.addFriendRequests(addFriendsDto);
+  }
+
+  @Patch('friend-request/accept/:friendId')
+  acceptFriendRequest(@Param('friendId') friendId: string) {
+    return this.userRequestService.updateFriendRequest(
+      friendId,
+      EFriendRequestStatus.ACCEPTED,
+    );
+  }
+
+  @Patch('friend-request/reject/:friendId')
+  rejectFriendRequest(@Param('friendId') friendId: string) {
+    return this.userRequestService.updateFriendRequest(
+      friendId,
+      EFriendRequestStatus.REJECTED,
+    );
   }
 
   @Post('remove-friend/:friendId')
