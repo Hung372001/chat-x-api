@@ -5,6 +5,8 @@ import {
   OneToMany,
   ManyToMany,
   ManyToOne,
+  OneToOne,
+  JoinColumn,
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { GroupChat } from '../../group-chat/entities/group-chat.entity';
@@ -38,8 +40,16 @@ export class ChatMessage extends BaseEntity {
   deletesBy: User[];
 
   @Column({ default: false })
-  pinned: boolean;
+  unsent: boolean;
+
+  @OneToOne(() => User)
+  @JoinColumn()
+  unsentBy: User;
 
   @Column({ default: false })
-  unsend: boolean;
+  pinned: boolean;
+
+  @OneToOne(() => User)
+  @JoinColumn()
+  pinnedBy: User;
 }

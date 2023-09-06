@@ -1,13 +1,20 @@
-import { Body, Controller, Post } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Post, Put, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { SignUpDto } from './dto/sign-up.dto';
+import { AuthRequestService } from './auth.request.service';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { PermissionGuard } from '../permission/permissison.guard';
+import { JwtAccessTokenGuard } from './guards/jwt-access-token.guard';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly requestService: AuthRequestService,
+  ) {}
 
   @Post('login')
   login(@Body() dto: LoginDto) {
@@ -17,5 +24,13 @@ export class AuthController {
   @Post('sign-up')
   signUp(@Body() dto: SignUpDto) {
     return this.authService.signUp(dto);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(PermissionGuard)
+  @UseGuards(JwtAccessTokenGuard)
+  @Put('change-password')
+  changePassword(@Body() dto: ChangePasswordDto) {
+    return this.requestService.changePassword(dto);
   }
 }

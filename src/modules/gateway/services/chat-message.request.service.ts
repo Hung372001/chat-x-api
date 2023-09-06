@@ -28,7 +28,10 @@ export class ChatMessageGatewayService {
         throw { message: 'Không tìm thấy nhóm chat.' };
       }
 
-      if (!groupChat.members.some((x) => x.id === sender.id)) {
+      if (
+        !groupChat.members.some((x) => x.id === sender.id) &&
+        !groupChat.admins.some((x) => x.id === sender.id)
+      ) {
         throw {
           message: 'Phải là thành viên nhóm chat mới được gửi tin nhắn.',
         };
@@ -56,24 +59,67 @@ export class ChatMessageGatewayService {
     }
   }
 
-  async unsendMessage(chatMessageId: string, sender: User) {
+  async togglePinMessage(id: string, user: User, pinMessage: boolean) {
+    try {
+      const message = await this.chatMessageRepo.findOne({
+        where: { id },
+        relations: ['group', 'group.admins'],
+      });
+
+      if (!message) {
+        throw { message: 'Không tìm thấy tin nhắn.' };
+      }
+
+      if (message.pinned && pinMessage) {
+        throw { message: 'Tin nhắn đã được ghim.' };
+      }
+
+      if (!message.pinned && !pinMessage) {
+        throw { message: 'Tin nhắn đã được bỏ ghim.' };
+      }
+
+      if (!message.group.admins.some((x) => x.id === user.id)) {
+        throw {
+          message: `Quản trị viên mới có quyền ${
+            pinMessage ? 'ghim' : 'bỏ ghim'
+          } tin nhắn`,
+        };
+      }
+
+      message.pinned = pinMessage;
+      await this.chatMessageRepo.update(id, { pinned: pinMessage });
+
+      return message;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async unsendMessage(chatMessageId: string, unsender: User) {
     try {
       const chatMessage = await this.chatMessageRepo.findOne({
         where: {
           id: chatMessageId,
         },
-        relations: ['sender', 'group'],
+        relations: ['sender', 'group', 'group.admins'],
       });
 
       if (!chatMessage) {
         throw { message: 'Không tìm thấy tin nhắn.' };
       }
 
-      if (sender.id !== chatMessage.sender.id) {
-        throw { message: 'Tin nhắn chỉ được thu hồi bởi người gửi.' };
+      if (
+        !chatMessage.group.admins.some((x) => x.id === unsender.id) &&
+        unsender.id !== chatMessage.sender.id
+      ) {
+        throw {
+          message:
+            'Chỉ có quản trị viên và người gửi mới có quyền thu hồi tin nhắn.',
+        };
       }
 
-      chatMessage.unsend = true;
+      chatMessage.unsent = true;
+      chatMessage.unsentBy = unsender;
       this.chatMessageRepo.save(chatMessage);
 
       return chatMessage;

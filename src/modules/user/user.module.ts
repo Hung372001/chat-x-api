@@ -6,9 +6,13 @@ import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { Profile } from '../profile/entities/profile.entity';
 import { UserRequestService } from './user.request.service';
+import { FriendRequest } from './entities/friend-request.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Profile]), RoleModule],
+  imports: [
+    TypeOrmModule.forFeature([User, Profile, FriendRequest]),
+    RoleModule,
+  ],
   controllers: [UserController],
   providers: [UserService, UserRequestService],
   exports: [UserService, UserRequestService],

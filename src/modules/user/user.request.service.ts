@@ -15,6 +15,8 @@ import { differenceBy } from 'lodash';
 import { REQUEST } from '@nestjs/core';
 import { FilterDto } from '../../common/dto/filter.dto';
 import { GetAllUserDto } from './dto/get-all-user.dto';
+import { FriendRequest } from './entities/friend-request.entity';
+import { EFriendRequestStatus } from './dto/friend-request.enum';
 
 @Injectable({ scope: Scope.REQUEST })
 export class UserRequestService extends BaseService<User> {
@@ -22,6 +24,8 @@ export class UserRequestService extends BaseService<User> {
     @Inject(REQUEST) private request: Request,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(FriendRequest)
+    private friendRequestRepository: Repository<FriendRequest>,
   ) {
     super(userRepository);
   }
@@ -162,7 +166,7 @@ export class UserRequestService extends BaseService<User> {
     });
   }
 
-  async addFriends(dto: AddFriendsDto) {
+  async addFriendRequests(dto: AddFriendsDto) {
     try {
       const currentUser = await this.findOneWithFriends();
 
@@ -185,22 +189,75 @@ export class UserRequestService extends BaseService<User> {
         'id',
       );
       if (newFriends?.length > 0) {
-        // Save friend list for current user
-        currentUser.friends.push(...newFriends);
-        await this.userRepository.save(currentUser);
-
-        // Save friend list for friends
+        // Save friend requests
         await Promise.all(
-          newFriends.map(async (user) => {
-            await this.userRepository.save({
-              ...user,
-              friends: [...user.friends, currentUser],
+          newFriends.map(async (friend) => {
+            await this.friendRequestRepository.save({
+              fromUser: currentUser,
+              toUser: friend,
             });
           }),
         );
       }
 
-      return currentUser;
+      return newFriends;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async updateFriendRequest(
+    friendId: string,
+    status = EFriendRequestStatus.ACCEPTED,
+  ) {
+    try {
+      const currentUser = this.request.user as User;
+
+      const friend = await this.userRepository.findOne({
+        where: { id: friendId },
+        relations: ['friends'],
+      });
+
+      if (!friend) {
+        throw { message: 'Không tìm thấy tài khoản kết bạn.' };
+      }
+
+      const friendRequest = await this.friendRequestRepository
+        .createQueryBuilder('friend_request')
+        .where('friend_request.fromUserId = :fromUserId', {
+          fromUserId: currentUser.id,
+        })
+        .andWhere('friend_request.toUserId = :toUserId', {
+          toUserId: friendId,
+        })
+        .andWhere('friend_request.status = :status', {
+          status: EFriendRequestStatus.ACCEPTED,
+        })
+        .getOne();
+
+      if (!friendRequest) {
+        throw { message: 'Không tìm thấy lời mời kết bạn.' };
+      }
+
+      if (currentUser.friends.some((x) => x.id === friendId)) {
+        throw { message: 'Tài khoản này đã là bạn bè.' };
+      }
+
+      await this.friendRequestRepository.update(friendRequest.id, { status });
+
+      if (status === EFriendRequestStatus.ACCEPTED) {
+        // Save friend list for current user
+        currentUser.friends.push(friend);
+        await this.userRepository.save(currentUser);
+
+        // Save friend list for friends
+        await this.userRepository.save({
+          ...friend,
+          friends: [...friend.friends, currentUser],
+        });
+      }
+
+      return;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }

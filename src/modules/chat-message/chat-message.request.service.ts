@@ -1,4 +1,10 @@
-import { Inject, Injectable, Scope } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  Scope,
+} from '@nestjs/common';
 import { ChatMessage } from './entities/chat-message.entity';
 import { BaseService } from '../../common/services/base.service';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -64,7 +70,10 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       .leftJoin('chat_message.group', 'group_chat')
       .leftJoinAndSelect('chat_message.sender', 'user')
       .leftJoinAndSelect('user.profile', 'profile')
-      .where('group_chat.id = :groupChatId', { groupChatId: groupChat.id });
+      .leftJoin('chat_message.deletesBy', 'user as delMsgUsers')
+      .where('group_chat.id = :groupChatId', { groupChatId: groupChat.id })
+      .andWhere('user as delMsgUsers.id != :userId', { userId: currentUser.id })
+      .andWhere('chat_message.pinned = false');
 
     if (keyword) {
       if (searchAndBy) {
@@ -149,8 +158,21 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       .skip(isGetAll ? null : (page - 1) * limit)
       .getManyAndCount();
 
+    const pinnedMessages = await this.chatMessageRepo
+      .createQueryBuilder('chat_message')
+      .leftJoin('chat_message.group', 'group_chat')
+      .leftJoinAndSelect('chat_message.sender', 'user')
+      .leftJoinAndSelect('user.profile', 'profile')
+      .leftJoinAndSelect('chat_message.pinnedBy', 'user as pinner')
+      .leftJoinAndSelect('user as pinner.profile', 'profile as pinnerProfile')
+      .where('group_chat.id = :groupChatId', { groupChatId: groupChat.id })
+      .andWhere('chat_message.pinned = true')
+      .orderBy(`chat_message.updated_at`, 'DESC')
+      .getMany();
+
     return {
       items,
+      pinnedMessages,
       total,
     };
   }

@@ -5,7 +5,6 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -17,13 +16,10 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAccessTokenGuard } from '../auth/guards/jwt-access-token.guard';
 import { PermissionGuard } from '../permission/permissison.guard';
 import { GroupChatRequestService } from './group-chat.request.service';
-import { Roles } from '../../decorators/roles.decorator';
-import { ERole } from '../../common/enums/role.enum';
 
 @Controller('group-chat')
 @ApiTags('group-chat')
 @ApiBearerAuth()
-@Roles(ERole.USER)
 @UseGuards(PermissionGuard)
 @UseGuards(JwtAccessTokenGuard)
 export class GroupChatController {
@@ -47,6 +43,11 @@ export class GroupChatController {
   @Patch('add-members/:id')
   addMember(@Param('id') roomId: string, @Body() dto: AddMemberDto) {
     return this.requestService.addMember(roomId, dto);
+  }
+
+  @Patch('add-admin/:id/:userId')
+  addAdmin(@Param('id') groupId: string, @Param('userId') userId: string) {
+    return this.requestService.addAdmin(groupId, userId);
   }
 
   @Patch('remove-members/:id')

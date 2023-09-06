@@ -21,6 +21,7 @@ import { User } from '../user/entities/user.entity';
 import { SendMessageDto } from '../chat-message/dto/send-message.dto';
 import { ChatMessageGatewayService } from './services/chat-message.request.service';
 import { SendConversationMessageDto } from '../chat-message/dto/send-conversation-message.dto';
+import { ChatMessage } from '../chat-message/entities/chat-message.entity';
 
 @WebSocketGateway({
   namespace: 'socket/chats',
@@ -105,7 +106,7 @@ export class AppGateway
   ) {
     const groupChat = await this.groupChatService.findOne({ id: groupId });
     if (groupChat && groupChat.members.some((x) => x.id === client.user.id)) {
-      client.broadcast.to(groupId).emit('onTypingStart', {
+      client.broadcast.to(groupId).emit('someoneIsTyping', {
         typingMember: client.user,
         groupChat: groupChat,
       });
@@ -119,7 +120,7 @@ export class AppGateway
   ) {
     const groupChat = await this.groupChatService.findOne({ id: groupId });
     if (groupChat && groupChat.members.some((x) => x.id === client.user.id)) {
-      client.broadcast.to(groupId).emit('onTypingStop', {
+      client.broadcast.to(groupId).emit('someoneStopTyping', {
         typingMember: client.user,
         groupChat: groupChat,
       });
@@ -156,6 +157,46 @@ export class AppGateway
       this.server.to(groupChat.id).emit('newMembersJoined', {
         groupChat,
         newMembers,
+      });
+    }
+  }
+
+  // Call socket after add new admin group chat successfully
+  async addNewGroupAdmin(groupChat: GroupChat, newAdmin: User) {
+    if (groupChat) {
+      this.server.to(groupChat.id).emit('newAdminGroupChatAdded', {
+        groupChat,
+        newAdmin,
+      });
+    }
+  }
+
+  // Call socket after rename group chat successfully
+  async renameGroupChat(groupChat: GroupChat, newName: string) {
+    if (groupChat) {
+      this.server.to(groupChat.id).emit('groupChatRenamed', {
+        groupChat,
+        newName,
+      });
+    }
+  }
+
+  // Call socket after rename group chat successfully
+  async pinChatMessage(groupChat: GroupChat, pinnedMessage: ChatMessage) {
+    if (groupChat) {
+      this.server.to(groupChat.id).emit('messagePinned', {
+        groupChat,
+        pinnedMessage,
+      });
+    }
+  }
+
+  // Call socket after rename group chat successfully
+  async unpinChatMessage(groupChat: GroupChat, unpinnedMessage: ChatMessage) {
+    if (groupChat) {
+      this.server.to(groupChat.id).emit('messageUnpinned', {
+        groupChat,
+        unpinnedMessage,
       });
     }
   }
@@ -201,20 +242,70 @@ export class AppGateway
     }
   }
 
+  @SubscribeMessage('onPinMessage')
+  async onPinMessage(
+    @MessageBody() chatMessageId: string,
+    @ConnectedSocket() client: AuthSocket,
+  ) {
+    try {
+      const pinnedMessage = await this.chatMessageService.togglePinMessage(
+        chatMessageId,
+        client.user,
+        true,
+      );
+
+      if (pinnedMessage) {
+        client.broadcast.to(pinnedMessage.group.id).emit('messagePinned', {
+          pinnedMessage,
+          pinnedUser: client.user,
+        });
+      }
+    } catch (e: any) {
+      client.emit('chatError', { errorMsg: e.message });
+    }
+  }
+
+  @SubscribeMessage('onUnpinMessage')
+  async onUnpinMessage(
+    @MessageBody() chatMessageId: string,
+    @ConnectedSocket() client: AuthSocket,
+  ) {
+    try {
+      const unPinnedMessage = await this.chatMessageService.togglePinMessage(
+        chatMessageId,
+        client.user,
+        false,
+      );
+
+      if (unPinnedMessage) {
+        client.broadcast.to(unPinnedMessage.group.id).emit('messageUnpinned', {
+          unPinnedMessage,
+          unpinnedUser: client.user,
+        });
+      }
+    } catch (e: any) {
+      client.emit('chatError', { errorMsg: e.message });
+    }
+  }
+
   @SubscribeMessage('onUnsendMessage')
   async onUnsendMessage(
     @MessageBody() chatMessageId: string,
     @ConnectedSocket() client: AuthSocket,
   ) {
-    const unsendMessage = await this.chatMessageService.unsendMessage(
-      chatMessageId,
-      client.user,
-    );
+    try {
+      const unsendMessage = await this.chatMessageService.unsendMessage(
+        chatMessageId,
+        client.user,
+      );
 
-    if (unsendMessage) {
-      client.broadcast.to(unsendMessage.group.id).emit('messageUnsent', {
-        unsendMessage,
-      });
+      if (unsendMessage) {
+        client.broadcast.to(unsendMessage.group.id).emit('messageUnsent', {
+          unsendMessage,
+        });
+      }
+    } catch (e: any) {
+      client.emit('chatError', { errorMsg: e.message });
     }
   }
 
@@ -223,15 +314,19 @@ export class AppGateway
     @MessageBody() chatMessageId: string,
     @ConnectedSocket() client: AuthSocket,
   ) {
-    const deletedMessage = await this.chatMessageService.remove(
-      chatMessageId,
-      client.user,
-    );
+    try {
+      const deletedMessage = await this.chatMessageService.remove(
+        chatMessageId,
+        client.user,
+      );
 
-    if (deletedMessage) {
-      client.emit('messageDeleted', {
-        deletedMessage,
-      });
+      if (deletedMessage) {
+        client.emit('messageDeleted', {
+          deletedMessage,
+        });
+      }
+    } catch (e: any) {
+      client.emit('chatError', { errorMsg: e.message });
     }
   }
 }
