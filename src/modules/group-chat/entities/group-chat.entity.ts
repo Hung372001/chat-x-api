@@ -11,6 +11,7 @@ import { User } from '../../user/entities/user.entity';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { ChatMessage } from '../../chat-message/entities/chat-message.entity';
 import { EGroupChatType } from '../dto/group-chat.enum';
+import { GroupChatSetting } from './group-chat-setting.entity';
 
 @Entity()
 export class GroupChat extends BaseEntity {
@@ -42,4 +43,7 @@ export class GroupChat extends BaseEntity {
     enum: EGroupChatType,
   })
   type: EGroupChatType;
+
+  @OneToMany(() => GroupChatSetting, (settings) => settings.groupChat)
+  settings: GroupChatSetting[];
 }

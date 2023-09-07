@@ -16,6 +16,7 @@ import { UploadFile } from '../../upload/entities/upload.entity';
 import { FCMToken } from '../../fcm-token/entities/fcm-token.entity';
 import { Notification } from '../../notification/entities/notification.entity';
 import { RollCall } from './roll-call.entity';
+import { GroupChatSetting } from '../../group-chat/entities/group-chat-setting.entity';
 
 @Entity()
 export class User extends BaseEntity {
@@ -62,4 +63,7 @@ export class User extends BaseEntity {
 
   @OneToMany(() => RollCall, () => (rollCalls) => rollCalls.user)
   rollCalls: RollCall[];
+
+  @OneToMany(() => GroupChatSetting, (settings) => settings.user)
+  groupChatSettings: GroupChatSetting[];
 }

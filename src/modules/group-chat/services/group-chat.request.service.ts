@@ -258,6 +258,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
           });
         }),
       );
+
       await this.groupSettingRepo.save(memberSettings);
 
       // Call socket to create group chat
