@@ -12,13 +12,13 @@ import {
 import { UserService } from './user.service';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PermissionGuard } from '../permission/permissison.guard';
-import { FilterDto } from '../../common/dto/filter.dto';
 import { DeleteResult } from 'typeorm';
 import { JwtAccessTokenGuard } from '../auth/guards/jwt-access-token.guard';
 import { AddFriendsDto } from './dto/add-friends.dto';
 import { UserRequestService } from './user.request.service';
 import { GetAllUserDto } from './dto/get-all-user.dto';
 import { EFriendRequestStatus } from './dto/friend-request.enum';
+import { GetAllRollCallDto } from './dto/get-all-roll-calls.dto';
 
 @ApiTags('user')
 @Controller('user')
@@ -44,6 +44,16 @@ export class UserController {
   @Get(':id')
   findById(@Param('id') id: string) {
     return this.userService.findById(id);
+  }
+
+  @Get('roll-call')
+  getAllRollCall(@Query() query: GetAllRollCallDto) {
+    return this.userRequestService.findAllRoleCalls(query);
+  }
+
+  @Patch('roll-call')
+  makeARollCall() {
+    return this.userRequestService.makeARollCall();
   }
 
   @Post('add-friends')

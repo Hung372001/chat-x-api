@@ -6,6 +6,7 @@ import { ChatMessage } from '../../chat-message/entities/chat-message.entity';
 import { GroupChatGatewayService } from './group-chat.gateway.service';
 import { SendMessageDto } from '../../chat-message/dto/send-message.dto';
 import { GroupChat } from '../../group-chat/entities/group-chat.entity';
+import { UserService } from '../../user/user.service';
 
 @Injectable()
 export class ChatMessageGatewayService {
@@ -14,6 +15,8 @@ export class ChatMessageGatewayService {
     private chatMessageRepo: Repository<ChatMessage>,
     @Inject(GroupChatGatewayService)
     private groupChatService: GroupChatGatewayService,
+    @Inject(UserService)
+    private userService: UserService,
   ) {}
 
   async sendMessage(dto: SendMessageDto, sender: User, groupChat?: GroupChat) {
@@ -37,12 +40,24 @@ export class ChatMessageGatewayService {
         };
       }
 
+      let nameCard = null;
+      if (dto.nameCardUserId) {
+        nameCard = await this.userService.findOne({ id: dto.nameCardUserId });
+
+        if (!nameCard) {
+          throw {
+            message: 'Không tìm thấy danh thiếp.',
+          };
+        }
+      }
+
       const newMessage = await this.chatMessageRepo.create({
         message: dto.message,
         imageUrls: dto.imageUrls,
         documentUrls: dto.documentUrls,
         sender,
         group: groupChat,
+        nameCard,
       } as ChatMessage);
 
       await this.chatMessageRepo.save(newMessage);

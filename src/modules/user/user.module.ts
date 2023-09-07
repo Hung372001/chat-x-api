@@ -7,10 +7,11 @@ import { UserService } from './user.service';
 import { Profile } from '../profile/entities/profile.entity';
 import { UserRequestService } from './user.request.service';
 import { FriendRequest } from './entities/friend-request.entity';
+import { RollCall } from './entities/roll-call.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Profile, FriendRequest]),
+    TypeOrmModule.forFeature([User, Profile, FriendRequest, RollCall]),
     RoleModule,
   ],
   controllers: [UserController],

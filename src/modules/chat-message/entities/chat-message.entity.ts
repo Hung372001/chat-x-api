@@ -2,7 +2,6 @@ import {
   Entity,
   Column,
   JoinTable,
-  OneToMany,
   ManyToMany,
   ManyToOne,
   OneToOne,
@@ -52,4 +51,8 @@ export class ChatMessage extends BaseEntity {
   @OneToOne(() => User)
   @JoinColumn()
   pinnedBy: User;
+
+  @OneToOne(() => User)
+  @JoinColumn()
+  nameCard: User;
 }

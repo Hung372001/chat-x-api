@@ -15,6 +15,7 @@ import { ChatMessage } from '../../chat-message/entities/chat-message.entity';
 import { UploadFile } from '../../upload/entities/upload.entity';
 import { FCMToken } from '../../fcm-token/entities/fcm-token.entity';
 import { Notification } from '../../notification/entities/notification.entity';
+import { RollCall } from './roll-call.entity';
 
 @Entity()
 export class User extends BaseEntity {
@@ -58,4 +59,7 @@ export class User extends BaseEntity {
 
   @OneToMany(() => Notification, () => (deviceTokens) => deviceTokens.user)
   notifications: Notification[];
+
+  @OneToMany(() => RollCall, () => (rollCalls) => rollCalls.user)
+  rollCalls: RollCall[];
 }
