@@ -48,10 +48,10 @@ export class AuthRequestService {
 
       // Save new password
       const salt = await bcrypt.genSalt(SALT_ROUND);
-      const newHashedPassword = await bcrypt.hash(dto.oldPassword, salt);
+      const newHashedPassword = await bcrypt.hash(dto.newPassword, salt);
 
-      this.userService.update(currentUser.id, {
-        hashPassword: newHashedPassword,
+      await this.userService.update(currentUser.id, {
+        hashedPassword: newHashedPassword,
       });
 
       // Gen new authenticate token

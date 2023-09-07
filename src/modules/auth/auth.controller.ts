@@ -7,6 +7,8 @@ import { AuthRequestService } from './auth.request.service';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { PermissionGuard } from '../permission/permissison.guard';
 import { JwtAccessTokenGuard } from './guards/jwt-access-token.guard';
+import { Roles } from '../../decorators/roles.decorator';
+import { ERole } from '../../common/enums/role.enum';
 
 @ApiTags('auth')
 @Controller('auth')

@@ -25,4 +25,10 @@ export class SendConversationMessageDto {
   @IsUrl()
   @Type(() => IsUrl)
   documentUrls: string[];
+
+  @ApiPropertyOptional({
+    description: 'Name card user id',
+  })
+  @IsOptional()
+  nameCardUserId: string;
 }

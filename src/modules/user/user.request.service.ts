@@ -7,16 +7,18 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
-import { Brackets, In, Repository } from 'typeorm';
+import { Between, Brackets, In, Repository } from 'typeorm';
 import { BaseService } from '../../common/services/base.service';
 import { AddFriendsDto } from './dto/add-friends.dto';
 import { Request } from 'express';
 import { differenceBy } from 'lodash';
 import { REQUEST } from '@nestjs/core';
-import { FilterDto } from '../../common/dto/filter.dto';
 import { GetAllUserDto } from './dto/get-all-user.dto';
 import { FriendRequest } from './entities/friend-request.entity';
 import { EFriendRequestStatus } from './dto/friend-request.enum';
+import { RollCall } from './entities/roll-call.entity';
+import moment from 'moment';
+import { GetAllRollCallDto } from './dto/get-all-roll-calls.dto';
 
 @Injectable({ scope: Scope.REQUEST })
 export class UserRequestService extends BaseService<User> {
@@ -26,6 +28,8 @@ export class UserRequestService extends BaseService<User> {
     private userRepository: Repository<User>,
     @InjectRepository(FriendRequest)
     private friendRequestRepository: Repository<FriendRequest>,
+    @InjectRepository(RollCall)
+    private rollCallRepository: Repository<RollCall>,
   ) {
     super(userRepository);
   }
@@ -309,6 +313,59 @@ export class UserRequestService extends BaseService<User> {
       });
 
       return currentUser;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async findAllRoleCalls(query: GetAllRollCallDto) {
+    const currentUser = this.request.user as User;
+    const { fromDate, toDate, sortBy, sortOrder } = query;
+
+    const queryBuilder = await this.rollCallRepository
+      .createQueryBuilder('roll_call')
+      .leftJoin('roll_call.user', 'user')
+      .where('user.id = :userId', { userId: currentUser.id });
+
+    if (fromDate) {
+      queryBuilder.andWhere('roll_call >= :fromDate', { fromDate });
+    }
+
+    if (toDate) {
+      queryBuilder.andWhere('roll_call >= :toDate', { toDate });
+    }
+
+    const [items, total] = await queryBuilder
+      .orderBy(`roll_call.${sortBy}`, sortOrder)
+      .getManyAndCount();
+
+    return {
+      items,
+      total,
+    };
+  }
+
+  async makeARollCall() {
+    try {
+      const currentUser = this.request.user as User;
+      const fromDate = moment().startOf('date').utc().toDate();
+      const toDate = moment().endOf('date').utc().toDate();
+
+      const existedRollCall = await this.rollCallRepository
+        .createQueryBuilder('roll_call')
+        .leftJoin('roll_call.user', 'user')
+        .where('roll_call >= :fromDate', { fromDate })
+        .andWhere('roll_call <= :toDate', { toDate })
+        .andWhere('user.id = :userId', { userId: currentUser.id });
+
+      if (existedRollCall) {
+        throw { message: 'Hôm nay bạn đã điểm danh rồi' };
+      }
+
+      const newRollCall = this.rollCallRepository.create({
+        user: currentUser,
+      });
+      return this.rollCallRepository.save(newRollCall);
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }

@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, ValidateIf } from 'class-validator';
+import { IsNotEmpty, IsString, IsStrongPassword } from 'class-validator';
 import { Match } from '../../../decorators/match.decorator';
+import { Unmatch } from '../../../decorators/unmatch.decorator';
 
 export class ChangePasswordDto {
   @ApiProperty()
@@ -11,7 +12,8 @@ export class ChangePasswordDto {
   @ApiProperty()
   @IsNotEmpty()
   @IsString()
-  @ValidateIf((o) => o.oldPassword === o.newPassword, {
+  @IsStrongPassword({}, { message: 'Độ bảo mật của mật khẩu thấp.' })
+  @Unmatch('oldPassword', {
     message: 'Mật khẩu mới không được trùng với mật khẩu cũ.',
   })
   newPassword: string;
