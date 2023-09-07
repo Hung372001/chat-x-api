@@ -21,6 +21,7 @@ import moment from 'moment';
 import { GetAllRollCallDto } from './dto/get-all-roll-calls.dto';
 import { ConfigService } from '@nestjs/config';
 import { Profile } from '../profile/entities/profile.entity';
+import { CreateRollCallDto } from './dto/create-roll-calls.dto';
 
 @Injectable({ scope: Scope.REQUEST })
 export class UserRequestService extends BaseService<User> {
@@ -333,11 +334,11 @@ export class UserRequestService extends BaseService<User> {
       .where('user.id = :userId', { userId: currentUser.id });
 
     if (fromDate) {
-      queryBuilder.andWhere('roll_call >= :fromDate', { fromDate });
+      queryBuilder.andWhere('roll_call.checkedDate >= :fromDate', { fromDate });
     }
 
     if (toDate) {
-      queryBuilder.andWhere('roll_call >= :toDate', { toDate });
+      queryBuilder.andWhere('roll_call.checkedDate <= :toDate', { toDate });
     }
 
     const [items, total] = await queryBuilder
@@ -350,7 +351,7 @@ export class UserRequestService extends BaseService<User> {
     };
   }
 
-  async makeARollCall() {
+  async makeRollCall() {
     try {
       const currentUser = this.request.user as User;
       const fromDate = moment().startOf('date').utc().toDate();
@@ -378,6 +379,42 @@ export class UserRequestService extends BaseService<User> {
 
       const newRollCall = this.rollCallRepository.create({
         user: currentUser,
+      });
+      return this.rollCallRepository.save(newRollCall);
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async createRollCall(dto: CreateRollCallDto) {
+    try {
+      const currentUser = this.request.user as User;
+      const fromDate = moment(dto.checkedDate).startOf('date').utc().toDate();
+      const toDate = moment(dto.checkedDate).endOf('date').utc().toDate();
+
+      const existedRollCall = await this.rollCallRepository
+        .createQueryBuilder('roll_call')
+        .leftJoin('roll_call.user', 'user')
+        .where('roll_call.checkedDate >= :fromDate', { fromDate })
+        .andWhere('roll_call.checkedDate <= :toDate', { toDate })
+        .andWhere('user.id = :userId', { userId: currentUser.id })
+        .getOne();
+
+      if (existedRollCall) {
+        throw { message: 'Bạn đã điểm danh vào ngày này.' };
+      }
+
+      currentUser.profile.activityScore =
+        +currentUser.profile.activityScore +
+        this.configService.get('ACTIVITY_SCORE_PER_ROLL_CALL');
+
+      await this.profileRepository.update(currentUser.profile.id, {
+        activityScore: currentUser.profile.activityScore,
+      });
+
+      const newRollCall = this.rollCallRepository.create({
+        user: currentUser,
+        checkedDate: dto.checkedDate,
       });
       return this.rollCallRepository.save(newRollCall);
     } catch (e: any) {

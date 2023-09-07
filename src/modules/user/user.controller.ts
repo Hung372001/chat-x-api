@@ -19,6 +19,7 @@ import { UserRequestService } from './user.request.service';
 import { GetAllUserDto } from './dto/get-all-user.dto';
 import { EFriendRequestStatus } from './dto/friend-request.enum';
 import { GetAllRollCallDto } from './dto/get-all-roll-calls.dto';
+import { CreateRollCallDto } from './dto/create-roll-calls.dto';
 
 @ApiTags('user')
 @Controller('user')
@@ -53,8 +54,13 @@ export class UserController {
 
   @Patch('roll-call')
   makeARollCall() {
-    return this.userRequestService.makeARollCall();
+    return this.userRequestService.makeRollCall();
   }
+
+  // @Post('roll-call')
+  // createRollCall(@Body() dto: CreateRollCallDto) {
+  //   return this.userRequestService.createRollCall(dto);
+  // }
 
   @Post('add-friends')
   addFriends(@Body() addFriendsDto: AddFriendsDto) {

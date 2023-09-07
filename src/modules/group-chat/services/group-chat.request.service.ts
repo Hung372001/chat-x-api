@@ -62,6 +62,13 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       })
       .getMany();
 
+    if (groupChatIds) {
+      return {
+        items: [],
+        total: 0,
+      };
+    }
+
     const queryBuilder = this.groupChatRepo
       .createQueryBuilder('group_chat')
       .leftJoinAndSelect('group_chat.members', 'user')

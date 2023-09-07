@@ -21,6 +21,7 @@ export class GroupChatSetting extends BaseEntity {
 
   @Column({
     type: 'timestamptz',
+    nullable: true,
   })
   deleteMessageFrom: Date;
 
