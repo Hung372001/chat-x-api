@@ -72,11 +72,21 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     const queryBuilder = this.groupChatRepo
       .createQueryBuilder('group_chat')
       .leftJoinAndSelect('group_chat.members', 'user')
+      .leftJoinAndSelect(
+        'user.groupChatSettings',
+        'group_chat_setting as userSetting',
+      )
       .leftJoinAndSelect('user.profile', 'profile')
       .leftJoinAndSelect('group_chat.latestMessage', 'chat_message')
+      .leftJoinAndSelect('group_chat.settings', 'group_chat_setting')
       .where('group_chat.id In(:...groupChatIds)', {
         groupChatIds: groupChatIds.map((x) => x.id),
-      });
+      })
+      .andWhere('group_chat_setting as userSetting.groupChatId = group_chat.id')
+      .andWhere('group_chat_setting.userId = :userId', {
+        userId: currentUser.id,
+      })
+      .orderBy('group_chat_setting.pinned', 'DESC');
 
     if (keyword) {
       if (searchAndBy) {
@@ -156,7 +166,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     }
 
     const [items, total] = await queryBuilder
-      .orderBy(`group_chat.${sortBy}`, sortOrder)
+      .addOrderBy(`group_chat.${sortBy}`, sortOrder)
       .take(isGetAll ? null : limit)
       .skip(isGetAll ? null : (page - 1) * limit)
       .getManyAndCount();

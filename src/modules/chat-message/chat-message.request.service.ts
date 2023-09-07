@@ -70,6 +70,7 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       .leftJoin('chat_message.group', 'group_chat')
       .leftJoinAndSelect('chat_message.sender', 'user')
       .leftJoinAndSelect('user.profile', 'profile')
+      .leftJoin('group_chat.settings', 'group_chat_setting')
       .leftJoin('chat_message.deletesBy', 'user as delMsgUsers')
       .leftJoinAndSelect('chat_message.nameCard', 'user as nameCardUser')
       .leftJoinAndSelect(
@@ -78,7 +79,13 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       )
       .where('group_chat.id = :groupChatId', { groupChatId: groupChat.id })
       //.andWhere('user as delMsgUsers.id != :userId', { userId: currentUser.id })
-      .andWhere('chat_message.pinned = false');
+      .andWhere('chat_message.pinned = false')
+      .andWhere('group_chat_setting.userId = :userId', {
+        userId: currentUser.id,
+      })
+      .andWhere(
+        'group_chat_setting.deleteMessageFrom <= chat_message.created_at',
+      );
 
     if (keyword) {
       if (searchAndBy) {
