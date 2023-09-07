@@ -13,7 +13,7 @@ import { Brackets, In, Repository } from 'typeorm';
 import { UserService } from '../../user/user.service';
 import { GroupChat } from '../entities/group-chat.entity';
 import { RemoveMemberDto } from '../dto/remove-member.dto';
-import { different } from 'lodash';
+import { differenceBy } from 'lodash';
 import { User } from '../../user/entities/user.entity';
 import { EGroupChatType } from '../dto/group-chat.enum';
 import { FilterDto } from '../../../common/dto/filter.dto';
@@ -412,10 +412,10 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
 
       const foundGroupChat = await this.groupChatRepo.findOne({
         where: { id, type: EGroupChatType.GROUP },
-        relations: ['admins'],
+        relations: ['admins', 'members'],
       });
 
-      if (foundGroupChat) {
+      if (!foundGroupChat) {
         throw { message: 'Không tìm thấy nhóm chat.' };
       }
 
@@ -432,19 +432,21 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       }
 
       // After remove members list
-      const aRMembers = different(foundGroupChat.members, members);
+      const aRMembers = differenceBy(foundGroupChat.members, members, 'id');
 
-      // Delete member setting
-      const memberSettings = [];
-      await Promise.all(
-        aRMembers.map((member) => {
-          memberSettings.push({
-            groupChat: foundGroupChat,
-            user: member,
-          });
-        }),
-      );
-      await this.groupSettingRepo.delete(memberSettings);
+      if (aRMembers.length > 0) {
+        // Delete member setting
+        const memberSettings = [];
+        await Promise.all(
+          aRMembers.map((member) => {
+            memberSettings.push({
+              groupChat: foundGroupChat,
+              user: member,
+            });
+          }),
+        );
+        await this.groupSettingRepo.delete(memberSettings);
+      }
 
       return this.groupChatRepo.save({
         ...foundGroupChat,
