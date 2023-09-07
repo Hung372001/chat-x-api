@@ -5,28 +5,31 @@ import {
   Injectable,
   Scope,
 } from '@nestjs/common';
-import { BaseService } from '../../common/services/base.service';
-import { AddMemberDto } from './dto/add-member.dto';
-import { CreateGroupChatDto } from './dto/create-group-chat.dto';
+import { BaseService } from '../../../common/services/base.service';
+import { AddMemberDto } from '../dto/add-member.dto';
+import { CreateGroupChatDto } from '../dto/create-group-chat.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, In, Repository } from 'typeorm';
-import { UserService } from '../user/user.service';
-import { GroupChat } from './entities/group-chat.entity';
-import { RemoveMemberDto } from './dto/remove-member.dto';
+import { UserService } from '../../user/user.service';
+import { GroupChat } from '../entities/group-chat.entity';
+import { RemoveMemberDto } from '../dto/remove-member.dto';
 import { different } from 'lodash';
-import { User } from '../user/entities/user.entity';
-import { EGroupChatType } from './dto/group-chat.enum';
-import { FilterDto } from '../../common/dto/filter.dto';
+import { User } from '../../user/entities/user.entity';
+import { EGroupChatType } from '../dto/group-chat.enum';
+import { FilterDto } from '../../../common/dto/filter.dto';
 import { REQUEST } from '@nestjs/core';
 import { Request } from 'express';
-import { AppGateway } from '../gateway/app.gateway';
-import { RenameGroupChatDto } from './dto/rename-group-chat.dto';
+import { AppGateway } from '../../gateway/app.gateway';
+import { RenameGroupChatDto } from '../dto/rename-group-chat.dto';
+import { GroupChatSetting } from '../entities/group-chat-setting.entity';
 
 @Injectable({ scope: Scope.REQUEST })
 export class GroupChatRequestService extends BaseService<GroupChat> {
   constructor(
     @Inject(REQUEST) private request: Request,
     @InjectRepository(GroupChat) private groupChatRepo: Repository<GroupChat>,
+    @InjectRepository(GroupChatSetting)
+    private groupSettingRepo: Repository<GroupChatSetting>,
     @Inject(UserService) private userService: UserService,
     @Inject(AppGateway) private readonly gateway: AppGateway,
   ) {
@@ -238,6 +241,18 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
 
       await this.groupChatRepo.save(newGroupChat);
 
+      // Create member setting
+      const memberSettings = [];
+      await Promise.all(
+        members.map((member) => {
+          memberSettings.push({
+            groupChat: newGroupChat,
+            user: member,
+          });
+        }),
+      );
+      await this.groupSettingRepo.save(memberSettings);
+
       // Call socket to create group chat
       await this.gateway.createGroupChat(newGroupChat);
 
@@ -279,6 +294,18 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         ...foundGroupChat,
         members: [...foundGroupChat.members, ...members],
       });
+
+      // Create member setting
+      const memberSettings = [];
+      await Promise.all(
+        members.map((member) => {
+          memberSettings.push({
+            groupChat: foundGroupChat,
+            user: member,
+          });
+        }),
+      );
+      await this.groupSettingRepo.save(memberSettings);
 
       // Call socket to create group chat
       await this.gateway.addNewGroupMember(foundGroupChat, members);
@@ -388,6 +415,18 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
 
       // After remove members list
       const aRMembers = different(foundGroupChat.members, members);
+
+      // Delete member setting
+      const memberSettings = [];
+      await Promise.all(
+        aRMembers.map((member) => {
+          memberSettings.push({
+            groupChat: foundGroupChat,
+            user: member,
+          });
+        }),
+      );
+      await this.groupSettingRepo.delete(memberSettings);
 
       return this.groupChatRepo.save({
         ...foundGroupChat,

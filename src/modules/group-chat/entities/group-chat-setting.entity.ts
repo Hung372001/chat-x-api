@@ -4,7 +4,10 @@ import { BaseEntity } from '../../../common/entities/base.entity';
 import { GroupChat } from './group-chat.entity';
 
 @Entity()
-export class GroupChatMember extends BaseEntity {
+export class GroupChatSetting extends BaseEntity {
+  @Column({ nullable: true })
+  nickname: string;
+
   @OneToOne(() => GroupChat)
   @JoinColumn()
   groupChat: GroupChat;
@@ -16,6 +19,11 @@ export class GroupChatMember extends BaseEntity {
   @Column({ default: false })
   pinned: boolean;
 
-  @Column({ default: 0 })
-  unReads: number;
+  @Column({
+    type: 'timestamptz',
+  })
+  deleteMessageFrom: Date;
+
+  @Column({ default: false })
+  muteNotification: boolean;
 }

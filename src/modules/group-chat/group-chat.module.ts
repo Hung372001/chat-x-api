@@ -1,22 +1,32 @@
 import { Module } from '@nestjs/common';
 import { UserModule } from '../user/user.module';
 import {} from '../gateway/services/group-chat.gateway.service';
-import { GroupChatController } from './group-chat.controller';
+import { GroupChatSettingController } from './controllers/group-chat-setting.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { GroupChat } from './entities/group-chat.entity';
-import { GroupChatRequestService } from './group-chat.request.service';
+import { GroupChatSettingRequestService } from './services/group-chat-setting.request.service';
 import { GatewayModule } from '../gateway/gateway.module';
-import { GroupChatService } from './group-chat.service';
-import { GroupChatMember } from './entities/group-chat-member.entity';
+import { GroupChatService } from './services/group-chat.service';
+import { GroupChatSetting } from './entities/group-chat-setting.entity';
+import { GroupChatController } from './controllers/group-chat.controller';
+import { GroupChatRequestService } from './services/group-chat.request.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([GroupChat, GroupChatMember]),
+    TypeOrmModule.forFeature([GroupChat, GroupChatSetting]),
     UserModule,
     GatewayModule,
   ],
-  controllers: [GroupChatController],
-  providers: [GroupChatRequestService, GroupChatService],
-  exports: [GroupChatRequestService, GroupChatService],
+  controllers: [GroupChatController, GroupChatSettingController],
+  providers: [
+    GroupChatRequestService,
+    GroupChatService,
+    GroupChatSettingRequestService,
+  ],
+  exports: [
+    GroupChatRequestService,
+    GroupChatService,
+    GroupChatSettingRequestService,
+  ],
 })
 export class GroupChatModule {}

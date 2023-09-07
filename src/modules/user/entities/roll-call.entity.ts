@@ -13,7 +13,7 @@ export class RollCall {
   id: string;
 
   @CreateDateColumn({
-    type: 'timestamp',
+    type: 'timestamptz',
     default: () => 'CURRENT_TIMESTAMP(6)',
     name: 'created_at',
   })
