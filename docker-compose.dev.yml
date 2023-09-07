@@ -8,9 +8,10 @@ services:
     volumes:
       - /home/chat-x-api/.env:/app/.env
       - /home/chat-x-api/files:/app/files
-      - /home/chat-x-api/.aws:/root/.aws:ro
     environment:
       - TZ=Asia/Bangkok
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
     dns:
       - 8.8.8.8
     deploy:
