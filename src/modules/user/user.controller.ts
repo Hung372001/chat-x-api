@@ -41,14 +41,14 @@ export class UserController {
     return this.userRequestService.findMe();
   }
 
-  @Get(':id')
-  findById(@Param('id') id: string) {
-    return this.userService.findById(id);
-  }
-
   @Get('roll-call')
   getAllRollCall(@Query() query: GetAllRollCallDto) {
     return this.userRequestService.findAllRoleCalls(query);
+  }
+
+  @Get(':id')
+  findById(@Param('id') id: string) {
+    return this.userService.findById(id);
   }
 
   @Patch('roll-call')

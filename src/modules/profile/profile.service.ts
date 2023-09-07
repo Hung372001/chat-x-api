@@ -14,6 +14,7 @@ import { BaseService } from '../../common/services/base.service';
 import { UpdateProfileDto } from './dto/update.dto';
 import { User } from '../user/entities/user.entity';
 import { UpdateAvatarDto } from './dto/update-avatar.dto';
+import { UpdateNicknameDto } from '../group-chat/dto/update-nickname.dto';
 
 @Injectable({ scope: Scope.REQUEST })
 export class ProfileService extends BaseService<Profile> {

@@ -5,6 +5,7 @@ import { UpdateProfileDto } from './dto/update.dto';
 import { PermissionGuard } from '../permission/permissison.guard';
 import { JwtAccessTokenGuard } from '../auth/guards/jwt-access-token.guard';
 import { UpdateAvatarDto } from './dto/update-avatar.dto';
+import { UpdateNicknameDto } from '../group-chat/dto/update-nickname.dto';
 
 @ApiTags('profile')
 @Controller('profile')
@@ -19,7 +20,7 @@ export class ProfileController {
     return this.profileService.updateProfile(dto);
   }
 
-  @Put('avatar')
+  @Patch('avatar')
   updateAvatar(@Body() dto: UpdateAvatarDto) {
     return this.profileService.updateAvatar(dto);
   }

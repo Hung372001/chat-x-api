@@ -8,14 +8,14 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { FilterDto } from '../../common/dto/filter.dto';
-import { AddMemberDto } from './dto/add-member.dto';
-import { RemoveMemberDto } from './dto/remove-member.dto';
-import { CreateGroupChatDto } from './dto/create-group-chat.dto';
+import { FilterDto } from '../../../common/dto/filter.dto';
+import { AddMemberDto } from '../dto/add-member.dto';
+import { RemoveMemberDto } from '../dto/remove-member.dto';
+import { CreateGroupChatDto } from '../dto/create-group-chat.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { JwtAccessTokenGuard } from '../auth/guards/jwt-access-token.guard';
-import { PermissionGuard } from '../permission/permissison.guard';
-import { GroupChatRequestService } from './group-chat.request.service';
+import { JwtAccessTokenGuard } from '../../auth/guards/jwt-access-token.guard';
+import { PermissionGuard } from '../../permission/permissison.guard';
+import { GroupChatRequestService } from '../services/group-chat.request.service';
 
 @Controller('group-chat')
 @ApiTags('group-chat')

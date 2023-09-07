@@ -122,6 +122,7 @@ export class AuthService {
     const refreshToken = this.generateRefreshToken(payload);
     await this.storeRefreshToken(payload.id, refreshToken);
     return {
+      ...user,
       accessToken,
       refreshToken,
     };

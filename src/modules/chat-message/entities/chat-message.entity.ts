@@ -30,6 +30,9 @@ export class ChatMessage extends BaseEntity {
   @JoinTable()
   group: GroupChat;
 
+  @Column({ default: false })
+  isRead: boolean;
+
   @ManyToMany(() => User)
   @JoinTable()
   readsBy: User[];

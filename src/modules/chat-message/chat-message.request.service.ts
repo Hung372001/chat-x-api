@@ -13,7 +13,7 @@ import { User } from '../user/entities/user.entity';
 import { FilterDto } from '../../common/dto/filter.dto';
 import { REQUEST } from '@nestjs/core';
 import { Request } from 'express';
-import { GroupChatService } from '../group-chat/group-chat.service';
+import { GroupChatService } from '../group-chat/services/group-chat.service';
 import { AppGateway } from '../gateway/app.gateway';
 
 @Injectable({ scope: Scope.REQUEST })

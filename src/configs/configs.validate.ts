@@ -26,4 +26,7 @@ export const configsValidator = Joi.object({
   RABBITMQ_QUEUE_NAME: Joi.string().required(),
   RABBITMQ_USER: Joi.string().required(),
   RABBITMQ_PASSWORD: Joi.string().required(),
+
+  // Roll call
+  ACTIVITY_SCORE_PER_ROLL_CALL: Joi.number().required(),
 });

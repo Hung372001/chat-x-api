@@ -19,17 +19,22 @@ import { EFriendRequestStatus } from './dto/friend-request.enum';
 import { RollCall } from './entities/roll-call.entity';
 import moment from 'moment';
 import { GetAllRollCallDto } from './dto/get-all-roll-calls.dto';
+import { ConfigService } from '@nestjs/config';
+import { Profile } from '../profile/entities/profile.entity';
 
 @Injectable({ scope: Scope.REQUEST })
 export class UserRequestService extends BaseService<User> {
   constructor(
     @Inject(REQUEST) private request: Request,
+    private configService: ConfigService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @InjectRepository(FriendRequest)
     private friendRequestRepository: Repository<FriendRequest>,
     @InjectRepository(RollCall)
     private rollCallRepository: Repository<RollCall>,
+    @InjectRepository(Profile)
+    private profileRepository: Repository<Profile>,
   ) {
     super(userRepository);
   }
@@ -340,7 +345,7 @@ export class UserRequestService extends BaseService<User> {
       .getManyAndCount();
 
     return {
-      items,
+      items: items.map((x) => x.checkedDate),
       total,
     };
   }
@@ -354,13 +359,22 @@ export class UserRequestService extends BaseService<User> {
       const existedRollCall = await this.rollCallRepository
         .createQueryBuilder('roll_call')
         .leftJoin('roll_call.user', 'user')
-        .where('roll_call >= :fromDate', { fromDate })
-        .andWhere('roll_call <= :toDate', { toDate })
-        .andWhere('user.id = :userId', { userId: currentUser.id });
+        .where('roll_call.checkedDate >= :fromDate', { fromDate })
+        .andWhere('roll_call.checkedDate <= :toDate', { toDate })
+        .andWhere('user.id = :userId', { userId: currentUser.id })
+        .getOne();
 
       if (existedRollCall) {
-        throw { message: 'Hôm nay bạn đã điểm danh rồi' };
+        throw { message: 'Hôm nay bạn đã điểm danh.' };
       }
+
+      currentUser.profile.activityScore =
+        +currentUser.profile.activityScore +
+        this.configService.get('ACTIVITY_SCORE_PER_ROLL_CALL');
+
+      await this.profileRepository.update(currentUser.profile.id, {
+        activityScore: currentUser.profile.activityScore,
+      });
 
       const newRollCall = this.rollCallRepository.create({
         user: currentUser,
