@@ -13,7 +13,7 @@ import { Brackets, In, Repository } from 'typeorm';
 import { UserService } from '../../user/user.service';
 import { GroupChat } from '../entities/group-chat.entity';
 import { RemoveMemberDto } from '../dto/remove-member.dto';
-import { differenceBy } from 'lodash';
+import { differenceBy, intersectionBy } from 'lodash';
 import { User } from '../../user/entities/user.entity';
 import { EGroupChatType } from '../dto/group-chat.enum';
 import { FilterDto } from '../../../common/dto/filter.dto';
@@ -286,7 +286,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
 
       const foundGroupChat = await this.groupChatRepo.findOne({
         where: { id },
-        relations: ['admins', 'members'],
+        relations: ['admins', 'members', 'members.profile'],
       });
       if (!foundGroupChat) {
         throw { message: 'Không tìm thấy nhóm chat.' };
@@ -304,8 +304,22 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         where: { id: In(dto.members) },
         relations: ['profile'],
       });
-      if (members?.length > 0 && dto.members.length !== members.length) {
+      if (!members?.length || dto.members.length !== members.length) {
         throw { message: 'Không tìm thấy thành viên nhóm.' };
+      }
+
+      const existedMembers = intersectionBy(
+        foundGroupChat.members,
+        members,
+        'id',
+      );
+
+      if (existedMembers.length > 0) {
+        throw {
+          message: `${existedMembers
+            .map((x) => x.username)
+            .join(', ')} đã là thành viên của nhóm.`,
+        };
       }
 
       const res = await this.groupChatRepo.save({
@@ -412,7 +426,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
 
       const foundGroupChat = await this.groupChatRepo.findOne({
         where: { id, type: EGroupChatType.GROUP },
-        relations: ['admins', 'members'],
+        relations: ['admins', 'members', 'members.profile'],
       });
 
       if (!foundGroupChat) {
@@ -427,8 +441,17 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         where: { id: In(dto.members) },
         relations: ['profile'],
       });
-      if (members?.length > 0 && dto.members.length !== members.length) {
+      if (!members?.length || dto.members.length !== members.length) {
         throw { message: 'Không tìm thấy thành viên nhóm.' };
+      }
+
+      const notMembers = differenceBy(members, foundGroupChat.members, 'id');
+      if (notMembers.length > 0) {
+        throw {
+          message: `${notMembers
+            .map((x) => x.username)
+            .join(', ')} không phải thành viên của nhóm.`,
+        };
       }
 
       // After remove members list

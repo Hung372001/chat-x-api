@@ -1,10 +1,4 @@
-import {
-  HttpException,
-  HttpStatus,
-  Inject,
-  Injectable,
-  Scope,
-} from '@nestjs/common';
+import { Inject, Injectable, Scope } from '@nestjs/common';
 import { ChatMessage } from './entities/chat-message.entity';
 import { BaseService } from '../../common/services/base.service';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -15,6 +9,7 @@ import { REQUEST } from '@nestjs/core';
 import { Request } from 'express';
 import { GroupChatService } from '../group-chat/services/group-chat.service';
 import { AppGateway } from '../gateway/app.gateway';
+import { GroupChatSettingRequestService } from '../group-chat/services/group-chat-setting.request.service';
 
 @Injectable({ scope: Scope.REQUEST })
 export class ChatMessageRequestService extends BaseService<ChatMessage> {
@@ -23,6 +18,7 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
     @InjectRepository(ChatMessage)
     private chatMessageRepo: Repository<ChatMessage>,
     private groupChatService: GroupChatService,
+    private groupSettingService: GroupChatSettingRequestService,
     @Inject(AppGateway) private readonly gateway: AppGateway,
   ) {
     super(chatMessageRepo);
@@ -65,6 +61,11 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       isGetAll = false,
     } = query;
 
+    const chatSetting = await this.groupSettingService.getGroupSetting(
+      groupChatId,
+      currentUser.id,
+    );
+
     const queryBuilder = this.chatMessageRepo
       .createQueryBuilder('chat_message')
       .leftJoin('chat_message.group', 'group_chat')
@@ -82,10 +83,13 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       .andWhere('chat_message.pinned = false')
       .andWhere('group_chat_setting.userId = :userId', {
         userId: currentUser.id,
-      })
-      .andWhere(
-        'group_chat_setting.deleteMessageFrom <= chat_message.created_at',
-      );
+      });
+
+    if (chatSetting.deleteMessageFrom) {
+      queryBuilder.andWhere('chat_message.created_at >= :fromDate', {
+        fromDate: chatSetting.deleteMessageFrom,
+      });
+    }
 
     if (keyword) {
       if (searchAndBy) {
