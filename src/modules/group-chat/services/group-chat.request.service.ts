@@ -62,7 +62,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       })
       .getMany();
 
-    if (groupChatIds) {
+    if (!groupChatIds.length) {
       return {
         items: [],
         total: 0,
