@@ -70,4 +70,7 @@ export class User extends BaseEntity {
 
   @OneToMany(() => GroupChat, (ownGroup) => ownGroup.owner)
   ownGroups: GroupChat[];
+
+  @OneToMany(() => ChatMessage, (deletedMessages) => deletedMessages.deletedBy)
+  deletedMessages: ChatMessage[];
 }

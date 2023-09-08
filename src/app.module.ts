@@ -20,6 +20,8 @@ import { RmqModule } from './modules/rmq/rmq.module';
 import { FCMTokenModule } from './modules/fcm-token/fcm-token.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { CacheInterceptor } from './interceptors/cache.interceptor';
+import { ScheduleModule } from '@nestjs/schedule';
+import { SchedulerModule } from './modules/scheduler/scheduler.module';
 
 const apiV1Modules = [
   UserModule,
@@ -50,6 +52,8 @@ const apiV1Modules = [
       url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
       ttl: 0,
     }),
+    ScheduleModule.forRoot(),
+    SchedulerModule,
     DatabaseModule,
     AuthModule,
     CustomeCacheModule,

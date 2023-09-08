@@ -31,6 +31,10 @@ export class ChatMessageGatewayService {
         throw { message: 'Không tìm thấy nhóm chat.' };
       }
 
+      if (!groupChat.enabledChat) {
+        throw { message: 'Tính năng chat đang bị khóa.' };
+      }
+
       if (
         !groupChat.members.some((x) => x.id === sender.id) &&
         !groupChat.admins.some((x) => x.id === sender.id)
@@ -143,36 +147,29 @@ export class ChatMessageGatewayService {
     }
   }
 
-  async remove(chatMessageId: string, deleteBy: User) {
+  async remove(chatMessageId: string, deletedBy: User) {
     try {
       const chatMessage = await this.chatMessageRepo.findOne({
         where: {
           id: chatMessageId,
         },
-        relations: ['sender', 'group', 'group.members', 'deleteBy'],
+        relations: ['sender', 'group', 'group.members'],
       });
 
       if (!chatMessage) {
         throw { message: 'Không tìm thấy tin nhắn.' };
       }
 
-      if (!chatMessage.group.members.some((x) => x.id === deleteBy.id)) {
+      if (!chatMessage.group.members.some((x) => x.id === deletedBy.id)) {
         throw {
           message: 'Bạn không phải là thành viên nhóm chat.',
         };
       }
 
-      if (chatMessage.deletesBy.some((x) => x.id === deleteBy.id)) {
-        throw {
-          message: 'Tin nhắn này đã được xoá.',
-        };
-      }
+      await this.chatMessageRepo.update(chatMessage.id, { deletedBy });
+      await this.chatMessageRepo.softDelete(chatMessage.id);
 
-      chatMessage.deletesBy.push(deleteBy);
-
-      return this.chatMessageRepo.update(chatMessage.id, {
-        deletesBy: chatMessage.deletesBy,
-      });
+      return chatMessage;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }

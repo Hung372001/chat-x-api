@@ -10,6 +10,8 @@ import { Request } from 'express';
 import { GroupChatService } from '../group-chat/services/group-chat.service';
 import { AppGateway } from '../gateway/app.gateway';
 import { GroupChatSettingRequestService } from '../group-chat/services/group-chat-setting.request.service';
+import { ERole } from '../../common/enums/role.enum';
+import { omitBy, isNull } from 'lodash';
 
 @Injectable({ scope: Scope.REQUEST })
 export class ChatMessageRequestService extends BaseService<ChatMessage> {
@@ -47,6 +49,10 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       throw { message: 'Không tìm thấy nhóm chat.' };
     }
 
+    const adminPermission =
+      currentUser.roles[0].type === ERole.ADMIN ||
+      groupChat.admins.some((x) => x.id === currentUser.id);
+
     const {
       keyword = '',
       andKeyword = '',
@@ -72,14 +78,13 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       .leftJoinAndSelect('chat_message.sender', 'user')
       .leftJoinAndSelect('user.profile', 'profile')
       .leftJoin('group_chat.settings', 'group_chat_setting')
-      .leftJoin('chat_message.deletesBy', 'user as delMsgUsers')
+      .leftJoin('chat_message.deletedBy', 'user as delMsgUser')
       .leftJoinAndSelect('chat_message.nameCard', 'user as nameCardUser')
       .leftJoinAndSelect(
         'user as nameCardUser.profile',
         'profile as nameCardProfile',
       )
       .where('group_chat.id = :groupChatId', { groupChatId: groupChat.id })
-      //.andWhere('user as delMsgUsers.id != :userId', { userId: currentUser.id })
       .andWhere('chat_message.pinned = false')
       .andWhere('group_chat_setting.userId = :userId', {
         userId: currentUser.id,
@@ -89,6 +94,10 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       queryBuilder.andWhere('chat_message.created_at >= :fromDate', {
         fromDate: chatSetting.deleteMessageFrom,
       });
+    }
+
+    if (adminPermission) {
+      queryBuilder.withDeleted();
     }
 
     if (keyword) {
@@ -187,7 +196,20 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       .getMany();
 
     return {
-      items,
+      items: items.map((iterator) =>
+        adminPermission || !iterator.unsent
+          ? iterator
+          : omitBy(
+              {
+                ...iterator,
+                imageUrls: null,
+                message: null,
+                documentUrls: null,
+                nameCard: null,
+              },
+              isNull,
+            ),
+      ),
       pinnedMessages,
       total,
     };

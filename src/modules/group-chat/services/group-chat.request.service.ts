@@ -318,6 +318,10 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         throw { message: 'Không tìm thấy nhóm chat.' };
       }
 
+      if (!foundGroupChat.canAddFriends) {
+        throw { message: 'Tính năng thêm thành viên cho nhóm đang bị khóa.' };
+      }
+
       if (foundGroupChat.type === EGroupChatType.DOU) {
         throw { message: 'Vui lòng tạo nhóm chat để thêm thành viên.' };
       }

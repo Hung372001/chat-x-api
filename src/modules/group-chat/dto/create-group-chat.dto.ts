@@ -1,11 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsArray,
-  IsEnum,
-  IsNotEmpty,
-  IsOptional,
-  ValidateIf,
-} from 'class-validator';
+import { IsArray, IsEnum, IsNotEmpty, ValidateIf } from 'class-validator';
 import { EGroupChatType } from './group-chat.enum';
 
 export class CreateGroupChatDto {
