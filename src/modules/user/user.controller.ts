@@ -67,6 +67,11 @@ export class UserController {
   //   return this.userRequestService.createRollCall(dto);
   // }
 
+  @Patch('hiding/toggle')
+  hiding() {
+    return this.userRequestService.hiding();
+  }
+
   @Post('add-friends')
   addFriends(@Body() addFriendsDto: AddFriendsDto) {
     return this.userRequestService.addFriendRequests(addFriendsDto);

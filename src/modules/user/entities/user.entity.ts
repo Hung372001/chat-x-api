@@ -38,6 +38,9 @@ export class User extends BaseEntity {
   @Exclude()
   currentRefreshToken: string;
 
+  @Column({ default: false })
+  hiding: boolean;
+
   @ManyToMany(() => Role)
   @JoinTable()
   roles: Role[];

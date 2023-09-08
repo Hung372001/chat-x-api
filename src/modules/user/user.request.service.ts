@@ -22,6 +22,7 @@ import { GetAllRollCallDto } from './dto/get-all-roll-calls.dto';
 import { ConfigService } from '@nestjs/config';
 import { Profile } from '../profile/entities/profile.entity';
 import { CreateRollCallDto } from './dto/create-roll-calls.dto';
+import { ERole } from '../../common/enums/role.enum';
 
 @Injectable({ scope: Scope.REQUEST })
 export class UserRequestService extends BaseService<User> {
@@ -42,6 +43,7 @@ export class UserRequestService extends BaseService<User> {
 
   async findAllUsers(query: GetAllUserDto) {
     const currentUser = this.request.user as User;
+    const isRootAdmin = currentUser.roles[0].type === ERole.ADMIN;
 
     const {
       keyword = '',
@@ -64,6 +66,10 @@ export class UserRequestService extends BaseService<User> {
       .leftJoinAndSelect('user.roles', 'role')
       .leftJoinAndSelect('user.friends', 'user as friends')
       .andWhere('user.id <> :userId', { userId: currentUser.id });
+
+    if (!isRootAdmin) {
+      queryBuilder.andWhere('user.hiding = false');
+    }
 
     if (keyword) {
       if (searchAndBy) {
@@ -472,6 +478,21 @@ export class UserRequestService extends BaseService<User> {
           toUserId: currentUser.id,
         })
         .getOne();
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async hiding() {
+    try {
+      const currentUser = this.request.user as User;
+
+      currentUser.hiding = !currentUser.hiding;
+
+      await this.userRepository.update(currentUser.id, {
+        hiding: currentUser.hiding,
+      });
+      return currentUser;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
