@@ -1,15 +1,15 @@
-import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { User } from './user.entity';
 import { EFriendRequestStatus } from '../dto/friend-request.enum';
 
 @Entity()
 export class FriendRequest extends BaseEntity {
-  @OneToOne(() => User)
+  @ManyToOne(() => User, (fromUser) => fromUser.requestFromUsers)
   @JoinColumn()
   fromUser: User;
 
-  @OneToOne(() => User)
+  @ManyToOne(() => User, (toUser) => toUser.requestToUsers)
   @JoinColumn()
   toUser: User;
 

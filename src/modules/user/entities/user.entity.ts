@@ -18,6 +18,7 @@ import { Notification } from '../../notification/entities/notification.entity';
 import { RollCall } from './roll-call.entity';
 import { GroupChatSetting } from '../../group-chat/entities/group-chat-setting.entity';
 import { GroupChat } from '../../group-chat/entities/group-chat.entity';
+import { FriendRequest } from './friend-request.entity';
 
 @Entity()
 export class User extends BaseEntity {
@@ -73,4 +74,13 @@ export class User extends BaseEntity {
 
   @OneToMany(() => ChatMessage, (deletedMessages) => deletedMessages.deletedBy)
   deletedMessages: ChatMessage[];
+
+  @OneToMany(
+    () => FriendRequest,
+    (requestFromUsers) => requestFromUsers.fromUser,
+  )
+  requestFromUsers: FriendRequest[];
+
+  @OneToMany(() => FriendRequest, (requestToUsers) => requestToUsers.toUser)
+  requestToUsers: FriendRequest[];
 }

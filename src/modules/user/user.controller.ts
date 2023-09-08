@@ -47,6 +47,11 @@ export class UserController {
     return this.userRequestService.findAllRoleCalls(query);
   }
 
+  @Get('friend-request/:userId')
+  getFriendRequest(@Param('userId') userId: string) {
+    return this.userRequestService.getFriendRequest(userId);
+  }
+
   @Get(':id')
   findById(@Param('id') id: string) {
     return this.userService.findById(id);
