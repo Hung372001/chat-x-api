@@ -8,11 +8,14 @@ import { User } from '../../user/entities/user.entity';
 import { EGroupChatType } from '../../group-chat/dto/group-chat.enum';
 import { AppGateway } from '../app.gateway';
 import { UserService } from '../../user/user.service';
+import { GroupChatSetting } from '../../group-chat/entities/group-chat-setting.entity';
 
 @Injectable()
 export class GroupChatGatewayService extends BaseService<GroupChat> {
   constructor(
     @InjectRepository(GroupChat) private groupChatRepo: Repository<GroupChat>,
+    @InjectRepository(GroupChatSetting)
+    private groupSettingRepo: Repository<GroupChatSetting>,
     @Inject(UserService) private userService: UserService,
   ) {
     super(groupChatRepo);
@@ -53,6 +56,19 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
 
         // Call socket to create group chat
         await gateway.createGroupChat(newGroupChat);
+
+        // Create member setting
+        const memberSettings = [];
+        await Promise.all(
+          members.map((member) => {
+            memberSettings.push({
+              groupChat: newGroupChat,
+              user: member,
+            });
+          }),
+        );
+
+        await this.groupSettingRepo.save(memberSettings);
 
         return newGroupChat;
       }

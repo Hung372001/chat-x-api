@@ -166,7 +166,10 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     }
 
     const [items, total] = await queryBuilder
-      .addOrderBy(`group_chat.${sortBy}`, sortOrder)
+      .addOrderBy(
+        sortBy.includes('.') ? sortBy : `group_chat.${sortBy}`,
+        sortOrder,
+      )
       .take(isGetAll ? null : limit)
       .skip(isGetAll ? null : (page - 1) * limit)
       .getManyAndCount();
@@ -339,7 +342,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       );
       await this.groupSettingRepo.save(memberSettings);
 
-      // Call socket to create group chat
+      // Call socket
       await this.gateway.addNewGroupMember(foundGroupChat, members);
 
       return res;
@@ -471,10 +474,15 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         await this.groupSettingRepo.delete(memberSettings);
       }
 
-      return this.groupChatRepo.save({
+      const res = await this.groupChatRepo.save({
         ...foundGroupChat,
         members: aRMembers,
       });
+
+      // Call socket
+      await this.gateway.removeGroupMember(foundGroupChat, members);
+
+      return res;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }

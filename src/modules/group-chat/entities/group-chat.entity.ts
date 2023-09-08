@@ -46,4 +46,14 @@ export class GroupChat extends BaseEntity {
 
   @OneToMany(() => GroupChatSetting, (settings) => settings.groupChat)
   settings: GroupChatSetting[];
+
+  // General setting
+  @Column({ nullable: true, default: true })
+  canAddFriend: boolean;
+
+  @Column({ nullable: true, default: true })
+  canChat: boolean;
+
+  @Column({ type: 'decimal', default: 0 })
+  clearMessageDuration: number;
 }

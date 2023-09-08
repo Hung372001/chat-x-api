@@ -138,6 +138,17 @@ export class AppGateway
     );
   }
 
+  leaveGroup(groupChatId: string, groupMembers: User[]) {
+    return Promise.all(
+      groupMembers.map((member) => {
+        const client = this.sessions.getUserSocket(member.id);
+        if (client) {
+          client.leave(groupChatId);
+        }
+      }),
+    );
+  }
+
   // Call socket after group chat created successfully
   async createGroupChat(groupChat: GroupChat) {
     if (groupChat && groupChat.members?.length > 0) {
@@ -157,6 +168,18 @@ export class AppGateway
       this.server.to(groupChat.id).emit('newMembersJoined', {
         groupChat,
         newMembers,
+      });
+    }
+  }
+
+  // Call socket after remove user from group chat successfully
+  async removeGroupMember(groupChat: GroupChat, removeMembers: User[]) {
+    if (groupChat && removeMembers?.length > 0) {
+      await this.leaveGroup(groupChat.id, removeMembers);
+
+      this.server.to(groupChat.id).emit('groupMembersRemoved', {
+        groupChat,
+        removeMembers,
       });
     }
   }
