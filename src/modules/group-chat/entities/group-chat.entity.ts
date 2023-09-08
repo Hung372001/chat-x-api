@@ -4,6 +4,7 @@ import {
   JoinColumn,
   JoinTable,
   ManyToMany,
+  ManyToOne,
   OneToMany,
   OneToOne,
 } from 'typeorm';
@@ -34,8 +35,8 @@ export class GroupChat extends BaseEntity {
   @JoinTable()
   admins: User[];
 
-  @OneToOne(() => ChatMessage, (message) => message.id)
-  @JoinColumn()
+  @ManyToOne(() => User, (owner) => owner.ownGroups)
+  @JoinTable()
   owner: User;
 
   @Column({
@@ -49,10 +50,10 @@ export class GroupChat extends BaseEntity {
 
   // General setting
   @Column({ nullable: true, default: true })
-  canAddFriend: boolean;
+  canAddFriends: boolean;
 
   @Column({ nullable: true, default: true })
-  canChat: boolean;
+  enabledChat: boolean;
 
   @Column({ type: 'decimal', default: 0 })
   clearMessageDuration: number;

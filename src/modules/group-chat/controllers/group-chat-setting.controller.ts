@@ -12,6 +12,7 @@ import { JwtAccessTokenGuard } from '../../auth/guards/jwt-access-token.guard';
 import { PermissionGuard } from '../../permission/permissison.guard';
 import { UpdateNicknameDto } from '../dto/update-nickname.dto';
 import { GroupChatSettingRequestService } from '../services/group-chat-setting.request.service';
+import { UpdateClearMessageDurationDto } from '../dto/update-clear-message-duration.dto';
 
 @Controller('group-chat/:id/setting')
 @ApiTags('group-chat/setting')
@@ -46,5 +47,23 @@ export class GroupChatSettingController {
   @Patch('mute-notification/toggle')
   toggleMuteNotification(@Param('id') id: string) {
     return this.requestService.toggleMuteNotification(id);
+  }
+
+  @Patch('add-friends/toggle')
+  toggleAddFriends(@Param('id') id: string) {
+    return this.requestService.toggleAddFriends(id);
+  }
+
+  @Patch('chat-feature/toggle')
+  toggleChatFeature(@Param('id') id: string) {
+    return this.requestService.toggleChatFeature(id);
+  }
+
+  @Patch('clear-message-sequence')
+  setClearHistorySequence(
+    @Param('id') id: string,
+    @Body() dto: UpdateClearMessageDurationDto,
+  ) {
+    return this.requestService.setClearHistorySequence(id, dto);
   }
 }

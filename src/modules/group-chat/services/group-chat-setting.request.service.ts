@@ -15,11 +15,15 @@ import { AppGateway } from '../../gateway/app.gateway';
 import { GroupChatSetting } from '../entities/group-chat-setting.entity';
 import { UpdateNicknameDto } from '../dto/update-nickname.dto';
 import moment from 'moment';
+import { GroupChatService } from './group-chat.service';
+import { UpdateClearMessageDurationDto } from '../dto/update-clear-message-duration.dto';
 
 @Injectable({ scope: Scope.REQUEST })
 export class GroupChatSettingRequestService extends BaseService<GroupChatSetting> {
   constructor(
     @Inject(REQUEST) private request: Request,
+    @Inject(GroupChatService)
+    private groupChatService: GroupChatService,
     @InjectRepository(GroupChatSetting)
     private groupSettingRepo: Repository<GroupChatSetting>,
     @Inject(AppGateway) private readonly gateway: AppGateway,
@@ -124,6 +128,96 @@ export class GroupChatSettingRequestService extends BaseService<GroupChatSetting
       });
 
       return setting;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async toggleAddFriends(groupChatId: string) {
+    try {
+      const currentUser = this.request.user as User;
+
+      const groupChat = await this.groupChatService.findOne({
+        id: groupChatId,
+      });
+
+      if (!groupChat) {
+        throw { message: 'Không tìm thấy thông tin nhóm chat.' };
+      }
+
+      if (!groupChat.admins.some((x) => x.id === currentUser.id)) {
+        throw {
+          message: 'Chỉ quản trị viên mới có quyền thực hiện tính năng này.',
+        };
+      }
+
+      groupChat.canAddFriends = !groupChat.canAddFriends;
+      await this.groupChatService.update(groupChat.id, {
+        canAddFriends: groupChat.canAddFriends,
+      });
+
+      return groupChat;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async toggleChatFeature(groupChatId: string) {
+    try {
+      const currentUser = this.request.user as User;
+
+      const groupChat = await this.groupChatService.findOne({
+        id: groupChatId,
+      });
+
+      if (!groupChat) {
+        throw { message: 'Không tìm thấy thông tin nhóm chat.' };
+      }
+
+      if (!groupChat.admins.some((x) => x.id === currentUser.id)) {
+        throw {
+          message: 'Chỉ quản trị viên mới có quyền thực hiện tính năng này.',
+        };
+      }
+
+      groupChat.enabledChat = !groupChat.enabledChat;
+      await this.groupChatService.update(groupChat.id, {
+        enabledChat: groupChat.enabledChat,
+      });
+
+      return groupChat;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async setClearHistorySequence(
+    groupChatId: string,
+    dto: UpdateClearMessageDurationDto,
+  ) {
+    try {
+      const currentUser = this.request.user as User;
+
+      const groupChat = await this.groupChatService.findOne({
+        id: groupChatId,
+      });
+
+      if (!groupChat) {
+        throw { message: 'Không tìm thấy thông tin nhóm chat.' };
+      }
+
+      if (!groupChat.admins.some((x) => x.id === currentUser.id)) {
+        throw {
+          message: 'Chỉ quản trị viên mới có quyền thực hiện tính năng này.',
+        };
+      }
+
+      groupChat.clearMessageDuration = dto.duration;
+      await this.groupChatService.update(groupChat.id, {
+        clearMessageDuration: groupChat.clearMessageDuration,
+      });
+
+      return groupChat;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }

@@ -13,7 +13,7 @@ import { Brackets, In, Repository } from 'typeorm';
 import { UserService } from '../../user/user.service';
 import { GroupChat } from '../entities/group-chat.entity';
 import { RemoveMemberDto } from '../dto/remove-member.dto';
-import { differenceBy, intersectionBy } from 'lodash';
+import { differenceBy, intersectionBy, omitBy, isNull } from 'lodash';
 import { User } from '../../user/entities/user.entity';
 import { EGroupChatType } from '../dto/group-chat.enum';
 import { FilterDto } from '../../../common/dto/filter.dto';
@@ -77,6 +77,8 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         'group_chat_setting as userSetting',
       )
       .leftJoinAndSelect('user.profile', 'profile')
+      .leftJoinAndSelect('group_chat.owner', 'user as owners')
+      .leftJoinAndSelect('group_chat.admins', 'user as admins')
       .leftJoinAndSelect('group_chat.latestMessage', 'chat_message')
       .leftJoinAndSelect('group_chat.settings', 'group_chat_setting')
       .where('group_chat.id In(:...groupChatIds)', {
@@ -175,7 +177,27 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       .getManyAndCount();
 
     return {
-      items,
+      items: items.map((iterator) =>
+        iterator.type === EGroupChatType.GROUP
+          ? omitBy(
+              {
+                ...iterator,
+                isAdmin: iterator.admins.some((x) => x.id === currentUser.id),
+                isOwner: !!iterator.owner,
+                admins: null,
+                owner: null,
+              },
+              isNull,
+            )
+          : omitBy(
+              {
+                ...iterator,
+                admins: null,
+                owner: null,
+              },
+              isNull,
+            ),
+      ),
       total,
     };
   }
@@ -257,6 +279,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         name: dto.name,
         type: dto.type,
         admins: [currentUser],
+        owner: dto.type === EGroupChatType.GROUP ? currentUser : null,
       } as unknown as GroupChat;
 
       await this.groupChatRepo.save(newGroupChat);

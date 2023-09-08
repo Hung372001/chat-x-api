@@ -20,7 +20,7 @@ export class GroupChatService extends BaseService<GroupChat> {
   ): Promise<GroupChat | null> {
     return this.groupChatRepo.findOne({
       where: query,
-      relations: ['members'],
+      relations: ['members', 'admins'],
     });
   }
 
