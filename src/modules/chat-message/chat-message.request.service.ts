@@ -32,6 +32,7 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
     query: FilterDto,
   ) {
     const currentUser = this.request.user as User;
+    const isRootAdmin = currentUser.roles[0].type === ERole.ADMIN;
 
     let groupChat = null;
     if (groupChatId) {
@@ -45,7 +46,10 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       ]);
     }
 
-    if (!groupChat || !groupChat.members.some((x) => x.id === currentUser.id)) {
+    if (
+      !isRootAdmin &&
+      (!groupChat || !groupChat.members.some((x) => x.id === currentUser.id))
+    ) {
       throw { message: 'Không tìm thấy nhóm chat.' };
     }
 
@@ -67,10 +71,13 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       isGetAll = false,
     } = query;
 
-    const chatSetting = await this.groupSettingService.getGroupSetting(
-      groupChatId,
-      currentUser.id,
-    );
+    let chatSetting = null;
+    if (!isRootAdmin) {
+      chatSetting = await this.groupSettingService.getGroupSetting(
+        groupChatId,
+        currentUser.id,
+      );
+    }
 
     const queryBuilder = this.chatMessageRepo
       .createQueryBuilder('chat_message')
@@ -85,15 +92,18 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
         'profile as nameCardProfile',
       )
       .where('group_chat.id = :groupChatId', { groupChatId: groupChat.id })
-      .andWhere('chat_message.pinned = false')
-      .andWhere('group_chat_setting.userId = :userId', {
+      .andWhere('chat_message.pinned = false');
+
+    if (!isRootAdmin) {
+      queryBuilder.andWhere('group_chat_setting.userId = :userId', {
         userId: currentUser.id,
       });
 
-    if (chatSetting.deleteMessageFrom) {
-      queryBuilder.andWhere('chat_message.created_at >= :fromDate', {
-        fromDate: chatSetting.deleteMessageFrom,
-      });
+      if (chatSetting.deleteMessageFrom) {
+        queryBuilder.andWhere('chat_message.created_at >= :fromDate', {
+          fromDate: chatSetting.deleteMessageFrom,
+        });
+      }
     }
 
     if (adminPermission) {

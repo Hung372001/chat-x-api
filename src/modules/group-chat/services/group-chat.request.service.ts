@@ -22,6 +22,7 @@ import { Request } from 'express';
 import { AppGateway } from '../../gateway/app.gateway';
 import { RenameGroupChatDto } from '../dto/rename-group-chat.dto';
 import { GroupChatSetting } from '../entities/group-chat-setting.entity';
+import { ERole } from '../../../common/enums/role.enum';
 
 @Injectable({ scope: Scope.REQUEST })
 export class GroupChatRequestService extends BaseService<GroupChat> {
@@ -38,6 +39,8 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
 
   override async findAll(query: FilterDto) {
     const currentUser = this.request.user as User;
+    const isRootAdmin = currentUser.roles[0].type === ERole.ADMIN;
+
     const {
       keyword = '',
       andKeyword = '',
@@ -52,21 +55,24 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       isGetAll = false,
     } = query;
 
-    const groupChatIds = await this.groupChatRepo
-      .createQueryBuilder('group_chat')
-      .select('group_chat.id')
-      .leftJoin('group_chat.members', 'user')
-      .addGroupBy('group_chat.id')
-      .having(`array_agg(user.id) @> :userIds::uuid[]`, {
-        userIds: [currentUser.id],
-      })
-      .getMany();
+    let groupChatIds = [];
+    if (!isRootAdmin) {
+      groupChatIds = await this.groupChatRepo
+        .createQueryBuilder('group_chat')
+        .select('group_chat.id')
+        .leftJoin('group_chat.members', 'user')
+        .addGroupBy('group_chat.id')
+        .having(`array_agg(user.id) @> :userIds::uuid[]`, {
+          userIds: [currentUser.id],
+        })
+        .getMany();
 
-    if (!groupChatIds.length) {
-      return {
-        items: [],
-        total: 0,
-      };
+      if (!groupChatIds.length) {
+        return {
+          items: [],
+          total: 0,
+        };
+      }
     }
 
     const queryBuilder = this.groupChatRepo
@@ -81,14 +87,18 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       .leftJoinAndSelect('group_chat.admins', 'user as admins')
       .leftJoinAndSelect('group_chat.latestMessage', 'chat_message')
       .leftJoinAndSelect('group_chat.settings', 'group_chat_setting')
-      .where('group_chat.id In(:...groupChatIds)', {
-        groupChatIds: groupChatIds.map((x) => x.id),
-      })
-      .andWhere('group_chat_setting as userSetting.groupChatId = group_chat.id')
-      .andWhere('group_chat_setting.userId = :userId', {
-        userId: currentUser.id,
-      })
+      .where('group_chat_setting as userSetting.groupChatId = group_chat.id')
       .orderBy('group_chat_setting.pinned', 'DESC');
+
+    if (!isRootAdmin) {
+      queryBuilder
+        .andWhere('group_chat.id In(:...groupChatIds)', {
+          groupChatIds: groupChatIds.map((x) => x.id),
+        })
+        .andWhere('group_chat_setting.userId = :userId', {
+          userId: currentUser.id,
+        });
+    }
 
     if (keyword) {
       if (searchAndBy) {
