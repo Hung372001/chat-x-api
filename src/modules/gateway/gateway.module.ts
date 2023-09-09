@@ -10,6 +10,7 @@ import { ChatMessage } from '../chat-message/entities/chat-message.entity';
 import { ChatMessageGatewayService } from './services/chat-message.request.service';
 import { GroupChatSetting } from '../group-chat/entities/group-chat-setting.entity';
 import { NotificationModule } from '../notification/notification.module';
+import { OnlinesSessionManager } from './sessions/onlines.session';
 
 @Module({
   imports: [
@@ -21,12 +22,14 @@ import { NotificationModule } from '../notification/notification.module';
   providers: [
     AppGateway,
     GatewaySessionManager,
+    OnlinesSessionManager,
     GroupChatGatewayService,
     ChatMessageGatewayService,
   ],
   exports: [
     AppGateway,
     GatewaySessionManager,
+    OnlinesSessionManager,
     GroupChatGatewayService,
     ChatMessageGatewayService,
   ],

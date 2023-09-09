@@ -23,6 +23,7 @@ import { ChatMessageGatewayService } from './services/chat-message.request.servi
 import { SendConversationMessageDto } from '../chat-message/dto/send-conversation-message.dto';
 import { ChatMessage } from '../chat-message/entities/chat-message.entity';
 import { ReadMessageDto } from '../chat-message/dto/read-message.dto';
+import { OnlinesSessionManager } from './sessions/onlines.session';
 
 @WebSocketGateway({
   namespace: 'socket/chats',
@@ -45,6 +46,8 @@ export class AppGateway
     private readonly socketSessions: GatewaySessionManager<AuthSocket>,
     @Inject(GatewaySessionManager)
     private readonly insideGroupSessions: GatewaySessionManager<string>,
+    @Inject(OnlinesSessionManager)
+    private readonly onlineSessions: OnlinesSessionManager,
     @Inject(JwtService) private jwtService: JwtService,
     @Inject(UserService) private userService: UserService,
     @Inject(GroupChatGatewayService)
@@ -64,24 +67,28 @@ export class AppGateway
   async handleConnection(client: AuthSocket) {
     this.logger.log(client.id, 'Connected..............................');
     this.socketSessions.setUserSession(client?.user?.id, client);
+    this.onlineSessions.setUserSession(client?.user?.id, true);
     this.groupChatService.emitOnlineGroupMember(client, client?.user);
   }
 
   async handleDisconnect(client: AuthSocket) {
     this.logger.log(client.id, 'Disconnected..............................');
     this.groupChatService.emitOnlineGroupMember(client, client?.user);
+    this.onlineSessions.removeUserSession(client?.user?.id);
     this.socketSessions.removeUserSession(client.user.id, client);
   }
 
   // Online and offile status of group member
   @SubscribeMessage('online')
   async handleMemberOnline(@ConnectedSocket() client: AuthSocket) {
+    this.onlineSessions.setUserSession(client?.user?.id, true);
     this.groupChatService.emitOnlineGroupMember(client, client?.user, false);
   }
 
   @SubscribeMessage('offline')
   async handleMemberOffline(@ConnectedSocket() client: AuthSocket) {
-    this.groupChatService.emitOnlineGroupMember(client, client?.user, false);
+    this.onlineSessions.setUserSession(client?.user?.id, false);
+    this.groupChatService.emitOfflineGroupMember(client, client?.user, false);
   }
 
   @SubscribeMessage('enterGroupChat')
@@ -108,7 +115,7 @@ export class AppGateway
     const groupChat = await this.groupChatService.findOne({ id: groupId });
     if (groupChat) {
       const onlineMembers = groupChat.members.map((member) =>
-        this.socketSessions.getUserSession(member.id) ? member : null,
+        this.onlineSessions.getUserSession(member.id) ? member : null,
       );
 
       client.emit('onlineGroupMembersResponse', {
@@ -249,14 +256,18 @@ export class AppGateway
     @MessageBody() data: SendMessageDto,
     @ConnectedSocket() client: AuthSocket,
   ) {
-    const newMessage = await this.chatMessageService.sendMessage(
-      data,
-      client.user,
-    );
-    if (newMessage) {
-      client.broadcast.to(newMessage.group.id).emit('newMessageReceived', {
-        newMessage,
-      });
+    try {
+      const newMessage = await this.chatMessageService.sendMessage(
+        data,
+        client.user,
+      );
+      if (newMessage) {
+        client.broadcast.to(newMessage.group.id).emit('newMessageReceived', {
+          newMessage,
+        });
+      }
+    } catch (e: any) {
+      client.emit('chatError', { errorMsg: e.message });
     }
   }
 
@@ -265,22 +276,26 @@ export class AppGateway
     @MessageBody() data: SendConversationMessageDto,
     @ConnectedSocket() client: AuthSocket,
   ) {
-    const groupChatDou = await this.groupChatService.getGroupChatDou(
-      [data.receiverId, client.user.id],
-      this,
-    );
-
-    if (groupChatDou) {
-      const newMessage = await this.chatMessageService.sendMessage(
-        { ...data, groupId: groupChatDou.id },
-        client.user,
-        groupChatDou,
+    try {
+      const groupChatDou = await this.groupChatService.getGroupChatDou(
+        [data.receiverId, client.user.id],
+        this,
       );
-      if (newMessage) {
-        client.broadcast.to(newMessage.group.id).emit('newMessageReceived', {
-          newMessage,
-        });
+
+      if (groupChatDou) {
+        const newMessage = await this.chatMessageService.sendMessage(
+          { ...data, groupId: groupChatDou.id },
+          client.user,
+          groupChatDou,
+        );
+        if (newMessage) {
+          client.broadcast.to(newMessage.group.id).emit('newMessageReceived', {
+            newMessage,
+          });
+        }
       }
+    } catch (e: any) {
+      client.emit('chatError', { errorMsg: e.message });
     }
   }
 
@@ -289,17 +304,24 @@ export class AppGateway
     @MessageBody() data: ReadMessageDto,
     @ConnectedSocket() client: AuthSocket,
   ) {
-    const readRes = await this.groupChatService.readMessages(data, client.user);
+    try {
+      const readRes = await this.groupChatService.readMessages(
+        data,
+        client.user,
+      );
 
-    if (readRes) {
-      client.broadcast.to(readRes.groupChat.id).emit('messagesRead', {
-        messageIds: data.messageIds,
-      });
+      if (readRes) {
+        client.broadcast.to(readRes.groupChat.id).emit('messagesRead', {
+          messageIds: data.messageIds,
+        });
 
-      client.broadcast.emit('countReadMessages', {
-        groupChatId: readRes.groupChat.id,
-        unReadMessages: readRes.unReadMessages,
-      });
+        client.broadcast.emit('countReadMessages', {
+          groupChatId: readRes.groupChat.id,
+          unReadMessages: readRes.unReadMessages,
+        });
+      }
+    } catch (e: any) {
+      client.emit('chatError', { errorMsg: e.message });
     }
   }
 
@@ -382,7 +404,7 @@ export class AppGateway
       );
 
       if (deletedMessage) {
-        client.emit('messageDeleted', {
+        client.broadcast.to(deletedMessage.group.id).emit('messageDeleted', {
           deletedMessage,
         });
       }

@@ -22,10 +22,12 @@ import { NotificationModule } from './modules/notification/notification.module';
 import { CacheInterceptor } from './interceptors/cache.interceptor';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SchedulerModule } from './modules/scheduler/scheduler.module';
+import { ProfileModule } from './modules/profile/profile.module';
 
 const apiV1Modules = [
   UserModule,
   RoleModule,
+  ProfileModule,
   ChatMessageModule,
   GroupChatModule,
   UploadModule,

@@ -39,10 +39,10 @@ export class FCMTokenRequestService extends BaseService<FCMToken> {
         .getOne();
 
       if (foundToken) {
-        throw { message: 'Notification token has already existed.' };
+        throw { message: 'Device token đã tồn tại.' };
       }
 
-      return this.fcmTokenRepository.create({ ...dto, user: currentUser });
+      return this.fcmTokenRepository.save({ ...dto, user: currentUser });
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
@@ -61,7 +61,7 @@ export class FCMTokenRequestService extends BaseService<FCMToken> {
       .getOne();
 
     if (!foundToken) {
-      throw new BadRequestException('Notification token is not found.');
+      throw new BadRequestException('Device token đã tồn tại.');
     }
 
     return await this.fcmTokenRepository.softDelete(id);

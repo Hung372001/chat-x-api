@@ -1,10 +1,4 @@
-import {
-  HttpException,
-  HttpStatus,
-  Inject,
-  Injectable,
-  Scope,
-} from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { Notification } from './entities/notification.entity';
 import { SendNotificationDto } from './dto/send-notification.dto';
 import * as firebase from 'firebase-admin';
@@ -14,12 +8,10 @@ import { ICreateNotificationResponse } from './interfaces/create-notification.in
 import { ClientProxy } from '@nestjs/microservices';
 import { ChatXFirebase } from '../../configs/firebase';
 import { FCMTokenService } from '../fcm-token/fcm-token.service';
-import { REQUEST } from '@nestjs/core';
-import { Request } from 'express';
-import { User } from '../user/entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserService } from '../user/user.service';
+import { omitBy, isNull } from 'lodash';
 
 firebase.initializeApp({
   credential: firebase.credential.cert({
@@ -107,10 +99,14 @@ export class NotificationService {
       await firebase
         .messaging()
         .send({
-          notification: {
-            title: notification.title,
-            body: notification.content,
-          },
+          notification: omitBy(
+            {
+              title: notification.title,
+              body: notification.content,
+              imageUrl: notification.imageUrl,
+            },
+            isNull,
+          ),
           token: deviceToken,
         })
         .catch((error: any) => {

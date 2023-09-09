@@ -14,6 +14,7 @@ import { intersectionBy } from 'lodash';
 import { NotificationService } from '../../notification/notification.service';
 import { EGroupChatType } from '../../group-chat/dto/group-chat.enum';
 import { ENotificationType } from '../../notification/dto/enum-notification';
+import { OnlinesSessionManager } from '../sessions/onlines.session';
 
 @Injectable()
 export class ChatMessageGatewayService {
@@ -28,6 +29,8 @@ export class ChatMessageGatewayService {
     private userService: UserService,
     @Inject(GatewaySessionManager)
     private readonly insideGroupSessions: GatewaySessionManager<string>,
+    @Inject(OnlinesSessionManager)
+    private readonly onlineSessions: OnlinesSessionManager,
     @Inject(NotificationService)
     private readonly notifyService: NotificationService,
   ) {}
@@ -72,13 +75,14 @@ export class ChatMessageGatewayService {
         groupChat.id,
       );
 
-      const insideGroupMembers = intersectionBy(
-        groupChat.members,
-        groupSession.map((x) => {
-          id: x;
-        }),
-        'id',
-      );
+      let insideGroupMembers = [sender];
+      if (groupSession?.length) {
+        insideGroupMembers = intersectionBy(
+          groupChat.members,
+          groupSession.map((x) => ({ id: x })),
+          'id',
+        );
+      }
 
       const newMessage = await this.chatMessageRepo.create({
         message: dto.message,
@@ -96,14 +100,16 @@ export class ChatMessageGatewayService {
         Promise.all(
           groupChat.settings.map(async (setting) => {
             if (!insideGroupMembers.some((x) => x.id === setting.user.id)) {
-              // send notification
-              this.sendMessageNotification(
-                groupChat,
-                sender,
-                setting.user,
-                setting,
-                newMessage,
-              );
+              if (!this.onlineSessions.getUserSession(setting.user.id)) {
+                // send notification
+                this.sendMessageNotification(
+                  groupChat,
+                  sender,
+                  setting.user,
+                  setting,
+                  newMessage,
+                );
+              }
 
               await this.groupSettingRepo.update(setting.id, {
                 unReadMessages: setting.unReadMessages + 1,
@@ -159,6 +165,7 @@ export class ChatMessageGatewayService {
       title,
       content,
       userId: receiver.id,
+      imageUrl: sender.profile.avatar,
       notificationType: ENotificationType.UNREAD_MESSAGE,
     });
   }

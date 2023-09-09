@@ -17,8 +17,12 @@ export class GatewaySessionManager<T> implements IGatewaySessionManager<T> {
   }
 
   setUserSession(id: string, data: T) {
-    const userSession = this.sessions.get(id);
-    userSession.push(data);
+    let userSession = this.sessions.get(id);
+    if (userSession) {
+      userSession.push(data);
+    } else {
+      userSession = [data];
+    }
     this.sessions.set(id, userSession);
   }
 

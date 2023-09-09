@@ -11,7 +11,7 @@ export class Notification extends BaseEntity {
   @Column({ type: 'text' })
   content: string;
 
-  @Column({ default: '' })
+  @Column({ nullable: true, default: '' })
   imageUrl: string;
 
   @Column({
