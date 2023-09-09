@@ -7,6 +7,7 @@ import { GroupChatGatewayService } from './group-chat.gateway.service';
 import { SendMessageDto } from '../../chat-message/dto/send-message.dto';
 import { GroupChat } from '../../group-chat/entities/group-chat.entity';
 import { UserService } from '../../user/user.service';
+import moment from 'moment';
 
 @Injectable()
 export class ChatMessageGatewayService {
@@ -166,6 +167,7 @@ export class ChatMessageGatewayService {
         };
       }
 
+      chatMessage.deletedAt = moment.utc().toDate();
       await this.chatMessageRepo.update(chatMessage.id, { deletedBy });
       await this.chatMessageRepo.softDelete(chatMessage.id);
 
