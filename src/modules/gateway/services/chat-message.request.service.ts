@@ -8,6 +8,7 @@ import { SendMessageDto } from '../../chat-message/dto/send-message.dto';
 import { GroupChat } from '../../group-chat/entities/group-chat.entity';
 import { UserService } from '../../user/user.service';
 import moment from 'moment';
+import { EGroupChatType } from '../../group-chat/dto/group-chat.enum';
 
 @Injectable()
 export class ChatMessageGatewayService {
@@ -98,12 +99,14 @@ export class ChatMessageGatewayService {
         throw { message: 'Tin nhắn đã được bỏ ghim.' };
       }
 
-      if (!message.group.admins.some((x) => x.id === user.id)) {
-        throw {
-          message: `Quản trị viên mới có quyền ${
-            pinMessage ? 'ghim' : 'bỏ ghim'
-          } tin nhắn`,
-        };
+      if (message.group.type === EGroupChatType.GROUP) {
+        if (!message.group.admins.some((x) => x.id === user.id)) {
+          throw {
+            message: `Quản trị viên mới có quyền ${
+              pinMessage ? 'ghim' : 'bỏ ghim'
+            } tin nhắn`,
+          };
+        }
       }
 
       message.pinned = pinMessage;
@@ -126,6 +129,14 @@ export class ChatMessageGatewayService {
 
       if (!chatMessage) {
         throw { message: 'Không tìm thấy tin nhắn.' };
+      }
+
+      if (chatMessage.unsent) {
+        throw { message: 'Tin nhắn đã được thu hồi.' };
+      }
+
+      if (chatMessage.pinned) {
+        throw { message: 'Bỏ ghim để thu hồi tin nhắn.' };
       }
 
       if (
@@ -159,6 +170,10 @@ export class ChatMessageGatewayService {
 
       if (!chatMessage) {
         throw { message: 'Không tìm thấy tin nhắn.' };
+      }
+
+      if (chatMessage.pinned) {
+        throw { message: 'Bỏ ghim để xóa tin nhắn.' };
       }
 
       if (!chatMessage.group.members.some((x) => x.id === deletedBy.id)) {
