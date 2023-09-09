@@ -344,7 +344,7 @@ export class AppGateway
       );
 
       if (deletedMessage) {
-        client.emit('messageDeleted', {
+        client.broadcast.to(deletedMessage.group.id).emit('messageDeleted', {
           deletedMessage,
         });
       }
