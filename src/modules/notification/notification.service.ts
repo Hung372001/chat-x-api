@@ -65,7 +65,7 @@ export class NotificationService {
     }
   }
 
-  async send(dto: CreateNotificationDto) {
+  send(dto: CreateNotificationDto) {
     return this.rmqClient.emit('sendNotification', dto);
   }
 

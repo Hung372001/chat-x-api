@@ -34,4 +34,7 @@ export class GroupChatSetting extends BaseEntity {
 
   @Column({ default: false })
   muteNotification: boolean;
+
+  @Column({ default: 0 })
+  unReadMessages: number;
 }

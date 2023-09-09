@@ -14,7 +14,7 @@ import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../user/user.service';
 import { GroupChatGatewayService } from './services/group-chat.gateway.service';
-import { GatewaySessionManager } from './gateway.session';
+import { GatewaySessionManager } from './sessions/gateway.session';
 import { AuthSocket } from './interfaces/auth.interface';
 import { GroupChat } from '../group-chat/entities/group-chat.entity';
 import { User } from '../user/entities/user.entity';
@@ -22,6 +22,7 @@ import { SendMessageDto } from '../chat-message/dto/send-message.dto';
 import { ChatMessageGatewayService } from './services/chat-message.request.service';
 import { SendConversationMessageDto } from '../chat-message/dto/send-conversation-message.dto';
 import { ChatMessage } from '../chat-message/entities/chat-message.entity';
+import { ReadMessageDto } from '../chat-message/dto/read-message.dto';
 
 @WebSocketGateway({
   namespace: 'socket/chats',
@@ -41,7 +42,9 @@ export class AppGateway
   private logger: Logger = new Logger(AppGateway.name);
   constructor(
     @Inject(GatewaySessionManager)
-    private readonly sessions: GatewaySessionManager,
+    private readonly socketSessions: GatewaySessionManager<AuthSocket>,
+    @Inject(GatewaySessionManager)
+    private readonly insideGroupSessions: GatewaySessionManager<string>,
     @Inject(JwtService) private jwtService: JwtService,
     @Inject(UserService) private userService: UserService,
     @Inject(GroupChatGatewayService)
@@ -60,14 +63,14 @@ export class AppGateway
   // Connection and disconnect socket
   async handleConnection(client: AuthSocket) {
     this.logger.log(client.id, 'Connected..............................');
-    this.sessions.setUserSocket(client?.user?.id, client);
+    this.socketSessions.setUserSession(client?.user?.id, client);
     this.groupChatService.emitOnlineGroupMember(client, client?.user);
   }
 
   async handleDisconnect(client: AuthSocket) {
     this.logger.log(client.id, 'Disconnected..............................');
     this.groupChatService.emitOnlineGroupMember(client, client?.user);
-    this.sessions.removeUserSocket(client.user.id);
+    this.socketSessions.removeUserSession(client.user.id, client);
   }
 
   // Online and offile status of group member
@@ -81,6 +84,22 @@ export class AppGateway
     this.groupChatService.emitOnlineGroupMember(client, client?.user, false);
   }
 
+  @SubscribeMessage('enterGroupChat')
+  async enterGroupChat(
+    @MessageBody() groupId: string,
+    @ConnectedSocket() client: AuthSocket,
+  ) {
+    this.insideGroupSessions.setUserSession(groupId, client?.user?.id);
+  }
+
+  @SubscribeMessage('outGroupChat')
+  async outGroupChat(
+    @MessageBody() groupId: string,
+    @ConnectedSocket() client: AuthSocket,
+  ) {
+    this.insideGroupSessions.removeUserSession(groupId, client?.user?.id);
+  }
+
   @SubscribeMessage('getOnlineGroupMembers')
   async getOnlineGroupMembers(
     @MessageBody() groupId: string,
@@ -89,7 +108,7 @@ export class AppGateway
     const groupChat = await this.groupChatService.findOne({ id: groupId });
     if (groupChat) {
       const onlineMembers = groupChat.members.map((member) =>
-        this.sessions.getUserSocket(member.id) ? member : null,
+        this.socketSessions.getUserSession(member.id) ? member : null,
       );
 
       client.emit('onlineGroupMembersResponse', {
@@ -130,9 +149,9 @@ export class AppGateway
   joinGroup(groupChatId: string, groupMembers: User[]) {
     return Promise.all(
       groupMembers.map((member) => {
-        const client = this.sessions.getUserSocket(member.id);
-        if (client) {
-          client.join(groupChatId);
+        const clients = this.socketSessions.getUserSession(member.id);
+        if (clients) {
+          clients.forEach((client) => client.join(groupChatId));
         }
       }),
     );
@@ -141,9 +160,9 @@ export class AppGateway
   leaveGroup(groupChatId: string, groupMembers: User[]) {
     return Promise.all(
       groupMembers.map((member) => {
-        const client = this.sessions.getUserSocket(member.id);
-        if (client) {
-          client.leave(groupChatId);
+        const clients = this.socketSessions.getUserSession(member.id);
+        if (clients) {
+          clients.forEach((client) => client.leave(groupChatId));
         }
       }),
     );
@@ -262,6 +281,25 @@ export class AppGateway
           newMessage,
         });
       }
+    }
+  }
+
+  @SubscribeMessage('onReadMessages')
+  async onReadMessages(
+    @MessageBody() data: ReadMessageDto,
+    @ConnectedSocket() client: AuthSocket,
+  ) {
+    const readRes = await this.groupChatService.readMessages(data, client.user);
+
+    if (readRes) {
+      client.broadcast.to(readRes.groupChat.id).emit('messagesRead', {
+        messageIds: data.messageIds,
+      });
+
+      client.broadcast.emit('countReadMessages', {
+        groupChatId: readRes.groupChat.id,
+        unReadMessages: readRes.unReadMessages,
+      });
     }
   }
 
