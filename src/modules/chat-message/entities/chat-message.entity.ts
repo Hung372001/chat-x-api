@@ -44,18 +44,18 @@ export class ChatMessage extends BaseEntity {
   @Column({ default: false })
   unsent: boolean;
 
-  @OneToOne(() => User)
+  @ManyToOne(() => User, (unsentBy) => unsentBy.unsentMessages)
   @JoinColumn()
   unsentBy: User;
 
   @Column({ default: false })
   pinned: boolean;
 
-  @OneToOne(() => User)
+  @ManyToOne(() => User, (pinnedBy) => pinnedBy.pinnedMessages)
   @JoinColumn()
   pinnedBy: User;
 
-  @OneToOne(() => User)
+  @ManyToOne(() => User, (nameCard) => nameCard.nameCardMessages)
   @JoinColumn()
   nameCard: User;
 }

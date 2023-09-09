@@ -78,6 +78,15 @@ export class User extends BaseEntity {
   @OneToMany(() => ChatMessage, (deletedMessages) => deletedMessages.deletedBy)
   deletedMessages: ChatMessage[];
 
+  @OneToMany(() => ChatMessage, (unsentMessages) => unsentMessages.unsentBy)
+  unsentMessages: ChatMessage[];
+
+  @OneToMany(() => ChatMessage, (pinnedMessages) => pinnedMessages.pinnedBy)
+  pinnedMessages: ChatMessage[];
+
+  @OneToMany(() => ChatMessage, (nameCardMessages) => nameCardMessages.nameCard)
+  nameCardMessages: ChatMessage[];
+
   @OneToMany(
     () => FriendRequest,
     (requestFromUsers) => requestFromUsers.fromUser,
