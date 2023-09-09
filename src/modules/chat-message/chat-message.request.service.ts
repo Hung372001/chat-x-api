@@ -74,7 +74,7 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
     let chatSetting = null;
     if (!isRootAdmin) {
       chatSetting = await this.groupSettingService.getGroupSetting(
-        groupChatId,
+        groupChat.id,
         currentUser.id,
       );
     }
