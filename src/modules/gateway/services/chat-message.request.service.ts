@@ -177,7 +177,7 @@ export class ChatMessageGatewayService {
     try {
       const message = await this.chatMessageRepo.findOne({
         where: { id },
-        relations: ['group', 'group.admins'],
+        relations: ['group', 'group.admins', 'sender', 'sender.profile'],
       });
 
       if (!message) {
@@ -217,7 +217,7 @@ export class ChatMessageGatewayService {
         where: {
           id: chatMessageId,
         },
-        relations: ['sender', 'group', 'group.admins'],
+        relations: ['sender', 'sender.profile', 'group', 'group.admins'],
       });
 
       if (!chatMessage) {
@@ -258,7 +258,7 @@ export class ChatMessageGatewayService {
         where: {
           id: chatMessageId,
         },
-        relations: ['sender', 'group', 'group.members'],
+        relations: ['sender', 'sender.profile', 'group', 'group.members'],
       });
 
       if (!chatMessage) {
