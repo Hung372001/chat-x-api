@@ -85,13 +85,14 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
         );
 
         await this.groupSettingRepo.save(memberSettings);
+        newGroupChat.settings = memberSettings;
 
         return newGroupChat;
       }
 
       return null;
     } else {
-      return this.findOne({ id: groupChat.id });
+      return this.findOneWithSettings({ id: groupChat.id });
     }
   }
 

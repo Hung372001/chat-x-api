@@ -96,11 +96,14 @@ export class ChatMessageGatewayService {
 
       await this.chatMessageRepo.save(newMessage);
 
-      if (groupChat.settings.length) {
+      if (groupChat?.settings?.length) {
         Promise.all(
           groupChat.settings.map(async (setting) => {
             if (!insideGroupMembers.some((x) => x.id === setting.user.id)) {
-              if (!this.onlineSessions.getUserSession(setting.user.id)) {
+              if (
+                !this.onlineSessions.getUserSession(setting.user.id) &&
+                !setting.muteNotification
+              ) {
                 // send notification
                 this.sendMessageNotification(
                   groupChat,
