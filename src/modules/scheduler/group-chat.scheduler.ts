@@ -35,21 +35,25 @@ export class GroupChatScheduler {
       if (groupChats.length > 0) {
         await Promise.all(
           groupChats.map(async (group: GroupChat) => {
+            const clearFrom = moment
+              .utc()
+              .add(-group.clearMessageDuration, 'minute')
+              .toDate();
             const chatMessages = await this.chatMessageRepo
               .createQueryBuilder('chat_message')
               .where('chat_message.groupId = :groupId', { groupId: group.id })
-              .andWhere('chat_message.createdAt >= :fromTime', {
-                fromTime: moment()
-                  .utc()
-                  .add(-group.clearMessageDuration, 'minute')
-                  .toDate(),
+              .andWhere('chat_message.createdAt <= :clearFrom', {
+                clearFrom,
               })
+              .andWhere('chat_message.pinned = false')
               .getMany();
 
             // Remove all messages
-            await this.chatMessageRepo.softDelete(
-              chatMessages.map((x) => x.id),
-            );
+            if (chatMessages?.length) {
+              await this.chatMessageRepo.softDelete(
+                chatMessages.map((x) => x.id),
+              );
+            }
           }),
         );
       }
