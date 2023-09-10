@@ -1,19 +1,8 @@
-import {
-  BadRequestException,
-  HttpException,
-  HttpStatus,
-  Inject,
-  Injectable,
-  Scope,
-} from '@nestjs/common';
-import { REQUEST } from '@nestjs/core';
-import { Request } from 'express';
+import { Injectable } from '@nestjs/common';
 import { FCMToken } from './entities/fcm-token.entity';
-import { CreateFCMTokenDto } from './dto/create-fcm-token.dto';
 import { BaseService } from '../../common/services/base.service';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DeleteResult, Repository } from 'typeorm';
-import { User } from '../user/entities/user.entity';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class FCMTokenService extends BaseService<FCMToken> {

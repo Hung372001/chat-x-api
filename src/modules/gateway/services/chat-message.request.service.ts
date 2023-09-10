@@ -7,6 +7,12 @@ import { GroupChatGatewayService } from './group-chat.gateway.service';
 import { SendMessageDto } from '../../chat-message/dto/send-message.dto';
 import { GroupChat } from '../../group-chat/entities/group-chat.entity';
 import { UserService } from '../../user/user.service';
+import { GroupChatSetting } from '../../group-chat/entities/group-chat-setting.entity';
+import { GatewaySessionManager } from '../sessions/gateway.session';
+import { intersectionBy } from 'lodash';
+import { NotificationService } from '../../notification/notification.service';
+import { ENotificationType } from '../../notification/dto/enum-notification';
+import { OnlinesSessionManager } from '../sessions/onlines.session';
 import moment from 'moment';
 import { EGroupChatType } from '../../group-chat/dto/group-chat.enum';
 
@@ -17,14 +23,22 @@ export class ChatMessageGatewayService {
     private chatMessageRepo: Repository<ChatMessage>,
     @Inject(GroupChatGatewayService)
     private groupChatService: GroupChatGatewayService,
+    @InjectRepository(GroupChatSetting)
+    private groupSettingRepo: Repository<GroupChatSetting>,
     @Inject(UserService)
     private userService: UserService,
+    @Inject(GatewaySessionManager)
+    private readonly insideGroupSessions: GatewaySessionManager<string>,
+    @Inject(OnlinesSessionManager)
+    private readonly onlineSessions: OnlinesSessionManager,
+    @Inject(NotificationService)
+    private readonly notifyService: NotificationService,
   ) {}
 
   async sendMessage(dto: SendMessageDto, sender: User, groupChat?: GroupChat) {
     try {
       if (!groupChat) {
-        groupChat = await this.groupChatService.findOne({
+        groupChat = await this.groupChatService.findOneWithSettings({
           id: dto.groupId,
         });
       }
@@ -57,6 +71,19 @@ export class ChatMessageGatewayService {
         }
       }
 
+      const groupSession = this.insideGroupSessions.getUserSession(
+        groupChat.id,
+      );
+
+      let insideGroupMembers = [sender];
+      if (groupSession?.length) {
+        insideGroupMembers = intersectionBy(
+          groupChat.members,
+          groupSession.map((x) => ({ id: x })),
+          'id',
+        );
+      }
+
       const newMessage = await this.chatMessageRepo.create({
         message: dto.message,
         imageUrls: dto.imageUrls,
@@ -64,9 +91,36 @@ export class ChatMessageGatewayService {
         sender,
         group: groupChat,
         nameCard,
+        readsBy: insideGroupMembers,
       } as ChatMessage);
 
       await this.chatMessageRepo.save(newMessage);
+
+      if (groupChat?.settings?.length) {
+        Promise.all(
+          groupChat.settings.map(async (setting) => {
+            if (!insideGroupMembers.some((x) => x.id === setting.user.id)) {
+              if (
+                !this.onlineSessions.getUserSession(setting.user.id) &&
+                !setting.muteNotification
+              ) {
+                // send notification
+                this.sendMessageNotification(
+                  groupChat,
+                  sender,
+                  setting.user,
+                  setting,
+                  newMessage,
+                );
+              }
+
+              await this.groupSettingRepo.update(setting.id, {
+                unReadMessages: setting.unReadMessages + 1,
+              });
+            }
+          }),
+        );
+      }
 
       // Save latest message for group
       groupChat.latestMessage = newMessage;
@@ -78,6 +132,45 @@ export class ChatMessageGatewayService {
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
+  }
+
+  sendMessageNotification(
+    group: GroupChat,
+    sender: User,
+    receiver: User,
+    setting: GroupChatSetting,
+    chatMessage: ChatMessage,
+  ) {
+    let title = group.name;
+
+    let messageContent = chatMessage.message;
+    if (!chatMessage.message) {
+      if (chatMessage.nameCard) {
+        messageContent = `Danh thiếp ${chatMessage.nameCard.username}`;
+      } else {
+        messageContent = 'Photos';
+        if (!chatMessage.imageUrls) {
+          if (!chatMessage.documentUrls) {
+            messageContent = 'Attach files';
+          }
+        }
+      }
+    }
+
+    let content = `${setting.nickname ?? sender.username}: ${messageContent}`;
+
+    if (group.type === EGroupChatType.DOU) {
+      title = receiver.username;
+      content = `${messageContent}`;
+    }
+
+    this.notifyService.send({
+      title,
+      content,
+      userId: receiver.id,
+      imageUrl: sender.profile.avatar,
+      notificationType: ENotificationType.UNREAD_MESSAGE,
+    });
   }
 
   async togglePinMessage(id: string, user: User, pinMessage: boolean) {

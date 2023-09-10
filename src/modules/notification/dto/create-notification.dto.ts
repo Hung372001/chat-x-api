@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty } from 'class-validator';
+import { IsNotEmpty, IsOptional } from 'class-validator';
 import { ENotificationType } from './enum-notification';
 
 export class CreateNotificationDto {
@@ -22,8 +22,15 @@ export class CreateNotificationDto {
   userId: string;
 
   @ApiPropertyOptional({
+    example: 'Image url',
+  })
+  @IsOptional()
+  imageUrl?: string;
+
+  @ApiPropertyOptional({
     enum: ENotificationType,
     example: 'NORMAL',
   })
+  @IsOptional()
   notificationType?: ENotificationType;
 }

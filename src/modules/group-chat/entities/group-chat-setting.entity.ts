@@ -26,6 +26,9 @@ export class GroupChatSetting extends BaseEntity {
   @Column({ default: false })
   pinned: boolean;
 
+  @Column({ default: false })
+  hiding: boolean;
+
   @Column({
     type: 'timestamptz',
     nullable: true,
@@ -34,4 +37,7 @@ export class GroupChatSetting extends BaseEntity {
 
   @Column({ default: false })
   muteNotification: boolean;
+
+  @Column({ default: 0 })
+  unReadMessages: number;
 }
