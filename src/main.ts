@@ -49,6 +49,7 @@ async function bootstrap() {
 
   // Port listener
   const port = appConfigs.get('PORT') ?? 3000;
+  await app.startAllMicroservices();
   await app.listen(port, () => {
     logger.log(`Application running on port ${port}`);
   });

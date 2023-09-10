@@ -9,6 +9,9 @@ import { EGroupChatType } from '../../group-chat/dto/group-chat.enum';
 import { AppGateway } from '../app.gateway';
 import { UserService } from '../../user/user.service';
 import { GroupChatSetting } from '../../group-chat/entities/group-chat-setting.entity';
+import { ReadMessageDto } from '../../chat-message/dto/read-message.dto';
+import { ChatMessage } from '../../chat-message/entities/chat-message.entity';
+import { GatewaySessionManager } from '../sessions/gateway.session';
 
 @Injectable()
 export class GroupChatGatewayService extends BaseService<GroupChat> {
@@ -16,7 +19,11 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     @InjectRepository(GroupChat) private groupChatRepo: Repository<GroupChat>,
     @InjectRepository(GroupChatSetting)
     private groupSettingRepo: Repository<GroupChatSetting>,
+    @InjectRepository(ChatMessage)
+    private chatMessageRepo: Repository<ChatMessage>,
     @Inject(UserService) private userService: UserService,
+    @Inject(GatewaySessionManager)
+    private readonly insideGroupSessions: GatewaySessionManager<string>,
   ) {
     super(groupChatRepo);
   }
@@ -27,6 +34,15 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     return this.groupChatRepo.findOne({
       where: query,
       relations: ['members', 'admins'],
+    });
+  }
+
+  async findOneWithSettings(
+    query: FindOptionsWhere<GroupChat> | FindOptionsWhere<GroupChat>[],
+  ): Promise<GroupChat | null> {
+    return this.groupChatRepo.findOne({
+      where: query,
+      relations: ['members', 'admins', 'settings', 'settings.user'],
     });
   }
 
@@ -69,13 +85,14 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
         );
 
         await this.groupSettingRepo.save(memberSettings);
+        newGroupChat.settings = memberSettings;
 
         return newGroupChat;
       }
 
       return null;
     } else {
-      return this.findOne({ id: groupChat.id });
+      return this.findOneWithSettings({ id: groupChat.id });
     }
   }
 
@@ -131,6 +148,63 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
           });
         }),
       );
+    }
+  }
+
+  async readMessages(dto: ReadMessageDto, user: User) {
+    try {
+      const groupChat = await this.groupChatRepo
+        .createQueryBuilder('group_chat')
+        .leftJoin('group_chat.members', 'user as members')
+        .leftJoinAndSelect('group_chat.settings', 'group_chat_setting')
+        .where('group_chat.id = :groupId', { groupId: dto.groupId })
+        .andWhere('user.id = :userId', { userId: user.id })
+        .andWhere('group_chat_setting.userId = :userId', { userId: user.id })
+        .getOne();
+
+      if (!groupChat) {
+        throw { message: 'Không tìm thấy nhóm chat.' };
+      }
+
+      let messages = await this.chatMessageRepo
+        .createQueryBuilder('chat_message')
+        .leftJoinAndSelect('chat_message.readsBy', 'user')
+        .where('chat_message.groupId = :groupId', { groupId: dto.groupId })
+        .andWhere('user.id = :userId', { userId: user.id })
+        .andWhere('chat_message.id In (:...messageIds)', {
+          messageIds: dto.messageIds,
+        })
+        .getMany();
+
+      messages = messages.filter(
+        (x) => !x.readsBy.some((x) => x.id === user.id),
+      );
+
+      if (messages.length) {
+        Promise.all(
+          messages.map(async (message) => {
+            message.readsBy.push(user);
+            await this.chatMessageRepo.update(message.id, {
+              isRead: true,
+              readsBy: message.readsBy,
+            });
+          }),
+        );
+
+        if (groupChat.settings.length) {
+          groupChat.settings[0].unReadMessages -= messages.length;
+          await this.groupSettingRepo.update(groupChat.settings[0].id, {
+            unReadMessages: groupChat.settings[0].unReadMessages,
+          });
+        }
+      }
+
+      return {
+        groupChat,
+        unReadMessages: groupChat.settings[0].unReadMessages,
+      };
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
   }
 }
