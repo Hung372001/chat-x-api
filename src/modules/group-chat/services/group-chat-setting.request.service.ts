@@ -222,4 +222,21 @@ export class GroupChatSettingRequestService extends BaseService<GroupChatSetting
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
   }
+
+  async toggleHideGroupChat(groupChatId: string) {
+    try {
+      const currentUser = this.request.user as User;
+
+      const setting = await this.getGroupSetting(groupChatId, currentUser.id);
+
+      setting.hiding = !setting.hiding;
+      await this.groupSettingRepo.update(setting.id, {
+        hiding: setting.hiding,
+      });
+
+      return setting;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
 }

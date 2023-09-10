@@ -44,6 +44,11 @@ export class GroupChatSettingController {
     return this.requestService.togglePinGroupChat(id);
   }
 
+  @Patch('hiding/toggle')
+  toggleHideGroupChat(@Param('id') id: string) {
+    return this.requestService.toggleHideGroupChat(id);
+  }
+
   @Patch('mute-notification/toggle')
   toggleMuteNotification(@Param('id') id: string) {
     return this.requestService.toggleMuteNotification(id);
