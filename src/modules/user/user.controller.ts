@@ -72,6 +72,11 @@ export class UserController {
     return this.userRequestService.hiding();
   }
 
+  @Patch('sound-notification/toggle')
+  soundNotification() {
+    return this.userRequestService.soundNotification();
+  }
+
   @Post('add-friends')
   addFriends(@Body() addFriendsDto: AddFriendsDto) {
     return this.userRequestService.addFriendRequests(addFriendsDto);

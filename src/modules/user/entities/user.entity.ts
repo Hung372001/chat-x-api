@@ -41,6 +41,9 @@ export class User extends BaseEntity {
   @Column({ default: false })
   hiding: boolean;
 
+  @Column({ default: false })
+  soundNotification: boolean;
+
   @ManyToMany(() => Role)
   @JoinTable()
   roles: Role[];

@@ -497,4 +497,19 @@ export class UserRequestService extends BaseService<User> {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
   }
+
+  async soundNotification() {
+    try {
+      const currentUser = this.request.user as User;
+
+      currentUser.soundNotification = !currentUser.soundNotification;
+
+      await this.userRepository.update(currentUser.id, {
+        soundNotification: currentUser.soundNotification,
+      });
+      return currentUser;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
 }
