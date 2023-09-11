@@ -28,12 +28,12 @@ export class ProfileService extends BaseService<Profile> {
     super(profileRepository);
   }
 
-  updateProfile(dto: UpdateProfileDto) {
+  async updateProfile(dto: UpdateProfileDto) {
     try {
       const currentUser = this.request.user as User;
 
       if (currentUser.username !== dto.username) {
-        const existedUsername = this.userRepository.findOne({
+        const existedUsername = await this.userRepository.findOne({
           where: {
             id: Not(currentUser.id),
             username: dto.username,
@@ -48,7 +48,7 @@ export class ProfileService extends BaseService<Profile> {
       }
 
       if (currentUser.phoneNumber !== dto.phoneNumber) {
-        const existedPhoneNumber = this.userRepository.findOne({
+        const existedPhoneNumber = await this.userRepository.findOne({
           where: {
             id: Not(currentUser.id),
             phoneNumber: dto.phoneNumber,
@@ -59,6 +59,7 @@ export class ProfileService extends BaseService<Profile> {
           throw { message: 'Số điện thoại này đã tồn tại.' };
         }
 
+        currentUser.phoneNumber = dto.phoneNumber;
         this.userRepository.update(currentUser.id, {
           phoneNumber: dto.phoneNumber,
         });
@@ -77,10 +78,10 @@ export class ProfileService extends BaseService<Profile> {
     }
   }
 
-  updateAvatar(dto: UpdateAvatarDto) {
+  async updateAvatar(dto: UpdateAvatarDto) {
     const currentUser = this.request.user as User;
     currentUser.profile.avatar = dto.avatar;
-    this.profileRepository.update(currentUser.profile.id, {
+    await this.profileRepository.update(currentUser.profile.id, {
       avatar: currentUser.profile.avatar,
     });
     return currentUser;
