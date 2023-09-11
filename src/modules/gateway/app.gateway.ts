@@ -19,11 +19,14 @@ import { AuthSocket } from './interfaces/auth.interface';
 import { GroupChat } from '../group-chat/entities/group-chat.entity';
 import { User } from '../user/entities/user.entity';
 import { SendMessageDto } from '../chat-message/dto/send-message.dto';
-import { ChatMessageGatewayService } from './services/chat-message.request.service';
+import { ChatMessageGatewayService } from './services/chat-message.gateway.service';
 import { SendConversationMessageDto } from '../chat-message/dto/send-conversation-message.dto';
 import { ChatMessage } from '../chat-message/entities/chat-message.entity';
 import { ReadMessageDto } from '../chat-message/dto/read-message.dto';
 import { OnlinesSessionManager } from './sessions/onlines.session';
+import { UserGatewayService } from './services/user.gateway.service';
+import { NotificationService } from '../notification/notification.service';
+import { ENotificationType } from '../notification/dto/enum-notification';
 
 @WebSocketGateway({
   namespace: 'socket/chats',
@@ -49,11 +52,13 @@ export class AppGateway
     @Inject(OnlinesSessionManager)
     private readonly onlineSessions: OnlinesSessionManager,
     @Inject(JwtService) private jwtService: JwtService,
-    @Inject(UserService) private userService: UserService,
+    @Inject(UserGatewayService) private userService: UserGatewayService,
     @Inject(GroupChatGatewayService)
     private groupChatService: GroupChatGatewayService,
     @Inject(ChatMessageGatewayService)
     private chatMessageService: ChatMessageGatewayService,
+    @Inject(NotificationService)
+    private readonly notifyService: NotificationService,
   ) {}
 
   afterInit(client: Socket) {
@@ -157,7 +162,7 @@ export class AppGateway
     return Promise.all(
       groupMembers.map((member) => {
         const clients = this.socketSessions.getUserSession(member.id);
-        if (clients) {
+        if (clients?.length) {
           clients.forEach((client) => client.join(groupChatId));
         }
       }),
@@ -168,7 +173,7 @@ export class AppGateway
     return Promise.all(
       groupMembers.map((member) => {
         const clients = this.socketSessions.getUserSession(member.id);
-        if (clients) {
+        if (clients?.length) {
           clients.forEach((client) => client.leave(groupChatId));
         }
       }),
@@ -183,6 +188,54 @@ export class AppGateway
       this.server.to(groupChat.id).emit('newGroupChatCreated', {
         groupChat,
       });
+    }
+  }
+
+  async createNewFriendGroup(friend: User, currentUser: User) {
+    const clients = this.socketSessions.getUserSession(currentUser.id);
+
+    try {
+      this.notifyService.send({
+        title: currentUser.username,
+        content: `${currentUser.username} đã gửi cho bạn lời mời kết bạn`,
+        userId: friend.id,
+        imageUrl: currentUser.profile.avatar,
+        notificationType: ENotificationType.NEW_FRIEND_REQUEST,
+      });
+
+      const groupChatDou = await this.groupChatService.getGroupChatDou(
+        [friend.id, currentUser.id],
+        this,
+      );
+
+      if (groupChatDou) {
+        await this.joinGroup(groupChatDou.id, [friend, currentUser]);
+        const newMessage = await this.chatMessageService.sendMessage(
+          {
+            message: `Bạn có lời mời kết bạn từ ${currentUser.username}`,
+            imageUrls: null,
+            documentUrls: null,
+            groupId: groupChatDou.id,
+          } as SendMessageDto,
+          currentUser,
+          groupChatDou,
+        );
+        if (newMessage) {
+          delete newMessage.group.latestMessage;
+          if (newMessage.group.settings?.length) {
+            newMessage.group.settings.forEach((x) => delete x.groupChat);
+          }
+          this.server.to(groupChatDou.id).emit('newMessageReceived', {
+            newMessage,
+          });
+        }
+      }
+    } catch (e: any) {
+      if (clients?.length) {
+        clients.forEach((client) =>
+          client.emit('chatError', { errorMsg: e.message }),
+        );
+      }
     }
   }
 

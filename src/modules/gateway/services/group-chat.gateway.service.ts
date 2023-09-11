@@ -7,11 +7,11 @@ import { Socket } from 'socket.io';
 import { User } from '../../user/entities/user.entity';
 import { EGroupChatType } from '../../group-chat/dto/group-chat.enum';
 import { AppGateway } from '../app.gateway';
-import { UserService } from '../../user/user.service';
 import { GroupChatSetting } from '../../group-chat/entities/group-chat-setting.entity';
 import { ReadMessageDto } from '../../chat-message/dto/read-message.dto';
 import { ChatMessage } from '../../chat-message/entities/chat-message.entity';
 import { GatewaySessionManager } from '../sessions/gateway.session';
+import { UserGatewayService } from './user.gateway.service';
 
 @Injectable()
 export class GroupChatGatewayService extends BaseService<GroupChat> {
@@ -21,7 +21,7 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     private groupSettingRepo: Repository<GroupChatSetting>,
     @InjectRepository(ChatMessage)
     private chatMessageRepo: Repository<ChatMessage>,
-    @Inject(UserService) private userService: UserService,
+    @Inject(UserGatewayService) private userService: UserGatewayService,
     @Inject(GatewaySessionManager)
     private readonly insideGroupSessions: GatewaySessionManager<string>,
   ) {

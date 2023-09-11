@@ -77,32 +77,6 @@ export class UserController {
     return this.userRequestService.soundNotification();
   }
 
-  @Post('add-friends')
-  addFriends(@Body() addFriendsDto: AddFriendsDto) {
-    return this.userRequestService.addFriendRequests(addFriendsDto);
-  }
-
-  @Patch('friend-request/accept/:friendId')
-  acceptFriendRequest(@Param('friendId') friendId: string) {
-    return this.userRequestService.updateFriendRequest(
-      friendId,
-      EFriendRequestStatus.ACCEPTED,
-    );
-  }
-
-  @Patch('friend-request/reject/:friendId')
-  rejectFriendRequest(@Param('friendId') friendId: string) {
-    return this.userRequestService.updateFriendRequest(
-      friendId,
-      EFriendRequestStatus.REJECTED,
-    );
-  }
-
-  @Post('remove-friend/:friendId')
-  removeFriend(@Param('friendId') friendId: string) {
-    return this.userRequestService.removeFriend(friendId);
-  }
-
   @Delete(':id')
   remove(@Param('id') id: string): Promise<DeleteResult> {
     return this.userService.remove(id);

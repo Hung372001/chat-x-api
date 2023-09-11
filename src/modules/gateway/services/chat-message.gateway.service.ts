@@ -6,7 +6,6 @@ import { ChatMessage } from '../../chat-message/entities/chat-message.entity';
 import { GroupChatGatewayService } from './group-chat.gateway.service';
 import { SendMessageDto } from '../../chat-message/dto/send-message.dto';
 import { GroupChat } from '../../group-chat/entities/group-chat.entity';
-import { UserService } from '../../user/user.service';
 import { GroupChatSetting } from '../../group-chat/entities/group-chat-setting.entity';
 import { GatewaySessionManager } from '../sessions/gateway.session';
 import { intersectionBy } from 'lodash';
@@ -15,6 +14,7 @@ import { ENotificationType } from '../../notification/dto/enum-notification';
 import { OnlinesSessionManager } from '../sessions/onlines.session';
 import moment from 'moment';
 import { EGroupChatType } from '../../group-chat/dto/group-chat.enum';
+import { UserGatewayService } from './user.gateway.service';
 
 @Injectable()
 export class ChatMessageGatewayService {
@@ -25,8 +25,8 @@ export class ChatMessageGatewayService {
     private groupChatService: GroupChatGatewayService,
     @InjectRepository(GroupChatSetting)
     private groupSettingRepo: Repository<GroupChatSetting>,
-    @Inject(UserService)
-    private userService: UserService,
+    @Inject(UserGatewayService)
+    private userService: UserGatewayService,
     @Inject(GatewaySessionManager)
     private readonly insideGroupSessions: GatewaySessionManager<string>,
     @Inject(OnlinesSessionManager)
@@ -84,7 +84,7 @@ export class ChatMessageGatewayService {
         );
       }
 
-      const newMessage = await this.chatMessageRepo.create({
+      const newMessage = await this.chatMessageRepo.save({
         message: dto.message,
         imageUrls: dto.imageUrls,
         documentUrls: dto.documentUrls,
@@ -93,8 +93,6 @@ export class ChatMessageGatewayService {
         nameCard,
         readsBy: insideGroupMembers,
       } as ChatMessage);
-
-      await this.chatMessageRepo.save(newMessage);
 
       if (groupChat?.settings?.length) {
         Promise.all(

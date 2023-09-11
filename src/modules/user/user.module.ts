@@ -8,6 +8,7 @@ import { Profile } from '../profile/entities/profile.entity';
 import { UserRequestService } from './user.request.service';
 import { FriendRequest } from './entities/friend-request.entity';
 import { RollCall } from './entities/roll-call.entity';
+import { GatewayModule } from '../gateway/gateway.module';
 
 @Module({
   imports: [

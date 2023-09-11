@@ -1,7 +1,7 @@
-import { UserService } from '../../user/user.service';
 import { Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { AuthSocket } from '../interfaces/auth.interface';
+import { UserGatewayService } from '../services/user.gateway.service';
 
 export type SocketMiddleware = (
   socket: Socket,
@@ -10,7 +10,7 @@ export type SocketMiddleware = (
 
 export const WSAuthMiddleware = (
   jwtService: JwtService,
-  userService: UserService,
+  userService: UserGatewayService,
 ): SocketMiddleware => {
   return async (socket: AuthSocket, next) => {
     try {

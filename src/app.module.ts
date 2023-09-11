@@ -23,6 +23,7 @@ import { CacheInterceptor } from './interceptors/cache.interceptor';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SchedulerModule } from './modules/scheduler/scheduler.module';
 import { ProfileModule } from './modules/profile/profile.module';
+import { FriendModule } from './modules/friend/friend.module';
 
 const apiV1Modules = [
   UserModule,
@@ -33,6 +34,7 @@ const apiV1Modules = [
   UploadModule,
   FCMTokenModule,
   NotificationModule,
+  FriendModule,
 ];
 
 @Module({

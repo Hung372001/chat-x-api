@@ -7,16 +7,17 @@ import { GroupChatGatewayService } from './services/group-chat.gateway.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { GroupChat } from '../group-chat/entities/group-chat.entity';
 import { ChatMessage } from '../chat-message/entities/chat-message.entity';
-import { ChatMessageGatewayService } from './services/chat-message.request.service';
+import { ChatMessageGatewayService } from './services/chat-message.gateway.service';
 import { GroupChatSetting } from '../group-chat/entities/group-chat-setting.entity';
 import { NotificationModule } from '../notification/notification.module';
 import { OnlinesSessionManager } from './sessions/onlines.session';
+import { UserGatewayService } from './services/user.gateway.service';
+import { User } from '../user/entities/user.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([GroupChat, ChatMessage, GroupChatSetting]),
-    UserModule,
-    JwtModule,
+    TypeOrmModule.forFeature([GroupChat, ChatMessage, GroupChatSetting, User]),
+    JwtModule.register({}),
     NotificationModule,
   ],
   providers: [
@@ -25,6 +26,7 @@ import { OnlinesSessionManager } from './sessions/onlines.session';
     OnlinesSessionManager,
     GroupChatGatewayService,
     ChatMessageGatewayService,
+    UserGatewayService,
   ],
   exports: [
     AppGateway,
@@ -32,6 +34,7 @@ import { OnlinesSessionManager } from './sessions/onlines.session';
     OnlinesSessionManager,
     GroupChatGatewayService,
     ChatMessageGatewayService,
+    UserGatewayService,
   ],
 })
 export class GatewayModule {}
