@@ -221,10 +221,6 @@ export class AppGateway
           groupChatDou,
         );
         if (newMessage) {
-          delete newMessage.group.latestMessage;
-          if (newMessage.group.settings?.length) {
-            newMessage.group.settings.forEach((x) => delete x.groupChat);
-          }
           this.server.to(groupChatDou.id).emit('newMessageReceived', {
             newMessage,
           });

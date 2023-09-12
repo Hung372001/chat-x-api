@@ -126,6 +126,14 @@ export class ChatMessageGatewayService {
         latestMessage: groupChat.latestMessage,
       });
 
+      if (newMessage.group.latestMessage) {
+        delete newMessage.group.latestMessage;
+      }
+
+      if (newMessage.group.settings?.length) {
+        newMessage.group.settings.forEach((x) => delete x.groupChat);
+      }
+
       return newMessage;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
