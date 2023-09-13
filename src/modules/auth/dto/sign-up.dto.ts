@@ -5,7 +5,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsPhoneNumber,
-  IsStrongPassword,
+  MinLength,
   ValidateIf,
 } from 'class-validator';
 
@@ -26,7 +26,7 @@ export class SignUpDto {
 
   @ApiProperty()
   @IsNotEmpty()
-  @IsStrongPassword({}, { message: 'Độ bảo mật của mật khẩu thấp.' })
+  @MinLength(6)
   password: string;
 
   @ApiProperty()
