@@ -7,6 +7,7 @@ import {
   Param,
   Query,
   UseGuards,
+  Delete,
 } from '@nestjs/common';
 import { FilterDto } from '../../../common/dto/filter.dto';
 import { AddMemberDto } from '../dto/add-member.dto';
@@ -41,8 +42,8 @@ export class GroupChatController {
   }
 
   @Patch('add-members/:id')
-  addMember(@Param('id') roomId: string, @Body() dto: AddMemberDto) {
-    return this.requestService.addMember(roomId, dto);
+  addMember(@Param('id') groupId: string, @Body() dto: AddMemberDto) {
+    return this.requestService.addMember(groupId, dto);
   }
 
   @Patch('add-admin/:id/:userId')
@@ -51,7 +52,12 @@ export class GroupChatController {
   }
 
   @Patch('remove-members/:id')
-  removeMember(@Param('id') roomId: string, @Body() dto: RemoveMemberDto) {
-    return this.requestService.removeMember(roomId, dto);
+  removeMember(@Param('id') groupId: string, @Body() dto: RemoveMemberDto) {
+    return this.requestService.removeMember(groupId, dto);
+  }
+
+  @Delete(':id')
+  removeGroup(@Param('id') groupId: string) {
+    return this.requestService.removeGroup(groupId);
   }
 }

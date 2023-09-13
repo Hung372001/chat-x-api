@@ -86,7 +86,7 @@ export class NotificationRequestService extends BaseService<Notification> {
       if (searchAndBy) {
         searchAndBy.forEach((item, index) => {
           const whereParams = {};
-          whereParams[`equalKeyword_${index}`] = !Array.isArray(andKeyword)
+          whereParams[`andKeyword_${index}`] = !Array.isArray(andKeyword)
             ? `${andKeyword}`
             : `${andKeyword[index]}`;
 
@@ -104,7 +104,7 @@ export class NotificationRequestService extends BaseService<Notification> {
           new Brackets((subQuery) => {
             searchBy.forEach((item, index) => {
               const whereParams = {};
-              whereParams[`andKeyword${index}`] = !Array.isArray(andKeyword)
+              whereParams[`andKeyword_${index}`] = !Array.isArray(andKeyword)
                 ? `${andKeyword}`
                 : `${andKeyword[index]}`;
 

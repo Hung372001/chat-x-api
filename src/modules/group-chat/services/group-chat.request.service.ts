@@ -23,6 +23,7 @@ import { AppGateway } from '../../gateway/app.gateway';
 import { RenameGroupChatDto } from '../dto/rename-group-chat.dto';
 import { GroupChatSetting } from '../entities/group-chat-setting.entity';
 import { ERole } from '../../../common/enums/role.enum';
+import moment from 'moment';
 
 @Injectable({ scope: Scope.REQUEST })
 export class GroupChatRequestService extends BaseService<GroupChat> {
@@ -98,6 +99,8 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         .andWhere('group_chat_setting.userId = :userId', {
           userId: currentUser.id,
         });
+    } else {
+      queryBuilder.withDeleted();
     }
 
     if (keyword) {
@@ -143,7 +146,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       if (searchAndBy) {
         searchAndBy.forEach((item, index) => {
           const whereParams = {};
-          whereParams[`equalKeyword_${index}`] = !Array.isArray(andKeyword)
+          whereParams[`andKeyword_${index}`] = !Array.isArray(andKeyword)
             ? `${andKeyword}`
             : `${andKeyword[index]}`;
 
@@ -161,7 +164,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
           new Brackets((subQuery) => {
             searchBy.forEach((item, index) => {
               const whereParams = {};
-              whereParams[`andKeyword${index}`] = !Array.isArray(andKeyword)
+              whereParams[`andKeyword_${index}`] = !Array.isArray(andKeyword)
                 ? `${andKeyword}`
                 : `${andKeyword[index]}`;
 
@@ -520,6 +523,40 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       await this.gateway.removeGroupMember(foundGroupChat, members);
 
       return res;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async removeGroup(id: string) {
+    try {
+      const currentUser = this.request.user as User;
+
+      const foundGroupChat = await this.groupChatRepo.findOne({
+        where: { id },
+        relations: ['admins', 'members', 'members.profile', 'owner'],
+      });
+
+      if (!foundGroupChat) {
+        throw { message: 'Không tìm thấy nhóm chat.' };
+      }
+
+      if (
+        (foundGroupChat.type === EGroupChatType.GROUP &&
+          foundGroupChat.owner.id !== currentUser.id) ||
+        (foundGroupChat.type === EGroupChatType.DOU &&
+          !foundGroupChat.members.some((x) => x.id === currentUser.id))
+      ) {
+        throw { message: 'Bạn không có quyền xóa nhóm.' };
+      }
+
+      await this.groupChatRepo.softDelete(id);
+      foundGroupChat.deletedAt = moment.utc().toDate();
+
+      // Call socket
+      await this.gateway.removeGroupChat(foundGroupChat);
+
+      return foundGroupChat;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }

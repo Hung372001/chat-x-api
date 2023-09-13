@@ -152,7 +152,7 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       if (searchAndBy) {
         searchAndBy.forEach((item, index) => {
           const whereParams = {};
-          whereParams[`equalKeyword_${index}`] = !Array.isArray(andKeyword)
+          whereParams[`andKeyword_${index}`] = !Array.isArray(andKeyword)
             ? `${andKeyword}`
             : `${andKeyword[index]}`;
 
@@ -170,7 +170,7 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
           new Brackets((subQuery) => {
             searchBy.forEach((item, index) => {
               const whereParams = {};
-              whereParams[`andKeyword${index}`] = !Array.isArray(andKeyword)
+              whereParams[`andKeyword_${index}`] = !Array.isArray(andKeyword)
                 ? `${andKeyword}`
                 : `${andKeyword[index]}`;
 

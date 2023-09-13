@@ -191,6 +191,17 @@ export class AppGateway
     }
   }
 
+  // Call socket after group chat soft deleted successfully
+  async removeGroupChat(groupChat: GroupChat) {
+    if (groupChat && groupChat.members?.length > 0) {
+      this.server.to(groupChat.id).emit('groupChatRemoved', {
+        groupChat,
+      });
+
+      await this.leaveGroup(groupChat.id, groupChat.members);
+    }
+  }
+
   async createNewFriendGroup(friend: User, currentUser: User) {
     const clients = this.socketSessions.getUserSession(currentUser.id);
 
