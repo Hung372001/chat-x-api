@@ -12,7 +12,7 @@ export class ChangePasswordDto {
   @ApiProperty()
   @IsNotEmpty()
   @IsString()
-  @MinLength(6)
+  @MinLength(6, { message: 'Tin nhắn phải có ít nhất 6 ký tự.' })
   @Unmatch('oldPassword', {
     message: 'Mật khẩu mới không được trùng với mật khẩu cũ.',
   })

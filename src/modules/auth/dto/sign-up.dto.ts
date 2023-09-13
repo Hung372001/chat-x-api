@@ -26,7 +26,7 @@ export class SignUpDto {
 
   @ApiProperty()
   @IsNotEmpty()
-  @MinLength(6)
+  @MinLength(6, { message: 'Tin nhắn phải có ít nhất 6 ký tự.' })
   password: string;
 
   @ApiProperty()
