@@ -39,7 +39,7 @@ export class FCMTokenRequestService extends BaseService<FCMToken> {
         .getOne();
 
       if (foundToken) {
-        throw { message: 'Device token đã tồn tại.' };
+        return foundToken;
       }
 
       return this.fcmTokenRepository.save({ ...dto, user: currentUser });
@@ -61,7 +61,7 @@ export class FCMTokenRequestService extends BaseService<FCMToken> {
       .getOne();
 
     if (!foundToken) {
-      throw new BadRequestException('Device token đã tồn tại.');
+      throw new BadRequestException('Không tìm thấy device token.');
     }
 
     return await this.fcmTokenRepository.softDelete(id);
