@@ -151,15 +151,17 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     }
   }
 
-  async readMessages(dto: ReadMessageDto, user: User) {
+  async readMessages(groupId: string, user: User) {
     try {
       const groupChat = await this.groupChatRepo
         .createQueryBuilder('group_chat')
         .leftJoin('group_chat.members', 'user as members')
         .leftJoinAndSelect('group_chat.settings', 'group_chat_setting')
-        .where('group_chat.id = :groupId', { groupId: dto.groupId })
-        .andWhere('user.id = :userId', { userId: user.id })
-        .andWhere('group_chat_setting.userId = :userId', { userId: user.id })
+        .where('group_chat.id = :groupId', { groupId })
+        .andWhere('user as members.id = :userId', { userId: user.id })
+        .andWhere('group_chat_setting.userId = :settingUserId', {
+          settingUserId: user.id,
+        })
         .getOne();
 
       if (!groupChat) {
@@ -169,11 +171,7 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
       let messages = await this.chatMessageRepo
         .createQueryBuilder('chat_message')
         .leftJoinAndSelect('chat_message.readsBy', 'user')
-        .where('chat_message.groupId = :groupId', { groupId: dto.groupId })
-        .andWhere('user.id = :userId', { userId: user.id })
-        .andWhere('chat_message.id In (:...messageIds)', {
-          messageIds: dto.messageIds,
-        })
+        .where('chat_message.groupId = :groupId', { groupId })
         .getMany();
 
       messages = messages.filter(
@@ -183,26 +181,26 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
       if (messages.length) {
         Promise.all(
           messages.map(async (message) => {
-            message.readsBy.push(user);
-            await this.chatMessageRepo.update(message.id, {
-              isRead: true,
-              readsBy: message.readsBy,
-            });
+            if (!message.readsBy.some((x) => x.id === user.id)) {
+              message.readsBy.push(user);
+              await this.chatMessageRepo.save({
+                ...message,
+                isRead: true,
+                readsBy: message.readsBy,
+              });
+            }
           }),
         );
 
         if (groupChat.settings.length) {
-          groupChat.settings[0].unReadMessages -= messages.length;
+          groupChat.settings[0].unReadMessages = 0;
           await this.groupSettingRepo.update(groupChat.settings[0].id, {
             unReadMessages: groupChat.settings[0].unReadMessages,
           });
         }
       }
 
-      return {
-        groupChat,
-        unReadMessages: groupChat.settings[0].unReadMessages,
-      };
+      return groupChat;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }

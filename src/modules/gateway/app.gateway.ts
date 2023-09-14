@@ -361,24 +361,47 @@ export class AppGateway
 
   @SubscribeMessage('onReadMessages')
   async onReadMessages(
-    @MessageBody() data: ReadMessageDto,
+    @MessageBody() groupId: string,
     @ConnectedSocket() client: AuthSocket,
   ) {
     try {
-      const readRes = await this.groupChatService.readMessages(
-        data,
+      const groupChat = await this.groupChatService.readMessages(
+        groupId,
         client.user,
       );
 
-      if (readRes) {
-        client.broadcast.to(readRes.groupChat.id).emit('messagesRead', {
-          messageIds: data.messageIds,
+      if (groupChat) {
+        client.broadcast.to(groupChat.id).emit('messagesRead', {
+          groupChat,
         });
+      }
+    } catch (e: any) {
+      client.emit('chatError', { errorMsg: e.message });
+    }
+  }
 
-        client.broadcast.emit('countReadMessages', {
-          groupChatId: readRes.groupChat.id,
-          unReadMessages: readRes.unReadMessages,
-        });
+  @SubscribeMessage('onReadConversationMessages')
+  async onReadConversationMessages(
+    @MessageBody() receiverId: string,
+    @ConnectedSocket() client: AuthSocket,
+  ) {
+    try {
+      const groupChatDou = await this.groupChatService.getGroupChatDou(
+        [receiverId, client.user.id],
+        this,
+      );
+
+      if (groupChatDou) {
+        const groupChat = await this.groupChatService.readMessages(
+          groupChatDou.id,
+          client.user,
+        );
+
+        if (groupChat) {
+          client.broadcast.to(groupChat.id).emit('messagesRead', {
+            groupChat,
+          });
+        }
       }
     } catch (e: any) {
       client.emit('chatError', { errorMsg: e.message });

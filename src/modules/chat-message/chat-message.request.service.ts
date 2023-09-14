@@ -86,6 +86,7 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       .leftJoinAndSelect('user.profile', 'profile')
       .leftJoin('group_chat.settings', 'group_chat_setting')
       .leftJoin('chat_message.deletedBy', 'user as delMsgUser')
+      .leftJoinAndSelect('chat_message.readsBy', 'user as readsByUser')
       .leftJoinAndSelect('chat_message.nameCard', 'user as nameCardUser')
       .leftJoinAndSelect(
         'user as nameCardUser.profile',
