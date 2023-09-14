@@ -3,7 +3,7 @@ import { BaseService } from '../../../common/services/base.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, In, Repository } from 'typeorm';
 import { GroupChat } from '../../group-chat/entities/group-chat.entity';
-import { Socket } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 import { User } from '../../user/entities/user.entity';
 import { EGroupChatType } from '../../group-chat/dto/group-chat.enum';
 import { AppGateway } from '../app.gateway';
@@ -109,7 +109,12 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     }
   }
 
-  async emitOnlineGroupMember(client: Socket, member: User, joinGroup = true) {
+  async emitOnlineGroupMember(
+    server: Server,
+    client: Socket,
+    member: User,
+    joinGroup = true,
+  ) {
     const groupChats = await this.getJoinedGroups(member.id);
 
     // Join socket to all group
@@ -119,7 +124,7 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
           if (joinGroup) {
             await client.join(group.id);
           }
-          client.broadcast.to(group.id).emit('someoneOnline', {
+          server.to(group.id).emit('someoneOnline', {
             groupChat: group,
             member,
           });
@@ -129,6 +134,7 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
   }
 
   async emitOfflineGroupMember(
+    server: Server,
     client: Socket,
     member: User,
     leaveGroup = true,
@@ -142,7 +148,7 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
           if (leaveGroup) {
             await client.leave(group.id);
           }
-          client.broadcast.to(group.id).emit('someoneOffline', {
+          server.to(group.id).emit('someoneOffline', {
             groupChat: group,
             member,
           });

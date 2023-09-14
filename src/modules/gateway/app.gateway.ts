@@ -73,12 +73,20 @@ export class AppGateway
     this.logger.log(client.id, 'Connected..............................');
     this.socketSessions.setUserSession(client?.user?.id, client);
     this.onlineSessions.setUserSession(client?.user?.id, true);
-    this.groupChatService.emitOnlineGroupMember(client, client?.user);
+    this.groupChatService.emitOnlineGroupMember(
+      this.server,
+      client,
+      client?.user,
+    );
   }
 
   async handleDisconnect(client: AuthSocket) {
     this.logger.log(client.id, 'Disconnected..............................');
-    this.groupChatService.emitOnlineGroupMember(client, client?.user);
+    this.groupChatService.emitOnlineGroupMember(
+      this.server,
+      client,
+      client?.user,
+    );
     this.onlineSessions.removeUserSession(client?.user?.id);
     this.socketSessions.removeUserSession(client.user.id, client);
   }
@@ -87,13 +95,23 @@ export class AppGateway
   @SubscribeMessage('online')
   async handleMemberOnline(@ConnectedSocket() client: AuthSocket) {
     this.onlineSessions.setUserSession(client?.user?.id, true);
-    this.groupChatService.emitOnlineGroupMember(client, client?.user, false);
+    this.groupChatService.emitOnlineGroupMember(
+      this.server,
+      client,
+      client?.user,
+      false,
+    );
   }
 
   @SubscribeMessage('offline')
   async handleMemberOffline(@ConnectedSocket() client: AuthSocket) {
     this.onlineSessions.setUserSession(client?.user?.id, false);
-    this.groupChatService.emitOfflineGroupMember(client, client?.user, false);
+    this.groupChatService.emitOfflineGroupMember(
+      this.server,
+      client,
+      client?.user,
+      false,
+    );
   }
 
   @SubscribeMessage('enterGroupChat')
@@ -102,6 +120,7 @@ export class AppGateway
     @ConnectedSocket() client: AuthSocket,
   ) {
     this.insideGroupSessions.setUserSession(groupId, client?.user?.id);
+    client.emit('enterGroupChat', true);
   }
 
   @SubscribeMessage('outGroupChat')
@@ -110,6 +129,7 @@ export class AppGateway
     @ConnectedSocket() client: AuthSocket,
   ) {
     this.insideGroupSessions.removeUserSession(groupId, client?.user?.id);
+    client.emit('outGroupChat', true);
   }
 
   @SubscribeMessage('getOnlineGroupMembers')
@@ -322,7 +342,7 @@ export class AppGateway
         client.user,
       );
       if (newMessage) {
-        client.broadcast.to(newMessage.group.id).emit('newMessageReceived', {
+        this.server.to(newMessage.group.id).emit('newMessageReceived', {
           newMessage,
         });
       }
@@ -349,7 +369,7 @@ export class AppGateway
           groupChatDou,
         );
         if (newMessage) {
-          client.broadcast.to(newMessage.group.id).emit('newMessageReceived', {
+          this.server.to(newMessage.group.id).emit('newMessageReceived', {
             newMessage,
           });
         }
@@ -371,7 +391,7 @@ export class AppGateway
       );
 
       if (groupChat) {
-        client.broadcast.to(groupChat.id).emit('messagesRead', {
+        this.server.to(groupChat.id).emit('messagesRead', {
           groupChat,
         });
       }
@@ -407,7 +427,7 @@ export class AppGateway
         );
 
         if (groupChat) {
-          client.broadcast.to(groupChat.id).emit('messagesRead', {
+          this.server.to(groupChat.id).emit('messagesRead', {
             groupChat,
           });
         }
@@ -430,7 +450,7 @@ export class AppGateway
       );
 
       if (pinnedMessage) {
-        client.broadcast.to(pinnedMessage.group.id).emit('messagePinned', {
+        this.server.to(pinnedMessage.group.id).emit('messagePinned', {
           pinnedMessage,
           pinnedUser: client.user,
         });
@@ -453,7 +473,7 @@ export class AppGateway
       );
 
       if (unPinnedMessage) {
-        client.broadcast.to(unPinnedMessage.group.id).emit('messageUnpinned', {
+        this.server.to(unPinnedMessage.group.id).emit('messageUnpinned', {
           unPinnedMessage,
           unpinnedUser: client.user,
         });
@@ -475,7 +495,7 @@ export class AppGateway
       );
 
       if (unsendMessage) {
-        client.broadcast.to(unsendMessage.group.id).emit('messageUnsent', {
+        this.server.to(unsendMessage.group.id).emit('messageUnsent', {
           unsendMessage,
         });
       }
@@ -496,7 +516,7 @@ export class AppGateway
       );
 
       if (deletedMessage) {
-        client.broadcast.to(deletedMessage.group.id).emit('messageDeleted', {
+        this.server.to(deletedMessage.group.id).emit('messageDeleted', {
           deletedMessage,
         });
       }
