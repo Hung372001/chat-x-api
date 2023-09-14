@@ -380,6 +380,15 @@ export class AppGateway
     }
   }
 
+  @SubscribeMessage('onTestListener')
+  async onTestListener(
+    @MessageBody() message: string,
+    @ConnectedSocket() client: AuthSocket,
+  ) {
+    client.emit('onTestListener', message);
+    client.emit('testListenerReceived', message);
+  }
+
   @SubscribeMessage('onReadConversationMessages')
   async onReadConversationMessages(
     @MessageBody() receiverId: string,
