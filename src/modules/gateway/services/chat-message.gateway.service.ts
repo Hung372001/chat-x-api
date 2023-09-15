@@ -47,7 +47,10 @@ export class ChatMessageGatewayService {
         throw { message: 'Không tìm thấy nhóm chat.' };
       }
 
-      if (!groupChat.enabledChat) {
+      if (
+        !groupChat.enabledChat &&
+        !groupChat.admins.some((x) => x.id === sender.id)
+      ) {
         throw { message: 'Tính năng chat đang bị khóa.' };
       }
 
@@ -176,6 +179,7 @@ export class ChatMessageGatewayService {
       userId: receiver.id,
       imageUrl: sender.profile.avatar,
       notificationType: ENotificationType.UNREAD_MESSAGE,
+      data: group,
     });
   }
 

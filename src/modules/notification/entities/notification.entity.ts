@@ -26,4 +26,7 @@ export class Notification extends BaseEntity {
 
   @Column({ default: false })
   isRead: boolean;
+
+  @Column({ type: 'jsonb', nullable: true })
+  data: any;
 }

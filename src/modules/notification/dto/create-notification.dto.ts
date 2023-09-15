@@ -33,4 +33,8 @@ export class CreateNotificationDto {
   })
   @IsOptional()
   notificationType?: ENotificationType;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  data?: any;
 }

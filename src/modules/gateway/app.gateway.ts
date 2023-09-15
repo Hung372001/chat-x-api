@@ -291,11 +291,21 @@ export class AppGateway
   }
 
   // Call socket after add new admin group chat successfully
-  async addNewGroupAdmin(groupChat: GroupChat, newAdmin: User) {
+  async addNewGroupAdmin(groupChat: GroupChat, newAdmins: User[]) {
     if (groupChat) {
       this.server.to(groupChat.id).emit('newAdminGroupChatAdded', {
         groupChat,
-        newAdmin,
+        newAdmins,
+      });
+    }
+  }
+
+  // Call socket after add new admin group chat successfully
+  async removeGroupAdmin(groupChat: GroupChat, admins: User[]) {
+    if (groupChat) {
+      this.server.to(groupChat.id).emit('adminGroupChatRemoved', {
+        groupChat,
+        admins,
       });
     }
   }

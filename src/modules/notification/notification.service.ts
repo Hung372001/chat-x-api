@@ -108,6 +108,7 @@ export class NotificationService {
             isNull,
           ),
           token: deviceToken,
+          data: notification.data,
         })
         .catch((error: any) => {
           console.error(error);

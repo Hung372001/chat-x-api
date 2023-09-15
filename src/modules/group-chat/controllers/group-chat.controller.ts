@@ -17,6 +17,8 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAccessTokenGuard } from '../../auth/guards/jwt-access-token.guard';
 import { PermissionGuard } from '../../permission/permissison.guard';
 import { GroupChatRequestService } from '../services/group-chat.request.service';
+import { AddAdminDto } from '../dto/add-admin.dto';
+import { RemoveAdminDto } from '../dto/remove-admin.dto';
 
 @Controller('group-chat')
 @ApiTags('group-chat')
@@ -46,9 +48,14 @@ export class GroupChatController {
     return this.requestService.addMember(groupId, dto);
   }
 
-  @Patch('add-admin/:id/:userId')
-  addAdmin(@Param('id') groupId: string, @Param('userId') userId: string) {
-    return this.requestService.addAdmin(groupId, userId);
+  @Patch('add-admin/:id')
+  addAdmin(@Param('id') groupId: string, @Body() dto: AddAdminDto) {
+    return this.requestService.addAdmin(groupId, dto);
+  }
+
+  @Patch('remove-admin/:id')
+  removeAdmin(@Param('id') groupId: string, @Body() dto: RemoveAdminDto) {
+    return this.requestService.removeAdmin(groupId, dto);
   }
 
   @Patch('remove-members/:id')
