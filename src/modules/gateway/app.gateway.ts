@@ -226,18 +226,19 @@ export class AppGateway
     const clients = this.socketSessions.getUserSession(currentUser.id);
 
     try {
+      const groupChatDou = await this.groupChatService.getGroupChatDou(
+        [friend.id, currentUser.id],
+        this,
+      );
+
       this.notifyService.send({
         title: currentUser.username,
         content: `${currentUser.username} đã gửi cho bạn lời mời kết bạn`,
         userId: friend.id,
         imageUrl: currentUser.profile.avatar,
         notificationType: ENotificationType.NEW_FRIEND_REQUEST,
+        data: groupChatDou,
       });
-
-      const groupChatDou = await this.groupChatService.getGroupChatDou(
-        [friend.id, currentUser.id],
-        this,
-      );
 
       if (groupChatDou) {
         await this.joinGroup(groupChatDou.id, [friend, currentUser]);
