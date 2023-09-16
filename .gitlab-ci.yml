@@ -1,5 +1,6 @@
 stages:
-  - deploy development  
+  - deploy development
+  - deploy production
 deploy development:
   stage: deploy development
   only:
@@ -24,3 +25,28 @@ deploy development:
     - docker push avatarnice/api-chat-x-dev:${CI_BUILD_TOKEN}
     - chmod u+x ./deploy/develop/run.sh
     - ./deploy/develop/run.sh
+
+deploy production:
+  stage: deploy production
+  only:
+    - master
+  tags:
+    - production
+  variables:
+    DOCKER_IMAGE_NAME: avatarnice/api-chat-x-prod
+    DOCKER_IMAGE_TAG: ${CI_BUILD_TOKEN}
+    DOCKER_CONTAINER_NAME: api-chat-x-container-prod
+    POSTGRES_PASSWORD_PROD: ${POSTGRES_PASSWORD_PROD}
+    POSTGRES_DB_PROD: ${POSTGRES_DB_PROD}
+    RABBITMQ_USER_PROD: ${RABBITMQ_USER_PROD}
+    RABBITMQ_PASSWORD_PROD: ${RABBITMQ_PASSWORD_PROD}
+    AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+    AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+  before_script:
+    -  docker login -u ${DOCKER_HUB_REGISTRY_USER} -p ${DOCKER_HUB_REGISTRY_PASSWORD}
+  script:
+    - chmod u+x ./deploy/production/build.sh
+    - ./deploy/production/build.sh
+    - docker push avatarnice/api-chat-x-prod:${CI_BUILD_TOKEN}
+    - chmod u+x ./deploy/production/run.sh
+    - ./deploy/production/run.sh
