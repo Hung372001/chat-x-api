@@ -28,7 +28,7 @@ services:
     networks:
       - chat-x_net
   postgres-server:
-    image: "postgres"
+    image: "postgres:15"
     volumes: 
       - /home/chat-x-api/postgres:/data/postgres
     ports:
