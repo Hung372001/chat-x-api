@@ -237,7 +237,7 @@ export class AppGateway
         userId: friend.id,
         imageUrl: currentUser.profile.avatar,
         notificationType: ENotificationType.NEW_FRIEND_REQUEST,
-        data: groupChatDou,
+        data: { groupId: groupChatDou.id },
       });
 
       if (groupChatDou) {
@@ -292,19 +292,9 @@ export class AppGateway
   }
 
   // Call socket after add new admin group chat successfully
-  async addNewGroupAdmin(groupChat: GroupChat, newAdmins: User[]) {
+  async modifyGroupAdmin(groupChat: GroupChat, admins: User[]) {
     if (groupChat) {
-      this.server.to(groupChat.id).emit('newAdminGroupChatAdded', {
-        groupChat,
-        newAdmins,
-      });
-    }
-  }
-
-  // Call socket after add new admin group chat successfully
-  async removeGroupAdmin(groupChat: GroupChat, admins: User[]) {
-    if (groupChat) {
-      this.server.to(groupChat.id).emit('adminGroupChatRemoved', {
+      this.server.to(groupChat.id).emit('adminGroupChatModified', {
         groupChat,
         admins,
       });

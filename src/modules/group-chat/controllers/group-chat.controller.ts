@@ -48,14 +48,9 @@ export class GroupChatController {
     return this.requestService.addMember(groupId, dto);
   }
 
-  @Patch('add-admin/:id')
+  @Patch('modify-admin/:id')
   addAdmin(@Param('id') groupId: string, @Body() dto: AddAdminDto) {
-    return this.requestService.addAdmin(groupId, dto);
-  }
-
-  @Patch('remove-admin/:id')
-  removeAdmin(@Param('id') groupId: string, @Body() dto: RemoveAdminDto) {
-    return this.requestService.removeAdmin(groupId, dto);
+    return this.requestService.modifyAdmin(groupId, dto);
   }
 
   @Patch('remove-members/:id')

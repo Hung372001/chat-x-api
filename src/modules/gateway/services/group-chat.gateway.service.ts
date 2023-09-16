@@ -8,7 +8,6 @@ import { User } from '../../user/entities/user.entity';
 import { EGroupChatType } from '../../group-chat/dto/group-chat.enum';
 import { AppGateway } from '../app.gateway';
 import { GroupChatSetting } from '../../group-chat/entities/group-chat-setting.entity';
-import { ReadMessageDto } from '../../chat-message/dto/read-message.dto';
 import { ChatMessage } from '../../chat-message/entities/chat-message.entity';
 import { GatewaySessionManager } from '../sessions/gateway.session';
 import { UserGatewayService } from './user.gateway.service';

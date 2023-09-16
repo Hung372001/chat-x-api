@@ -198,8 +198,9 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
               {
                 ...iterator,
                 isAdmin: iterator.admins.some((x) => x.id === currentUser.id),
-                isOwner: !!iterator.owner,
-                admins: !!iterator.owner ? iterator.admins : null,
+                isOwner: iterator.owner.id === currentUser.id,
+                admins:
+                  iterator.owner.id === currentUser.id ? iterator.admins : null,
                 owner: null,
               },
               isNull,
@@ -393,7 +394,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     }
   }
 
-  async addAdmin(id: string, dto: AddAdminDto) {
+  async modifyAdmin(id: string, dto: AddAdminDto) {
     try {
       const currentUser = this.request.user as User;
 
@@ -427,88 +428,23 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         };
       }
 
-      const existedMembers = intersectionBy(
-        foundGroupChat.admins,
-        admins,
-        'id',
-      );
+      if (admins.length === foundGroupChat.admins.length) {
+        const changedAdmins = differenceBy(admins, foundGroupChat.admins, 'id');
 
-      if (existedMembers.length > 0) {
-        throw {
-          message: `${existedMembers
-            .map((x) => x.username)
-            .join(', ')} đã là quản trị viên nhóm.`,
-        };
+        if (!changedAdmins.length) {
+          throw {
+            message: `Danh sách quản trị viên không thay đổi.`,
+          };
+        }
       }
 
-      foundGroupChat.admins = foundGroupChat.admins.concat(admins);
       const res = await this.groupChatRepo.save({
         ...foundGroupChat,
-        admins: foundGroupChat.admins,
+        admins,
       });
 
       // Call socket to add new admin
-      await this.gateway.addNewGroupAdmin(foundGroupChat, admins);
-
-      return res;
-    } catch (e: any) {
-      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
-    }
-  }
-
-  async removeAdmin(id: string, dto: RemoveAdminDto) {
-    try {
-      const currentUser = this.request.user as User;
-
-      const foundGroupChat = await this.groupChatRepo.findOne({
-        where: { id, type: EGroupChatType.GROUP },
-        relations: ['admins', 'members', 'owner'],
-      });
-
-      if (!foundGroupChat) {
-        throw { message: 'Không tìm thấy nhóm chat.' };
-      }
-
-      if (foundGroupChat.owner?.id !== currentUser.id) {
-        throw { message: 'Chủ nhóm mới có quyền xóa quản trị viên.' };
-      }
-
-      const admins = await this.userService.findMany({
-        where: { id: In(dto.admins) },
-        relations: ['profile'],
-      });
-      if (!admins?.length || dto.admins.length !== admins.length) {
-        throw { message: 'Không tìm thấy quản trị viên.' };
-      }
-
-      const notMembers = differenceBy(admins, foundGroupChat.members, 'id');
-      if (notMembers.length > 0) {
-        throw {
-          message: `${notMembers
-            .map((x) => x.username)
-            .join(', ')} không phải thành viên nhóm chat.`,
-        };
-      }
-
-      const notAdmins = differenceBy(admins, foundGroupChat.admins, 'id');
-      if (notAdmins.length > 0) {
-        throw {
-          message: `${notAdmins
-            .map((x) => x.username)
-            .join(', ')} không phải quản trị viên.`,
-        };
-      }
-
-      const aRAdmins = differenceBy(foundGroupChat.members, admins, 'id');
-
-      foundGroupChat.admins = aRAdmins;
-      const res = await this.groupChatRepo.save({
-        ...foundGroupChat,
-        admins: foundGroupChat.admins,
-      });
-
-      // Call socket to remove admins
-      await this.gateway.removeGroupAdmin(foundGroupChat, aRAdmins);
+      await this.gateway.modifyGroupAdmin(foundGroupChat, admins);
 
       return res;
     } catch (e: any) {

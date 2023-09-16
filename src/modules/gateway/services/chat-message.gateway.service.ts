@@ -179,7 +179,7 @@ export class ChatMessageGatewayService {
       userId: receiver.id,
       imageUrl: sender.profile.avatar,
       notificationType: ENotificationType.UNREAD_MESSAGE,
-      data: group,
+      data: { groupId: group.id },
     });
   }
 
