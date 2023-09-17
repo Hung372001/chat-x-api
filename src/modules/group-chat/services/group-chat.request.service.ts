@@ -221,20 +221,53 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
 
   override async findById(id: string): Promise<GroupChat> {
     const currentUser = this.request.user as User;
+    const isRootAdmin = currentUser.roles[0].type === ERole.ADMIN;
+
     try {
-      const groupChat = await this.groupChatRepo.findOne({
-        where: { id },
-        relations: ['members'],
-      });
+      const groupChat = await this.groupChatRepo
+        .createQueryBuilder('group_chat')
+        .leftJoinAndSelect('group_chat.members', 'user')
+        .leftJoinAndSelect(
+          'user.groupChatSettings',
+          'group_chat_setting as userSetting',
+        )
+        .leftJoinAndSelect('user.profile', 'profile')
+        .leftJoinAndSelect('group_chat.owner', 'user as owners')
+        .leftJoinAndSelect('group_chat.admins', 'user as admins')
+        .leftJoinAndSelect('group_chat.latestMessage', 'chat_message')
+        .leftJoinAndSelect('group_chat.settings', 'group_chat_setting')
+        .where('group_chat_setting as userSetting.groupChatId = group_chat.id')
+        .andWhere('group_chat.id = :groupChatId', { groupChatId: id })
+        .andWhere('group_chat_setting.userId = :userId', {
+          userId: currentUser.id,
+        })
+        .orderBy('group_chat_setting.pinned', 'DESC')
+        .getOne();
 
       if (
-        !groupChat ||
-        !groupChat.members.some((x) => x.id === currentUser.id)
+        !isRootAdmin &&
+        (!groupChat || !groupChat.members.some((x) => x.id === currentUser.id))
       ) {
         throw { message: 'Không tìm thấy nhóm chat.' };
       }
 
-      return groupChat;
+      return omitBy(
+        groupChat.type === EGroupChatType.GROUP
+          ? {
+              ...groupChat,
+              isAdmin: groupChat.admins.some((x) => x.id === currentUser.id),
+              isOwner: groupChat.owner.id === currentUser.id,
+              admins:
+                groupChat.owner.id === currentUser.id ? groupChat.admins : null,
+              owner: null,
+            }
+          : {
+              ...groupChat,
+              admins: null,
+              owner: null,
+            },
+        isNull,
+      );
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
@@ -249,6 +282,20 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       }
 
       if (dto.type === EGroupChatType.GROUP) {
+        const existedGroupName = await this.groupChatRepo
+          .createQueryBuilder('group_chat')
+          .where(`LOWER(name) = :groupName`, {
+            groupName: dto.name.toLowerCase(),
+          })
+          .andWhere(`group_chat.ownerId = :userId`, { userId: currentUser.id })
+          .getOne();
+
+        if (existedGroupName) {
+          throw {
+            message: `${currentUser.username} đã đặt tên này cho 1 nhóm khác, vui lòng chọn tên khác.`,
+          };
+        }
+
         if (dto.members.length <= 2) {
           throw { message: 'Số thành viên không hợp lệ.' };
         }

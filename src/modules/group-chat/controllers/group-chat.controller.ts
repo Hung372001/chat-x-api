@@ -33,10 +33,10 @@ export class GroupChatController {
     return this.requestService.findAll(query);
   }
 
-  // @Get(':id')
-  // findById(@Param('id') id: string) {
-  //   return this.requestService.findById(id);
-  // }
+  @Get(':id')
+  findById(@Param('id') id: string) {
+    return this.requestService.findById(id);
+  }
 
   @Post()
   create(@Body() dto: CreateGroupChatDto) {

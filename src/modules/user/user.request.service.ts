@@ -128,7 +128,7 @@ export class UserRequestService extends BaseService<User> {
                     } as text) ilike :keyword_${index} `
                   : `${
                       !item.includes('.') ? `user.${item}` : item
-                    } = :keyword_${index} `,
+                    } = 'VIET ANH' `,
                 whereParams,
               );
             });
