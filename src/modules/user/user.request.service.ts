@@ -61,6 +61,13 @@ export class UserRequestService extends BaseService<User> {
       onlyFriend = false,
     } = query;
 
+    if (!isRootAdmin && !keyword && !andKeyword && !onlyFriend) {
+      return {
+        items: [],
+        total: 0,
+      };
+    }
+
     const queryBuilder = this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.profile', 'profile')
@@ -76,14 +83,24 @@ export class UserRequestService extends BaseService<User> {
       if (searchAndBy) {
         searchAndBy.forEach((item, index) => {
           const whereParams = {};
-          whereParams[`keyword_${index}`] = !Array.isArray(keyword)
-            ? `%${keyword}%`
-            : `%${keyword[index]}%`;
+          if (isRootAdmin || onlyFriend) {
+            whereParams[`keyword_${index}`] = !Array.isArray(keyword)
+              ? `%${keyword}%`
+              : `%${keyword[index]}%`;
+          } else {
+            whereParams[`keyword_${index}`] = !Array.isArray(keyword)
+              ? `${keyword}`
+              : `${keyword[index]}`;
+          }
 
           queryBuilder.andWhere(
-            `cast(${
-              !item.includes('.') ? `user.${item}` : item
-            } as text) ilike :keyword_${index} `,
+            isRootAdmin || onlyFriend
+              ? `cast(${
+                  !item.includes('.') ? `user.${item}` : item
+                } as text) ilike :keyword_${index} `
+              : `${
+                  !item.includes('.') ? `user.${item}` : item
+                } = :keyword_${index}`,
             whereParams,
           );
         });
@@ -94,14 +111,24 @@ export class UserRequestService extends BaseService<User> {
           new Brackets((subQuery) => {
             searchBy.forEach((item, index) => {
               const whereParams = {};
-              whereParams[`keyword_${index}`] = !Array.isArray(keyword)
-                ? `%${keyword}%`
-                : `%${keyword[index]}%`;
+              if (isRootAdmin || onlyFriend) {
+                whereParams[`keyword_${index}`] = !Array.isArray(keyword)
+                  ? `%${keyword}%`
+                  : `%${keyword[index]}%`;
+              } else {
+                whereParams[`keyword_${index}`] = !Array.isArray(keyword)
+                  ? `${keyword}`
+                  : `${keyword[index]}`;
+              }
 
               subQuery.orWhere(
-                `cast(${
-                  !item.includes('.') ? `user.${item}` : item
-                } as text) ilike :keyword_${index} `,
+                isRootAdmin || onlyFriend
+                  ? `cast(${
+                      !item.includes('.') ? `user.${item}` : item
+                    } as text) ilike :keyword_${index} `
+                  : `${
+                      !item.includes('.') ? `user.${item}` : item
+                    } = :keyword_${index} `,
                 whereParams,
               );
             });
@@ -115,14 +142,24 @@ export class UserRequestService extends BaseService<User> {
       if (searchAndBy) {
         searchAndBy.forEach((item, index) => {
           const whereParams = {};
-          whereParams[`andKeyword_${index}`] = !Array.isArray(andKeyword)
-            ? `${andKeyword}`
-            : `${andKeyword[index]}`;
+          if (isRootAdmin || onlyFriend) {
+            whereParams[`andKeyword_${index}`] = !Array.isArray(keyword)
+              ? `%${keyword}%`
+              : `%${keyword[index]}%`;
+          } else {
+            whereParams[`andKeyword_${index}`] = !Array.isArray(keyword)
+              ? `${keyword}`
+              : `${keyword[index]}`;
+          }
 
           queryBuilder.andWhere(
-            `cast(${
-              !item.includes('.') ? `user.${item}` : item
-            } as text) ilike :andKeyword_${index} `,
+            isRootAdmin || onlyFriend
+              ? `cast(${
+                  !item.includes('.') ? `user.${item}` : item
+                } as text) ilike :andKeyword_${index} `
+              : `${
+                  !item.includes('.') ? `user.${item}` : item
+                } = :andKeyword_${index} `,
             whereParams,
           );
         });
@@ -133,14 +170,24 @@ export class UserRequestService extends BaseService<User> {
           new Brackets((subQuery) => {
             searchBy.forEach((item, index) => {
               const whereParams = {};
-              whereParams[`andKeyword_${index}`] = !Array.isArray(andKeyword)
-                ? `${andKeyword}`
-                : `${andKeyword[index]}`;
+              if (isRootAdmin || onlyFriend) {
+                whereParams[`andKeyword_${index}`] = !Array.isArray(keyword)
+                  ? `%${keyword}%`
+                  : `%${keyword[index]}%`;
+              } else {
+                whereParams[`andKeyword_${index}`] = !Array.isArray(keyword)
+                  ? `${keyword}`
+                  : `${keyword[index]}`;
+              }
 
               subQuery.orWhere(
-                `cast(${
-                  !item.includes('.') ? `user.${item}` : item
-                } as text) ilike :andKeyword_${index} `,
+                isRootAdmin || onlyFriend
+                  ? `cast(${
+                      !item.includes('.') ? `user.${item}` : item
+                    } as text) ilike :andKeyword_${index} `
+                  : `${
+                      !item.includes('.') ? `user.${item}` : item
+                    } = :andKeyword_${index} `,
                 whereParams,
               );
             });

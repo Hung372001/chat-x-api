@@ -31,4 +31,8 @@ export class SendMessageDto {
   })
   @IsOptional()
   nameCardUserId: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  isFriendRequest? = false;
 }

@@ -248,6 +248,7 @@ export class AppGateway
             imageUrls: null,
             documentUrls: null,
             groupId: groupChatDou.id,
+            isFriendRequest: true,
           } as SendMessageDto,
           currentUser,
           groupChatDou,

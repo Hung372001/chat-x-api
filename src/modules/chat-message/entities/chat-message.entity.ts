@@ -58,4 +58,7 @@ export class ChatMessage extends BaseEntity {
   @ManyToOne(() => User, (nameCard) => nameCard.nameCardMessages)
   @JoinColumn()
   nameCard: User;
+
+  @Column({ default: false })
+  isFriendRequest: boolean;
 }

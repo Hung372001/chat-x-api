@@ -5,7 +5,6 @@ import { FindOptionsWhere, Repository } from 'typeorm';
 import { RoleService } from '../role/role.service';
 import { BaseService } from '../../common/services/base.service';
 import { ERole } from '../../common/enums/role.enum';
-import { ProfileService } from '../profile/profile.service';
 import { pick } from 'lodash';
 import { SignUpDto } from '../auth/dto/sign-up.dto';
 import * as bcrypt from 'bcryptjs';

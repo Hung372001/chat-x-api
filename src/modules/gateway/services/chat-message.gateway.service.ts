@@ -95,6 +95,7 @@ export class ChatMessageGatewayService {
         group: groupChat,
         nameCard,
         readsBy: insideGroupMembers,
+        isFriendRequest: dto.isFriendRequest,
       } as ChatMessage);
 
       if (groupChat?.settings?.length) {
