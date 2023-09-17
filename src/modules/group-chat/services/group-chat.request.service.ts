@@ -26,6 +26,7 @@ import { ERole } from '../../../common/enums/role.enum';
 import moment from 'moment';
 import { AddAdminDto } from '../dto/add-admin.dto';
 import { RemoveAdminDto } from '../dto/remove-admin.dto';
+import slugify from 'slugify';
 
 @Injectable({ scope: Scope.REQUEST })
 export class GroupChatRequestService extends BaseService<GroupChat> {
@@ -248,14 +249,6 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       }
 
       if (dto.type === EGroupChatType.GROUP) {
-        const existedGroupName = await this.groupChatRepo.findOneBy({
-          name: dto.name,
-        });
-
-        if (existedGroupName) {
-          throw { message: 'Tên nhóm đã tồn tại.' };
-        }
-
         if (dto.members.length <= 2) {
           throw { message: 'Số thành viên không hợp lệ.' };
         }
@@ -282,6 +275,21 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         }
       }
 
+      let uniqueName = null;
+      if (dto.name) {
+        uniqueName = `@${slugify(dto.name, '_')}`;
+        const existedGroupNameCount = await this.groupChatRepo
+          .createQueryBuilder('group_chat')
+          .where(`LOWER(name) = :groupName`, {
+            groupName: dto.name.toLowerCase(),
+          })
+          .getCount();
+
+        if (existedGroupNameCount) {
+          uniqueName += `_${+existedGroupNameCount}`;
+        }
+      }
+
       const members = await this.userService.findMany({
         where: { id: In(dto.members) },
         relations: ['profile'],
@@ -293,6 +301,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       const newGroupChat = {
         members: members,
         name: dto.name,
+        uniqueName,
         type: dto.type,
         admins: [currentUser],
         owner: dto.type === EGroupChatType.GROUP ? currentUser : null,
