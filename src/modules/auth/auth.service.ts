@@ -111,6 +111,15 @@ export class AuthService {
       throw new HttpException('Mật khẩu không đúng.', HttpStatus.BAD_REQUEST);
     }
 
+    const authResponse = await this.genToken(user);
+
+    return {
+      ...user,
+      ...authResponse,
+    };
+  }
+
+  async genToken(user: User) {
     const payload = {
       ...pick(user, ['id', 'email', 'phoneNumber', 'username']),
       permissions: user?.roles
@@ -121,8 +130,8 @@ export class AuthService {
     const accessToken = this.generateAccessToken(payload);
     const refreshToken = this.generateRefreshToken(payload);
     await this.storeRefreshToken(payload.id, refreshToken);
+
     return {
-      ...user,
       accessToken,
       refreshToken,
     };
@@ -145,6 +154,12 @@ export class AuthService {
       );
     }
 
-    return this.userService.createUserAccount(dto);
+    const registedUser = await this.userService.createUserAccount(dto);
+    const authResponse = await this.genToken(registedUser);
+
+    return {
+      ...registedUser,
+      ...authResponse,
+    };
   }
 }

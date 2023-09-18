@@ -66,12 +66,12 @@ export class UserService extends BaseService<User> {
     const salt = await bcrypt.genSalt(SALT_ROUND);
     const hashedPassword = await bcrypt.hash(dto.password, salt);
 
-    const user = await this.userRepository.create({
+    const user = (await this.userRepository.create({
       ...pick(dto, ['id', 'email', 'phoneNumber', 'username']),
       hashedPassword,
       roles: [foundRole],
       profile: newProfile,
-    });
+    })) as unknown as User;
     const newUser = await this.userRepository.save(user);
     return newUser;
   }
