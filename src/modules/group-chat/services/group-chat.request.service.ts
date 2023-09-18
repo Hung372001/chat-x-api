@@ -296,7 +296,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
           };
         }
 
-        if (dto.members.length <= 2) {
+        if (dto.members.length < 2) {
           throw { message: 'Số thành viên không hợp lệ.' };
         }
       }
