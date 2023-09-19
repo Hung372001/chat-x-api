@@ -15,6 +15,7 @@ import { OnlinesSessionManager } from '../sessions/onlines.session';
 import moment from 'moment';
 import { EGroupChatType } from '../../group-chat/dto/group-chat.enum';
 import { UserGatewayService } from './user.gateway.service';
+import { Friendship } from '../../friend/entities/friendship.entity';
 
 @Injectable()
 export class ChatMessageGatewayService {
@@ -106,12 +107,18 @@ export class ChatMessageGatewayService {
                 !this.onlineSessions.getUserSession(setting.user.id) &&
                 !setting.muteNotification
               ) {
+                // get friendship
+                const friendship = await this.userService.findFriendship(
+                  sender.id,
+                  setting.user.id,
+                );
+
                 // send notification
                 this.sendMessageNotification(
                   groupChat,
                   sender,
                   setting.user,
-                  setting,
+                  friendship,
                   newMessage,
                 );
               }
@@ -148,7 +155,7 @@ export class ChatMessageGatewayService {
     group: GroupChat,
     sender: User,
     receiver: User,
-    setting: GroupChatSetting,
+    friendship: Friendship,
     chatMessage: ChatMessage,
   ) {
     let title = group.name;
@@ -167,7 +174,9 @@ export class ChatMessageGatewayService {
       }
     }
 
-    let content = `${setting.nickname ?? sender.username}: ${messageContent}`;
+    let content = `${
+      friendship.nickname ?? sender.username
+    }: ${messageContent}`;
 
     if (group.type === EGroupChatType.DOU) {
       title = receiver.username;

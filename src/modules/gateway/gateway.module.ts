@@ -1,5 +1,4 @@
 import { JwtModule } from '@nestjs/jwt';
-import { UserModule } from '../user/user.module';
 import { AppGateway } from './app.gateway';
 import { Module } from '@nestjs/common';
 import { GatewaySessionManager } from './sessions/gateway.session';
@@ -13,10 +12,17 @@ import { NotificationModule } from '../notification/notification.module';
 import { OnlinesSessionManager } from './sessions/onlines.session';
 import { UserGatewayService } from './services/user.gateway.service';
 import { User } from '../user/entities/user.entity';
+import { Friendship } from '../friend/entities/friendship.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([GroupChat, ChatMessage, GroupChatSetting, User]),
+    TypeOrmModule.forFeature([
+      GroupChat,
+      ChatMessage,
+      GroupChatSetting,
+      User,
+      Friendship,
+    ]),
     JwtModule.register({}),
     NotificationModule,
   ],

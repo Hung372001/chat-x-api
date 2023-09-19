@@ -13,6 +13,7 @@ import { JwtAccessTokenGuard } from '../auth/guards/jwt-access-token.guard';
 import { AddFriendsDto } from './dto/add-friends.dto';
 import { FriendRequestService } from './friend.request.service';
 import { EFriendRequestStatus } from './dto/friend-request.enum';
+import { UpdateNicknameDto } from './dto/update-nickname.dto';
 
 @ApiTags('user')
 @Controller('user')
@@ -51,5 +52,13 @@ export class FriendController {
   @Post('remove-friend/:friendId')
   removeFriend(@Param('friendId') friendId: string) {
     return this.requestService.removeFriend(friendId);
+  }
+
+  @Patch('nickname/:friendId')
+  updateNickname(
+    @Param('friendId') friendId: string,
+    @Body() dto: UpdateNicknameDto,
+  ) {
+    return this.requestService.updateFriendNickname(friendId, dto);
   }
 }

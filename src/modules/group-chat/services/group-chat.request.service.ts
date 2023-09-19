@@ -91,7 +91,21 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       .leftJoinAndSelect('group_chat.admins', 'user as admins')
       .leftJoinAndSelect('group_chat.latestMessage', 'chat_message')
       .leftJoinAndSelect('group_chat.settings', 'group_chat_setting')
-      .where('group_chat_setting as userSetting.groupChatId = group_chat.id')
+      .leftJoinAndSelect('user.friends', 'friendship')
+      // .where(
+      //   new Brackets((subQuery) => {
+      //     subQuery.orWhere('group_chat.type = :type', {
+      //       type: EGroupChatType.GROUP,
+      //     });
+      //     subQuery.orWhere('friendship.toUserId = :friendId', {
+      //       friendId: currentUser.id,
+      //     });
+      //   }),
+      // )
+      // .where('friendship.toUserId = :friendId', {
+      //   friendId: currentUser.id,
+      // })
+      .andWhere('group_chat_setting as userSetting.groupChatId = group_chat.id')
       .orderBy('group_chat_setting.pinned', 'DESC');
 
     if (!isRootAdmin) {
