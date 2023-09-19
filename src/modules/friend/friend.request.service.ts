@@ -39,13 +39,23 @@ export class FriendRequestService {
     });
   }
 
+  async findFriendship(fromUserId: string, toUserId: string) {
+    return this.friendshipRepository
+      .createQueryBuilder('friendship')
+      .where('friendship.fromUserId = :fromUserId', { fromUserId })
+      .andWhere('friendship.toUserId = :toUserId', { toUserId })
+      .getOne();
+  }
+
   async updateFriendNickname(friendId: string, dto: UpdateNicknameDto) {
     try {
-      const currentUser = await this.findOneWithFriends();
+      const currentUser = this.request.user as User;
 
-      const friendship = currentUser.friends.find(
-        (x) => x.toUser.id === friendId,
-      );
+      if (currentUser.id === friendId) {
+        throw { message: 'Không được tự đặt biệt danh cho chính mình' };
+      }
+
+      const friendship = await this.findFriendship(currentUser.id, friendId);
       if (!friendship) {
         throw { message: 'Bạn chưa là bạn bè với người dùng này.' };
       }

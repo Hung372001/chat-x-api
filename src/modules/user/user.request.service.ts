@@ -84,13 +84,14 @@ export class UserRequestService extends BaseService<User> {
       .leftJoinAndSelect('user.profile', 'profile')
       .leftJoinAndSelect('user.roles', 'role')
       .leftJoinAndSelect('user.friends', 'friendship')
-      .leftJoinAndSelect('friendship.toUser', 'user as friends')
+      .leftJoinAndSelect('friendship.fromUser', 'user as friends')
+      .leftJoinAndSelect('friendship.toUser', 'user as beFriends')
       .andWhere('user.id <> :userId', { userId: currentUser.id });
 
     if (!isRootAdmin) {
       queryBuilder.andWhere('user.hiding = false');
       if (!keyword && !andKeyword) {
-        queryBuilder.andWhere('friendship.toUserId = :friendId', {
+        queryBuilder.andWhere('friendship.fromUserId = :friendId', {
           friendId: currentUser.id,
         });
       }
@@ -214,7 +215,7 @@ export class UserRequestService extends BaseService<User> {
     }
 
     if (onlyFriend) {
-      queryBuilder.andWhere('friendship.toUserId = :friendId', {
+      queryBuilder.andWhere('friendship.fromUserId = :friendId', {
         friendId: currentUser.id,
       });
     }
@@ -227,7 +228,9 @@ export class UserRequestService extends BaseService<User> {
 
     return {
       items: items.map((item) => {
-        const friend = item.friends.find((x) => x.toUser.id === currentUser.id);
+        const friend = item.friends.find(
+          (x) => x.fromUser.id === currentUser.id,
+        );
 
         return omitBy(
           {
