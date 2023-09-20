@@ -11,6 +11,8 @@ import { ApiTags } from '@nestjs/swagger';
 import { JwtAccessTokenGuard } from '../auth/guards/jwt-access-token.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { FCMTokenRequestService } from './fcm-token.request.service';
+import { Roles } from '../../decorators/roles.decorator';
+import { ERole } from '../../common/enums/role.enum';
 
 @Controller('notification-token')
 @ApiTags('notification-token')
@@ -18,6 +20,7 @@ export class FCMTokenController {
   constructor(private readonly fcmTokenService: FCMTokenRequestService) {}
 
   @Post()
+  @Roles(ERole.USER)
   @UseGuards(RolesGuard)
   @UseGuards(JwtAccessTokenGuard)
   create(@Body() dto: CreateFCMTokenDto) {
