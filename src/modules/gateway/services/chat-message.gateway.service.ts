@@ -175,7 +175,7 @@ export class ChatMessageGatewayService {
     }
 
     let content = `${
-      friendship?.nickname ?? sender.username
+      friendship && friendship.nickname ? friendship.nickname : sender.username
     }: ${messageContent}`;
 
     if (group.type === EGroupChatType.DOU) {
