@@ -94,9 +94,6 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
         'profile as nameCardProfile',
       )
       .where('group_chat.id = :groupChatId', { groupChatId: groupChat.id });
-    // .andWhere('friendship.toUserId = :friendId', {
-    //   friendId: currentUser.id,
-    // });
 
     if (!isRootAdmin) {
       queryBuilder.andWhere('group_chat_setting.userId = :userId', {
