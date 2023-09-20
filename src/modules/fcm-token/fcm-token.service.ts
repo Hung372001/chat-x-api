@@ -20,4 +20,15 @@ export class FCMTokenService extends BaseService<FCMToken> {
       .andWhere('user.id = :userId', { userId })
       .getMany();
   }
+
+  async clearToken(deviceToken: string) {
+    const tokens = await this.fcmTokenRepository.findBy({ deviceToken });
+    if (tokens.length) {
+      return Promise.all(
+        tokens.map((token) => this.fcmTokenRepository.delete(token.id)),
+      );
+    }
+
+    return null;
+  }
 }

@@ -6,11 +6,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { GroupChat } from '../group-chat/entities/group-chat.entity';
 import { EGroupChatType } from '../group-chat/dto/group-chat.enum';
 import { ChatMessage } from '../chat-message/entities/chat-message.entity';
+import { GroupChatSetting } from '../group-chat/entities/group-chat-setting.entity';
 
 @Injectable()
 export class GroupChatScheduler {
   constructor(
     @InjectRepository(GroupChat) private groupChatRepo: Repository<GroupChat>,
+    @InjectRepository(GroupChatSetting)
+    private groupSettingRepo: Repository<GroupChatSetting>,
     @InjectRepository(ChatMessage)
     private chatMessageRepo: Repository<ChatMessage>,
   ) {}
@@ -30,6 +33,7 @@ export class GroupChatScheduler {
           type: EGroupChatType.GROUP,
           clearMessageDuration: MoreThan(0),
         },
+        relations: ['settings'],
       });
 
       if (groupChats.length > 0) {
@@ -53,6 +57,22 @@ export class GroupChatScheduler {
               await this.chatMessageRepo.softDelete(
                 chatMessages.map((x) => x.id),
               );
+
+              const unReadSettings = group.settings.filter(
+                (x) => x.unReadMessages > 0,
+              );
+              if (unReadSettings.length) {
+                Promise.all(
+                  unReadSettings.map(async (setting) => {
+                    await this.groupSettingRepo.update(setting.id, {
+                      unReadMessages:
+                        setting.unReadMessages > chatMessages.length
+                          ? setting.unReadMessages - chatMessages.length
+                          : 0,
+                    });
+                  }),
+                );
+              }
             }
           }),
         );

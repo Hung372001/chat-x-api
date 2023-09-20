@@ -109,8 +109,8 @@ export class ChatMessageGatewayService {
               ) {
                 // get friendship
                 const friendship = await this.userService.findFriendship(
-                  sender.id,
                   setting.user.id,
+                  sender.id,
                 );
 
                 // send notification
@@ -237,7 +237,14 @@ export class ChatMessageGatewayService {
         where: {
           id: chatMessageId,
         },
-        relations: ['sender', 'sender.profile', 'group', 'group.admins'],
+        relations: [
+          'sender',
+          'sender.profile',
+          'group',
+          'group.admins',
+          'group.settings',
+          'group.settings.user',
+        ],
       });
 
       if (!chatMessage) {
@@ -266,6 +273,20 @@ export class ChatMessageGatewayService {
       chatMessage.unsentBy = unsender;
       this.chatMessageRepo.save(chatMessage);
 
+      const unReadSettings = chatMessage.group.settings.filter(
+        (x) => x.unReadMessages > 0 && x.user.id !== chatMessage.sender.id,
+      );
+      if (unReadSettings.length) {
+        Promise.all(
+          unReadSettings.map(async (setting) => {
+            await this.groupSettingRepo.update(setting.id, {
+              unReadMessages:
+                setting.unReadMessages > 1 ? setting.unReadMessages - 1 : 0,
+            });
+          }),
+        );
+      }
+
       return chatMessage;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
@@ -278,7 +299,14 @@ export class ChatMessageGatewayService {
         where: {
           id: chatMessageId,
         },
-        relations: ['sender', 'sender.profile', 'group', 'group.members'],
+        relations: [
+          'sender',
+          'sender.profile',
+          'group',
+          'group.members',
+          'group.settings',
+          'group.settings.user',
+        ],
       });
 
       if (!chatMessage) {
@@ -298,6 +326,20 @@ export class ChatMessageGatewayService {
       chatMessage.deletedAt = moment.utc().toDate();
       await this.chatMessageRepo.update(chatMessage.id, { deletedBy });
       await this.chatMessageRepo.softDelete(chatMessage.id);
+
+      const unReadSettings = chatMessage.group.settings.filter(
+        (x) => x.unReadMessages > 0 && x.user.id !== chatMessage.sender.id,
+      );
+      if (unReadSettings.length) {
+        Promise.all(
+          unReadSettings.map(async (setting) => {
+            await this.groupSettingRepo.update(setting.id, {
+              unReadMessages:
+                setting.unReadMessages > 1 ? setting.unReadMessages - 1 : 0,
+            });
+          }),
+        );
+      }
 
       return chatMessage;
     } catch (e: any) {

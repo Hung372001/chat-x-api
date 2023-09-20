@@ -84,6 +84,7 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       .leftJoin('chat_message.group', 'group_chat')
       .leftJoinAndSelect('chat_message.sender', 'user')
       .leftJoinAndSelect('user.friends', 'friendship')
+      .leftJoinAndSelect('friendship.fromUser', 'user as friends')
       .leftJoinAndSelect('user.profile', 'profile')
       .leftJoin('group_chat.settings', 'group_chat_setting')
       .leftJoin('chat_message.deletedBy', 'user as delMsgUser')
@@ -199,13 +200,11 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       .leftJoin('chat_message.group', 'group_chat')
       .leftJoinAndSelect('chat_message.sender', 'user')
       .leftJoinAndSelect('user.friends', 'friendship')
+      .leftJoinAndSelect('friendship.fromUser', 'user as friends')
       .leftJoinAndSelect('user.profile', 'profile')
       .leftJoinAndSelect('chat_message.pinnedBy', 'user as pinner')
       .leftJoinAndSelect('user as pinner.profile', 'profile as pinnerProfile')
       .where('group_chat.id = :groupChatId', { groupChatId: groupChat.id })
-      .andWhere('friendship.toUserId = :friendId', {
-        friendId: currentUser.id,
-      })
       .andWhere('chat_message.pinned = true')
       .orderBy(`chat_message.updated_at`, 'DESC')
       .getMany();
@@ -213,10 +212,10 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
     return {
       items: items.map((iterator) =>
         adminPermission || !iterator.unsent
-          ? iterator
+          ? this.mappingFriendship(iterator, currentUser)
           : omitBy(
               {
-                ...iterator,
+                ...this.mappingFriendship(iterator, currentUser),
                 imageUrls: null,
                 message: null,
                 documentUrls: null,
@@ -225,8 +224,24 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
               isNull,
             ),
       ),
-      pinnedMessages,
+      pinnedMessages: pinnedMessages.map((iterator) =>
+        this.mappingFriendship(iterator, currentUser),
+      ),
       total,
+    };
+  }
+
+  mappingFriendship(iterator: any, currentUser: User) {
+    return {
+      ...iterator,
+      sender: {
+        ...iterator.sender,
+        nickname:
+          iterator.sender.friends?.find(
+            (x) => x.fromUser?.id === currentUser.id,
+          )?.nickname ?? '',
+        friends: null,
+      },
     };
   }
 }

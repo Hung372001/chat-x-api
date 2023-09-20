@@ -82,6 +82,8 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     const queryBuilder = this.groupChatRepo
       .createQueryBuilder('group_chat')
       .leftJoinAndSelect('group_chat.members', 'user')
+      .leftJoinAndSelect('user.friends', 'friendship')
+      .leftJoinAndSelect('friendship.fromUser', 'user as friends')
       .leftJoinAndSelect(
         'user.groupChatSettings',
         'group_chat_setting as userSetting',
@@ -91,7 +93,6 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       .leftJoinAndSelect('group_chat.admins', 'user as admins')
       .leftJoinAndSelect('group_chat.latestMessage', 'chat_message')
       .leftJoinAndSelect('group_chat.settings', 'group_chat_setting')
-      .leftJoinAndSelect('user.friends', 'friendship')
       .andWhere('group_chat_setting as userSetting.groupChatId = group_chat.id')
       .orderBy('group_chat_setting.pinned', 'DESC');
 
@@ -204,6 +205,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
                 admins:
                   iterator.owner.id === currentUser.id ? iterator.admins : null,
                 owner: null,
+                members: this.mappingFriendship(iterator.members, currentUser),
               },
               isNull,
             )
@@ -212,6 +214,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
                 ...iterator,
                 admins: null,
                 owner: null,
+                members: this.mappingFriendship(iterator.members, currentUser),
               },
               isNull,
             ),
@@ -228,6 +231,8 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       const groupChat = await this.groupChatRepo
         .createQueryBuilder('group_chat')
         .leftJoinAndSelect('group_chat.members', 'user')
+        .leftJoinAndSelect('user.friends', 'friendship')
+        .leftJoinAndSelect('friendship.fromUser', 'user as friends')
         .leftJoinAndSelect(
           'user.groupChatSettings',
           'group_chat_setting as userSetting',
@@ -261,17 +266,29 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
               admins:
                 groupChat.owner.id === currentUser.id ? groupChat.admins : null,
               owner: null,
+              members: this.mappingFriendship(groupChat.members, currentUser),
             }
           : {
               ...groupChat,
               admins: null,
               owner: null,
+              members: this.mappingFriendship(groupChat.members, currentUser),
             },
         isNull,
       );
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
+  }
+
+  mappingFriendship(members: any[], currentUser: User) {
+    return members.map((member) => ({
+      ...member,
+      nickname:
+        member.friends?.find((x) => x.fromUser?.id === currentUser.id)
+          ?.nickname ?? '',
+      friends: null,
+    }));
   }
 
   override async create(dto: CreateGroupChatDto): Promise<GroupChat> {

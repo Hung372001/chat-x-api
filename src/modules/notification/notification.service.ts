@@ -112,6 +112,12 @@ export class NotificationService {
         })
         .catch((error: any) => {
           console.error(error);
+          if (
+            error.errorInfo.code ===
+            'messaging/registration-token-not-registered'
+          ) {
+            return this.fcmTokenService.clearToken(deviceToken);
+          }
         });
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
