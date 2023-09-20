@@ -102,9 +102,9 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       //     });
       //   }),
       // )
-      // .where('friendship.toUserId = :friendId', {
-      //   friendId: currentUser.id,
-      // })
+      .where('friendship.toUserId = :friendId', {
+        friendId: currentUser.id,
+      })
       .andWhere('group_chat_setting as userSetting.groupChatId = group_chat.id')
       .orderBy('group_chat_setting.pinned', 'DESC');
 

@@ -83,6 +83,7 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       .createQueryBuilder('chat_message')
       .leftJoin('chat_message.group', 'group_chat')
       .leftJoinAndSelect('chat_message.sender', 'user')
+      .leftJoinAndSelect('user.friends', 'friendship')
       .leftJoinAndSelect('user.profile', 'profile')
       .leftJoin('group_chat.settings', 'group_chat_setting')
       .leftJoin('chat_message.deletedBy', 'user as delMsgUser')
@@ -93,6 +94,9 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
         'profile as nameCardProfile',
       )
       .where('group_chat.id = :groupChatId', { groupChatId: groupChat.id });
+    // .andWhere('friendship.toUserId = :friendId', {
+    //   friendId: currentUser.id,
+    // });
 
     if (!isRootAdmin) {
       queryBuilder.andWhere('group_chat_setting.userId = :userId', {
@@ -197,10 +201,14 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       .createQueryBuilder('chat_message')
       .leftJoin('chat_message.group', 'group_chat')
       .leftJoinAndSelect('chat_message.sender', 'user')
+      .leftJoinAndSelect('user.friends', 'friendship')
       .leftJoinAndSelect('user.profile', 'profile')
       .leftJoinAndSelect('chat_message.pinnedBy', 'user as pinner')
       .leftJoinAndSelect('user as pinner.profile', 'profile as pinnerProfile')
       .where('group_chat.id = :groupChatId', { groupChatId: groupChat.id })
+      .andWhere('friendship.toUserId = :friendId', {
+        friendId: currentUser.id,
+      })
       .andWhere('chat_message.pinned = true')
       .orderBy(`chat_message.updated_at`, 'DESC')
       .getMany();
