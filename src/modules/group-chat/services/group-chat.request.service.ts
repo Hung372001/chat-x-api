@@ -281,6 +281,35 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     }
   }
 
+  async findConversation(userId: string): Promise<GroupChat> {
+    const currentUser = this.request.user as User;
+    const memberIds = [currentUser.id, userId];
+
+    try {
+      const groupChat = await this.groupChatRepo
+        .createQueryBuilder('group_chat')
+        .select('group_chat.id')
+        .leftJoin('group_chat.members', 'user')
+        .where('group_chat.type = :type', { type: EGroupChatType.DOU })
+        .addGroupBy('group_chat.id')
+        .having(`array_agg(user.id) @> :userIds::uuid[]`, {
+          userIds: memberIds,
+        })
+        .getOne();
+
+      if (!groupChat) {
+        throw new HttpException(
+          'Không tìm thấy cuộc hội thoại',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      return this.findById(groupChat.id);
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
   mappingFriendship(members: any[], currentUser: User) {
     return members.map((member) => ({
       ...member,

@@ -38,6 +38,11 @@ export class GroupChatController {
     return this.requestService.findById(id);
   }
 
+  @Get('conversation/:userId')
+  findConversation(@Param('userId') userId: string) {
+    return this.requestService.findConversation(userId);
+  }
+
   @Post()
   create(@Body() dto: CreateGroupChatDto) {
     return this.requestService.create(dto);
