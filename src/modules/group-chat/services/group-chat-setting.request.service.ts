@@ -44,7 +44,7 @@ export class GroupChatSettingRequestService extends BaseService<GroupChatSetting
         throw { message: 'Không tìm thấy thiết lập nhóm.' };
       }
 
-      return setting;
+      return { ...setting, userId, groupId: groupChatId };
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
