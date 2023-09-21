@@ -44,7 +44,19 @@ export class GroupChatSettingRequestService extends BaseService<GroupChatSetting
         throw { message: 'Không tìm thấy thiết lập nhóm.' };
       }
 
-      return { ...setting, userId, groupId: groupChatId };
+      const groupChat = await this.groupChatService.findOne({
+        id: groupChatId,
+      });
+
+      if (!groupChat) {
+        throw { message: 'Không tìm thấy nhóm chat.' };
+      }
+
+      return {
+        ...setting,
+        userId: groupChat?.members?.find((x) => x.id !== userId)?.id ?? '',
+        groupId: groupChatId,
+      };
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
