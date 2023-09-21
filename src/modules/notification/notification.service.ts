@@ -67,6 +67,7 @@ export class NotificationService {
         {
           title: dto.title,
           content: dto.content,
+          data: { groupId: 'de9f742a-8487-4957-b5a7-0b7458edfc74' },
         } as Notification,
         dto.deviceToken,
       );
@@ -109,6 +110,13 @@ export class NotificationService {
           ),
           token: deviceToken,
           data: notification.data,
+          apns: {
+            payload: {
+              aps: {
+                data: notification.data,
+              },
+            },
+          },
         })
         .catch((error: any) => {
           console.error(error);
