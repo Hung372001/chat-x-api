@@ -6,9 +6,8 @@ import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { Profile } from '../profile/entities/profile.entity';
 import { UserRequestService } from './user.request.service';
-import { FriendRequest } from './entities/friend-request.entity';
 import { RollCall } from './entities/roll-call.entity';
-import { GatewayModule } from '../gateway/gateway.module';
+import { FriendRequest } from '../friend/entities/friend-request.entity';
 
 @Module({
   imports: [

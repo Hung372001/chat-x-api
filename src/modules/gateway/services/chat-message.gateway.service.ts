@@ -15,6 +15,7 @@ import { OnlinesSessionManager } from '../sessions/onlines.session';
 import moment from 'moment';
 import { EGroupChatType } from '../../group-chat/dto/group-chat.enum';
 import { UserGatewayService } from './user.gateway.service';
+import { Friendship } from '../../friend/entities/friendship.entity';
 
 @Injectable()
 export class ChatMessageGatewayService {
@@ -106,12 +107,18 @@ export class ChatMessageGatewayService {
                 !this.onlineSessions.getUserSession(setting.user.id) &&
                 !setting.muteNotification
               ) {
+                // get friendship
+                const friendship = await this.userService.findFriendship(
+                  setting.user.id,
+                  sender.id,
+                );
+
                 // send notification
                 this.sendMessageNotification(
                   groupChat,
                   sender,
                   setting.user,
-                  setting,
+                  friendship,
                   newMessage,
                 );
               }
@@ -148,7 +155,7 @@ export class ChatMessageGatewayService {
     group: GroupChat,
     sender: User,
     receiver: User,
-    setting: GroupChatSetting,
+    friendship: Friendship,
     chatMessage: ChatMessage,
   ) {
     let title = group.name;
@@ -167,7 +174,9 @@ export class ChatMessageGatewayService {
       }
     }
 
-    let content = `${setting.nickname ?? sender.username}: ${messageContent}`;
+    let content = `${
+      friendship && friendship.nickname ? friendship.nickname : sender.username
+    }: ${messageContent}`;
 
     if (group.type === EGroupChatType.DOU) {
       title = receiver.username;
@@ -228,7 +237,14 @@ export class ChatMessageGatewayService {
         where: {
           id: chatMessageId,
         },
-        relations: ['sender', 'sender.profile', 'group', 'group.admins'],
+        relations: [
+          'sender',
+          'sender.profile',
+          'group',
+          'group.admins',
+          'group.settings',
+          'group.settings.user',
+        ],
       });
 
       if (!chatMessage) {
@@ -257,6 +273,20 @@ export class ChatMessageGatewayService {
       chatMessage.unsentBy = unsender;
       this.chatMessageRepo.save(chatMessage);
 
+      const unReadSettings = chatMessage.group.settings.filter(
+        (x) => x.unReadMessages > 0 && x.user.id !== chatMessage.sender.id,
+      );
+      if (unReadSettings.length) {
+        Promise.all(
+          unReadSettings.map(async (setting) => {
+            await this.groupSettingRepo.update(setting.id, {
+              unReadMessages:
+                setting.unReadMessages > 1 ? setting.unReadMessages - 1 : 0,
+            });
+          }),
+        );
+      }
+
       return chatMessage;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
@@ -269,7 +299,14 @@ export class ChatMessageGatewayService {
         where: {
           id: chatMessageId,
         },
-        relations: ['sender', 'sender.profile', 'group', 'group.members'],
+        relations: [
+          'sender',
+          'sender.profile',
+          'group',
+          'group.members',
+          'group.settings',
+          'group.settings.user',
+        ],
       });
 
       if (!chatMessage) {
@@ -289,6 +326,20 @@ export class ChatMessageGatewayService {
       chatMessage.deletedAt = moment.utc().toDate();
       await this.chatMessageRepo.update(chatMessage.id, { deletedBy });
       await this.chatMessageRepo.softDelete(chatMessage.id);
+
+      const unReadSettings = chatMessage.group.settings.filter(
+        (x) => x.unReadMessages > 0 && x.user.id !== chatMessage.sender.id,
+      );
+      if (unReadSettings.length) {
+        Promise.all(
+          unReadSettings.map(async (setting) => {
+            await this.groupSettingRepo.update(setting.id, {
+              unReadMessages:
+                setting.unReadMessages > 1 ? setting.unReadMessages - 1 : 0,
+            });
+          }),
+        );
+      }
 
       return chatMessage;
     } catch (e: any) {

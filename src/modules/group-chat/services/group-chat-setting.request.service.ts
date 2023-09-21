@@ -13,7 +13,6 @@ import { REQUEST } from '@nestjs/core';
 import { Request } from 'express';
 import { AppGateway } from '../../gateway/app.gateway';
 import { GroupChatSetting } from '../entities/group-chat-setting.entity';
-import { UpdateNicknameDto } from '../dto/update-nickname.dto';
 import moment from 'moment';
 import { GroupChatService } from './group-chat.service';
 import { UpdateClearMessageDurationDto } from '../dto/update-clear-message-duration.dto';
@@ -54,32 +53,6 @@ export class GroupChatSettingRequestService extends BaseService<GroupChatSetting
   async findOne(groupChatId: string) {
     const currentUser = this.request.user as User;
     return this.getGroupSetting(groupChatId, currentUser.id);
-  }
-
-  async updateNickname(groupChatId: string, dto: UpdateNicknameDto) {
-    try {
-      const currentUser = this.request.user as User;
-
-      const setting = await this.getGroupSetting(groupChatId, currentUser.id);
-
-      const existedSetting = await this.groupSettingRepo.findOneBy({
-        id: Not(currentUser.id),
-        nickname: dto.nickname,
-      });
-
-      if (existedSetting) {
-        throw { message: 'Biệt danh đã tồn tại.' };
-      }
-
-      setting.nickname = dto.nickname;
-      await this.groupSettingRepo.update(setting.id, {
-        nickname: setting.nickname,
-      });
-
-      return setting;
-    } catch (e: any) {
-      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
-    }
   }
 
   async clearHistory(groupChatId: string) {

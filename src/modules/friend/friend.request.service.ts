@@ -15,6 +15,8 @@ import { FriendRequest } from './entities/friend-request.entity';
 import { EFriendRequestStatus } from './dto/friend-request.enum';
 import { AppGateway } from '../gateway/app.gateway';
 import { User } from '../user/entities/user.entity';
+import { UpdateNicknameDto } from './dto/update-nickname.dto';
+import { Friendship } from './entities/friendship.entity';
 
 @Injectable({ scope: Scope.REQUEST })
 export class FriendRequestService {
@@ -24,6 +26,8 @@ export class FriendRequestService {
     private userRepository: Repository<User>,
     @InjectRepository(FriendRequest)
     private friendRequestRepository: Repository<FriendRequest>,
+    @InjectRepository(Friendship)
+    private friendshipRepository: Repository<Friendship>,
     @Inject(AppGateway) private readonly gateway: AppGateway,
   ) {}
 
@@ -31,8 +35,40 @@ export class FriendRequestService {
     const currentUser = this.request.user as User;
     return this.userRepository.findOne({
       where: { id: currentUser.id },
-      relations: ['friends', 'friends.profile', 'profile'],
+      relations: ['friends', 'friends.toUser.profile', 'profile'],
     });
+  }
+
+  async findFriendship(fromUserId: string, toUserId: string) {
+    return this.friendshipRepository
+      .createQueryBuilder('friendship')
+      .where('friendship.fromUserId = :fromUserId', { fromUserId })
+      .andWhere('friendship.toUserId = :toUserId', { toUserId })
+      .getOne();
+  }
+
+  async updateFriendNickname(friendId: string, dto: UpdateNicknameDto) {
+    try {
+      const currentUser = this.request.user as User;
+
+      if (currentUser.id === friendId) {
+        throw { message: 'Không được tự đặt biệt danh cho chính mình' };
+      }
+
+      const friendship = await this.findFriendship(currentUser.id, friendId);
+      if (!friendship) {
+        throw { message: 'Bạn chưa là bạn bè với người dùng này.' };
+      }
+
+      friendship.nickname = dto.nickname;
+      await this.friendshipRepository.update(friendship.id, {
+        nickname: friendship.nickname,
+      });
+
+      return friendship;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
   }
 
   async addFriendRequests(dto: AddFriendsDto) {
@@ -149,21 +185,35 @@ export class FriendRequestService {
         throw { message: 'Tài khoản này đã là bạn bè.' };
       }
 
-      await this.friendRequestRepository.update(friendRequest.id, { status });
+      friendRequest.status = status;
+      await this.friendRequestRepository.update(friendRequest.id, {
+        status: friendRequest.status,
+      });
 
       if (status === EFriendRequestStatus.ACCEPTED) {
+        const friendship = [];
         // Save friend list for current user
-        currentUser.friends.push(friend);
-        await this.userRepository.save(currentUser);
+        friendship.push(
+          this.friendshipRepository.create({
+            fromUser: currentUser,
+            toUser: friend,
+            nickname: '',
+          } as unknown as Friendship),
+        );
 
         // Save friend list for friends
-        await this.userRepository.save({
-          ...friend,
-          friends: [...friend.friends, currentUser],
-        });
+        friendship.push(
+          this.friendshipRepository.create({
+            toUser: currentUser,
+            fromUser: friend,
+            nickname: '',
+          } as unknown as Friendship),
+        );
+
+        await this.friendshipRepository.save(friendship);
       }
 
-      return;
+      return friendRequest;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
@@ -187,7 +237,9 @@ export class FriendRequestService {
       }
 
       if (
-        !currentUser.friends.some((friend: User) => friend.id === friendUser.id)
+        !currentUser.friends.some(
+          (friend: Friendship) => friend.toUser.id === friendUser.id,
+        )
       ) {
         throw {
           message: 'Tài khoản hiện tại không phải là bạn bè với tài khoản này.',

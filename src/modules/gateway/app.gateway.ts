@@ -12,7 +12,6 @@ import {
 import { WSAuthMiddleware } from './middlewares/auth.middleware';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
-import { UserService } from '../user/user.service';
 import { GroupChatGatewayService } from './services/group-chat.gateway.service';
 import { GatewaySessionManager } from './sessions/gateway.session';
 import { AuthSocket } from './interfaces/auth.interface';
@@ -22,7 +21,6 @@ import { SendMessageDto } from '../chat-message/dto/send-message.dto';
 import { ChatMessageGatewayService } from './services/chat-message.gateway.service';
 import { SendConversationMessageDto } from '../chat-message/dto/send-conversation-message.dto';
 import { ChatMessage } from '../chat-message/entities/chat-message.entity';
-import { ReadMessageDto } from '../chat-message/dto/read-message.dto';
 import { OnlinesSessionManager } from './sessions/onlines.session';
 import { UserGatewayService } from './services/user.gateway.service';
 import { NotificationService } from '../notification/notification.service';

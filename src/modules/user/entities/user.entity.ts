@@ -18,7 +18,8 @@ import { Notification } from '../../notification/entities/notification.entity';
 import { RollCall } from './roll-call.entity';
 import { GroupChatSetting } from '../../group-chat/entities/group-chat-setting.entity';
 import { GroupChat } from '../../group-chat/entities/group-chat.entity';
-import { FriendRequest } from './friend-request.entity';
+import { Friendship } from '../../friend/entities/friendship.entity';
+import { FriendRequest } from '../../friend/entities/friend-request.entity';
 
 @Entity()
 export class User extends BaseEntity {
@@ -59,9 +60,13 @@ export class User extends BaseEntity {
   @OneToMany(() => UploadFile, (uploadFiles) => uploadFiles.owner)
   uploadFiles: UploadFile[];
 
-  @ManyToMany(() => User)
+  @OneToMany(() => Friendship, (friends) => friends.toUser)
   @JoinTable()
-  friends: User[];
+  friends: Friendship[];
+
+  @OneToMany(() => Friendship, (friends) => friends.fromUser)
+  @JoinTable()
+  beFriends: Friendship[];
 
   @OneToMany(() => FCMToken, () => (deviceTokens) => deviceTokens.user)
   deviceTokens: FCMToken[];

@@ -49,21 +49,18 @@ export class FCMTokenRequestService extends BaseService<FCMToken> {
   }
 
   override async remove(id: string): Promise<DeleteResult> {
-    const currentUser = this.request.user as User;
-
     const foundToken = await this.fcmTokenRepository
       .createQueryBuilder('fcm_token')
       .leftJoinAndSelect('fcm_token.user', 'user')
       .where('fcm_token.id = :tokenId', {
         tokenId: id,
       })
-      .andWhere('user.id = :userId', { userId: currentUser.id })
       .getOne();
 
     if (!foundToken) {
       throw new BadRequestException('Không tìm thấy device token.');
     }
 
-    return await this.fcmTokenRepository.softDelete(id);
+    return this.fcmTokenRepository.delete(id);
   }
 }

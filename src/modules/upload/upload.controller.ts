@@ -5,6 +5,9 @@ import {
   UseInterceptors,
   UploadedFile,
   UploadedFiles,
+  FileTypeValidator,
+  ParseFilePipe,
+  HttpStatus,
 } from '@nestjs/common';
 import { UploadService } from './upload.service';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -25,16 +28,40 @@ export class UploadController {
 
   @Post()
   @UseInterceptors(FileInterceptor('file'))
-  async addAvatar(@UploadedFile() file) {
+  async addAvatar(
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new FileTypeValidator({
+            fileType: '.(jpg|jpeg|gif|png|mp4|mov|wmv|avi|flv|mpeg-2)',
+          }),
+        ],
+        errorHttpStatusCode: HttpStatus.NOT_ACCEPTABLE,
+      }),
+    )
+    file,
+  ) {
     return this.uploadService.uploadFile(file.buffer, file);
   }
 
   @Post('files')
   @UseInterceptors(FilesInterceptor('files', 10))
-  multiUpload(@UploadedFiles() files) {
-    return Promise.all(
+  async multiUpload(
+    @UploadedFiles(
+      new ParseFilePipe({
+        validators: [
+          new FileTypeValidator({
+            fileType: '.(jpg|jpeg|gif|png|mp4|mov|wmv|avi|flv|mpeg-2)',
+          }),
+        ],
+        errorHttpStatusCode: HttpStatus.NOT_ACCEPTABLE,
+      }),
+    )
+    files,
+  ) {
+    return await Promise.all(
       files.map((file) => {
-        this.uploadService.uploadFile(file.buffer, file);
+        return this.uploadService.uploadFile(file.buffer, file);
       }),
     );
   }

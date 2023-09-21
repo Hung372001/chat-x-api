@@ -7,14 +7,12 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
-import { Brackets, In, Repository } from 'typeorm';
+import { Brackets, Repository } from 'typeorm';
 import { BaseService } from '../../common/services/base.service';
-import { AddFriendsDto } from './dto/add-friends.dto';
 import { Request } from 'express';
-import { differenceBy, intersectionBy } from 'lodash';
+import { omitBy, isNull } from 'lodash';
 import { REQUEST } from '@nestjs/core';
 import { GetAllUserDto } from './dto/get-all-user.dto';
-import { FriendRequest } from './entities/friend-request.entity';
 import { EFriendRequestStatus } from './dto/friend-request.enum';
 import { RollCall } from './entities/roll-call.entity';
 import moment from 'moment';
@@ -23,7 +21,7 @@ import { ConfigService } from '@nestjs/config';
 import { Profile } from '../profile/entities/profile.entity';
 import { CreateRollCallDto } from './dto/create-roll-calls.dto';
 import { ERole } from '../../common/enums/role.enum';
-import { AppGateway } from '../gateway/app.gateway';
+import { FriendRequest } from '../friend/entities/friend-request.entity';
 
 @Injectable({ scope: Scope.REQUEST })
 export class UserRequestService extends BaseService<User> {
@@ -43,6 +41,26 @@ export class UserRequestService extends BaseService<User> {
   }
 
   async findAllUsers(query: GetAllUserDto) {
+    const findFriends = await this.findUsers({ ...query, onlyFriend: true });
+    if (
+      findFriends.items.length === query.limit ||
+      (!query.keyword && !query.andKeyword)
+    ) {
+      return findFriends;
+    }
+
+    const findNotFriends = await this.findUsers({
+      ...query,
+      onlyFriend: false,
+    });
+
+    return {
+      items: findFriends.items.concat(findNotFriends.items),
+      total: findFriends.total + findNotFriends.total,
+    };
+  }
+
+  async findUsers(query: GetAllUserDto) {
     const currentUser = this.request.user as User;
     const isRootAdmin = currentUser.roles[0].type === ERole.ADMIN;
 
@@ -61,22 +79,22 @@ export class UserRequestService extends BaseService<User> {
       onlyFriend = false,
     } = query;
 
-    if (!isRootAdmin && !keyword && !andKeyword && !onlyFriend) {
-      return {
-        items: [],
-        total: 0,
-      };
-    }
-
     const queryBuilder = this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.profile', 'profile')
       .leftJoinAndSelect('user.roles', 'role')
-      .leftJoinAndSelect('user.friends', 'user as friends')
+      .leftJoinAndSelect('user.friends', 'friendship')
+      .leftJoinAndSelect('friendship.fromUser', 'user as friends')
+      .leftJoinAndSelect('friendship.toUser', 'user as beFriends')
       .andWhere('user.id <> :userId', { userId: currentUser.id });
 
     if (!isRootAdmin) {
       queryBuilder.andWhere('user.hiding = false');
+      if (!keyword && !andKeyword) {
+        queryBuilder.andWhere('friendship.fromUserId = :friendId', {
+          friendId: currentUser.id,
+        });
+      }
     }
 
     if (keyword) {
@@ -197,8 +215,8 @@ export class UserRequestService extends BaseService<User> {
     }
 
     if (onlyFriend) {
-      queryBuilder.andWhere('user as friends.id = :userId', {
-        userId: currentUser.id,
+      queryBuilder.andWhere('friendship.fromUserId = :friendId', {
+        friendId: currentUser.id,
       });
     }
 
@@ -209,11 +227,21 @@ export class UserRequestService extends BaseService<User> {
       .getManyAndCount();
 
     return {
-      items: items.map((item) => ({
-        ...item,
-        friends: [],
-        isFriend: item.friends.some((x) => x.id === currentUser.id),
-      })),
+      items: items.map((item) => {
+        const friend = item.friends.find(
+          (x) => x.fromUser.id === currentUser.id,
+        );
+
+        return omitBy(
+          {
+            ...item,
+            friends: null,
+            nickname: friend?.nickname ?? '',
+            isFriend: !!friend,
+          },
+          isNull,
+        );
+      }),
       total,
     };
   }

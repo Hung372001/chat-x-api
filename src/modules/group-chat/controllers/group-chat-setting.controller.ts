@@ -10,7 +10,7 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAccessTokenGuard } from '../../auth/guards/jwt-access-token.guard';
 import { PermissionGuard } from '../../permission/permissison.guard';
-import { UpdateNicknameDto } from '../dto/update-nickname.dto';
+import { UpdateNicknameDto } from '../../friend/dto/update-nickname.dto';
 import { GroupChatSettingRequestService } from '../services/group-chat-setting.request.service';
 import { UpdateClearMessageDurationDto } from '../dto/update-clear-message-duration.dto';
 
@@ -27,11 +27,6 @@ export class GroupChatSettingController {
   @Get()
   findOne(@Param('id') id: string) {
     return this.requestService.findOne(id);
-  }
-
-  @Patch('nickname')
-  updateNickname(@Param('id') id: string, @Body() dto: UpdateNicknameDto) {
-    return this.requestService.updateNickname(id, dto);
   }
 
   @Patch('clear')
