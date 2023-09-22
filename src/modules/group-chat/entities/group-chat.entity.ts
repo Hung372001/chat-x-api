@@ -60,4 +60,7 @@ export class GroupChat extends BaseEntity {
 
   @Column({ type: 'decimal', default: 0 })
   clearMessageDuration: number;
+
+  @Column({ nullable: true, default: false })
+  isPublic: boolean;
 }
