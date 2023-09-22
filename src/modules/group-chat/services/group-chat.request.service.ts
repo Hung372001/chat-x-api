@@ -195,30 +195,9 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       .getManyAndCount();
 
     return {
-      items: items.map((iterator) =>
-        iterator.type === EGroupChatType.GROUP
-          ? omitBy(
-              {
-                ...iterator,
-                isAdmin: iterator.admins.some((x) => x.id === currentUser.id),
-                isOwner: iterator.owner.id === currentUser.id,
-                admins:
-                  iterator.owner.id === currentUser.id ? iterator.admins : null,
-                owner: null,
-                members: this.mappingFriendship(iterator.members, currentUser),
-              },
-              isNull,
-            )
-          : omitBy(
-              {
-                ...iterator,
-                admins: null,
-                owner: null,
-                members: this.mappingFriendship(iterator.members, currentUser),
-              },
-              isNull,
-            ),
-      ),
+      items: items.map((iterator) => {
+        return this.mappingGroup(iterator, currentUser);
+      }),
       total,
     };
   }
@@ -257,25 +236,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         return null;
       }
 
-      return omitBy(
-        groupChat.type === EGroupChatType.GROUP
-          ? {
-              ...groupChat,
-              isAdmin: groupChat.admins.some((x) => x.id === currentUser.id),
-              isOwner: groupChat.owner.id === currentUser.id,
-              admins:
-                groupChat.owner.id === currentUser.id ? groupChat.admins : null,
-              owner: null,
-              members: this.mappingFriendship(groupChat.members, currentUser),
-            }
-          : {
-              ...groupChat,
-              admins: null,
-              owner: null,
-              members: this.mappingFriendship(groupChat.members, currentUser),
-            },
-        isNull,
-      );
+      return this.mappingGroup(groupChat, currentUser);
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
@@ -308,6 +269,38 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
+  }
+
+  mappingGroup(groupChat: GroupChat, currentUser: User) {
+    return omitBy(
+      groupChat.type === EGroupChatType.GROUP
+        ? {
+            ...groupChat,
+            isAdmin: groupChat.admins.some((x) => x.id === currentUser.id),
+            isOwner: groupChat.owner.id === currentUser.id,
+            admins:
+              groupChat.owner.id === currentUser.id ? groupChat.admins : null,
+            owner: null,
+            members: this.mappingFriendship(groupChat.members, currentUser),
+            latestMessage: moment(groupChat.latestMessage?.createdAt).isBefore(
+              moment(groupChat?.settings[0]?.deleteMessageFrom),
+            )
+              ? null
+              : groupChat?.latestMessage,
+          }
+        : {
+            ...groupChat,
+            admins: null,
+            owner: null,
+            members: this.mappingFriendship(groupChat.members, currentUser),
+            latestMessage: moment(groupChat.latestMessage?.createdAt).isBefore(
+              moment(groupChat?.settings[0]?.deleteMessageFrom),
+            )
+              ? null
+              : groupChat?.latestMessage,
+          },
+      isNull,
+    );
   }
 
   mappingFriendship(members: any[], currentUser: User) {
