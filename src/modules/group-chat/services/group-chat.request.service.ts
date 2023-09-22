@@ -464,10 +464,8 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         };
       }
 
-      const res = await this.groupChatRepo.save({
-        ...foundGroupChat,
-        members: [...foundGroupChat.members, ...members],
-      });
+      foundGroupChat.members = [...foundGroupChat.members, ...members];
+      const res = await this.groupChatRepo.save(foundGroupChat);
 
       // Create member setting
       const memberSettings = [];
@@ -630,10 +628,8 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         await this.groupSettingRepo.delete(memberSettings);
       }
 
-      const res = await this.groupChatRepo.save({
-        ...foundGroupChat,
-        members: aRMembers,
-      });
+      foundGroupChat.members = aRMembers;
+      const res = await this.groupChatRepo.save(foundGroupChat);
 
       // Call socket
       await this.gateway.removeGroupMember(foundGroupChat, members);
