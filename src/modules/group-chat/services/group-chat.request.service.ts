@@ -254,7 +254,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         !isRootAdmin &&
         (!groupChat || !groupChat.members.some((x) => x.id === currentUser.id))
       ) {
-        throw { message: 'Không tìm thấy nhóm chat.' };
+        return null;
       }
 
       return omitBy(
