@@ -60,6 +60,7 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     if (!groupChat) {
       const members = await this.userService.findMany({
         where: { id: In(memberIds) },
+        relations: ['profile'],
       });
       if (members?.length === 2) {
         const newGroupChat = {
