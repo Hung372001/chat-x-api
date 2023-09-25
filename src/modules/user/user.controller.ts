@@ -1,11 +1,9 @@
 import {
-  Body,
   Controller,
   Delete,
   Get,
   Param,
   Patch,
-  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -14,12 +12,9 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PermissionGuard } from '../permission/permissison.guard';
 import { DeleteResult } from 'typeorm';
 import { JwtAccessTokenGuard } from '../auth/guards/jwt-access-token.guard';
-import { AddFriendsDto } from './dto/add-friends.dto';
 import { UserRequestService } from './user.request.service';
 import { GetAllUserDto } from './dto/get-all-user.dto';
-import { EFriendRequestStatus } from './dto/friend-request.enum';
 import { GetAllRollCallDto } from './dto/get-all-roll-calls.dto';
-import { CreateRollCallDto } from './dto/create-roll-calls.dto';
 
 @ApiTags('user')
 @Controller('user')
