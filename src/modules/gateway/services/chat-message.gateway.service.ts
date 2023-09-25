@@ -210,7 +210,14 @@ export class ChatMessageGatewayService {
     try {
       const message = await this.chatMessageRepo.findOne({
         where: { id },
-        relations: ['group', 'group.admins', 'sender', 'sender.profile'],
+        relations: [
+          'group',
+          'group.admins',
+          'sender',
+          'sender.profile',
+          'nameCard',
+          'nameCard.profile',
+        ],
       });
 
       if (!message) {
