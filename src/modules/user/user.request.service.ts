@@ -228,9 +228,9 @@ export class UserRequestService extends BaseService<User> {
 
     return {
       items: items.map((item) => {
-        const friend = item.friends.find(
-          (x) => x.fromUser.id === currentUser.id,
-        );
+        const friend = item.friends.length
+          ? item.friends.find((x) => x.fromUser?.id === currentUser.id)
+          : null;
 
         return omitBy(
           {
