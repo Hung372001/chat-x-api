@@ -157,6 +157,20 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     }
   }
 
+  async addMemberForPublicGroup(groupChat: GroupChat, member: User) {
+    // push new member into group members
+    groupChat.members.push(member);
+    await this.groupChatRepo.save(groupChat);
+
+    // create group chat setting for new member
+    await this.groupSettingRepo.save({
+      groupChat,
+      user: member,
+    });
+
+    return groupChat;
+  }
+
   async readMessages(groupId: string, user: User) {
     try {
       const groupChat = await this.groupChatRepo

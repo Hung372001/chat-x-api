@@ -97,13 +97,23 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       .orderBy('group_chat_setting.pinned', 'DESC');
 
     if (!isRootAdmin) {
-      queryBuilder
-        .andWhere('group_chat.id In(:...groupChatIds)', {
-          groupChatIds: groupChatIds.map((x) => x.id),
-        })
-        .andWhere('group_chat_setting.userId = :userId', {
-          userId: currentUser.id,
-        });
+      queryBuilder.andWhere(
+        new Brackets((subQuery) => {
+          subQuery.orWhere(
+            new Brackets((andSubQuery) => {
+              andSubQuery.where('group_chat.id In(:...groupChatIds)', {
+                groupChatIds: groupChatIds.map((x) => x.id),
+              });
+              andSubQuery.andWhere('group_chat_setting.userId = :userId', {
+                userId: currentUser.id,
+              });
+            }),
+          );
+          if (keyword || andKeyword) {
+            subQuery.orWhere('group_chat.isPublic = true');
+          }
+        }),
+      );
     } else {
       queryBuilder.withDeleted();
     }

@@ -341,7 +341,12 @@ export class AppGateway
         data,
         client.user,
       );
+
       if (newMessage) {
+        if (newMessage.isNewMember) {
+          await this.joinGroup(newMessage.group.id, [client.user]);
+        }
+
         this.server.to(newMessage.group.id).emit('newMessageReceived', {
           newMessage,
         });
@@ -369,6 +374,10 @@ export class AppGateway
           groupChatDou,
         );
         if (newMessage) {
+          if (newMessage.isNewMember) {
+            await this.joinGroup(newMessage.group.id, [client.user]);
+          }
+
           this.server.to(newMessage.group.id).emit('newMessageReceived', {
             newMessage,
           });
