@@ -587,6 +587,61 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     }
   }
 
+  async leaveGroup(id: string) {
+    const currentUser = this.request.user as User;
+
+    try {
+      const foundGroupChat = await this.groupChatRepo.findOne({
+        where: { id, type: EGroupChatType.GROUP },
+        relations: ['admins', 'members', 'members.profile', 'owner'],
+      });
+
+      if (!foundGroupChat) {
+        throw { message: 'Không tìm thấy nhóm chat.' };
+      }
+
+      if (!foundGroupChat.members.some((x) => x.id === currentUser.id)) {
+        throw { message: 'Bạn không phải thành viên nhóm chat.' };
+      }
+
+      // After remove members list
+      const aRMembers = differenceBy(
+        foundGroupChat.members,
+        [currentUser],
+        'id',
+      );
+
+      if (aRMembers.length > 0) {
+        // Delete member setting
+        const memberSettings = [];
+        await Promise.all(
+          aRMembers.map((member) => {
+            memberSettings.push({
+              groupChat: foundGroupChat,
+              user: member,
+            });
+          }),
+        );
+        await this.groupSettingRepo.delete(memberSettings);
+      }
+
+      foundGroupChat.members = aRMembers;
+      const res = await this.groupChatRepo.save(foundGroupChat);
+
+      // Call socket
+      await this.gateway.removeGroupMember(foundGroupChat, [currentUser]);
+
+      // Remove group if user is owner
+      if (foundGroupChat.owner.id === currentUser.id) {
+        await this.removeGroup(foundGroupChat.id);
+      }
+
+      return res;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
   async removeMember(id: string, dto: RemoveMemberDto) {
     try {
       const currentUser = this.request.user as User;

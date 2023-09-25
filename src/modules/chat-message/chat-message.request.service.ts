@@ -204,6 +204,11 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       .leftJoinAndSelect('user.profile', 'profile')
       .leftJoinAndSelect('chat_message.pinnedBy', 'user as pinner')
       .leftJoinAndSelect('user as pinner.profile', 'profile as pinnerProfile')
+      .leftJoinAndSelect('chat_message.nameCard', 'user as nameCardUser')
+      .leftJoinAndSelect(
+        'user as nameCardUser.profile',
+        'profile as nameCardProfile',
+      )
       .where('group_chat.id = :groupChatId', { groupChatId: groupChat.id })
       .andWhere('chat_message.pinned = true')
       .orderBy(`chat_message.updated_at`, 'DESC')
