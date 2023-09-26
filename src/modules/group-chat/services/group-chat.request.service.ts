@@ -25,7 +25,6 @@ import { GroupChatSetting } from '../entities/group-chat-setting.entity';
 import { ERole } from '../../../common/enums/role.enum';
 import moment from 'moment';
 import { AddAdminDto } from '../dto/add-admin.dto';
-import { RemoveAdminDto } from '../dto/remove-admin.dto';
 import slugify from 'slugify';
 
 @Injectable({ scope: Scope.REQUEST })
@@ -623,6 +622,15 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
           }),
         );
         await this.groupSettingRepo.delete(memberSettings);
+      }
+
+      // Admin group leaved
+      if (foundGroupChat.admins.some((x) => x.id === currentUser.id)) {
+        foundGroupChat.admins = differenceBy(
+          foundGroupChat.admins,
+          [currentUser],
+          'id',
+        );
       }
 
       foundGroupChat.members = aRMembers;
