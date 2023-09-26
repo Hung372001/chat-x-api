@@ -112,6 +112,14 @@ export class AppGateway
     );
   }
 
+  @SubscribeMessage('isOnline')
+  async checkOnlineStatus(
+    @MessageBody() userId: string,
+    @ConnectedSocket() client: AuthSocket,
+  ) {
+    client.emit('isOnline', !!this.onlineSessions.getUserSession(userId));
+  }
+
   @SubscribeMessage('enterGroupChat')
   async enterGroupChat(
     @MessageBody() groupId: string,
