@@ -1,16 +1,7 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Body, Patch, Param, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAccessTokenGuard } from '../../auth/guards/jwt-access-token.guard';
 import { PermissionGuard } from '../../permission/permissison.guard';
-import { UpdateNicknameDto } from '../../friend/dto/update-nickname.dto';
 import { GroupChatSettingRequestService } from '../services/group-chat-setting.request.service';
 import { UpdateClearMessageDurationDto } from '../dto/update-clear-message-duration.dto';
 
@@ -52,6 +43,11 @@ export class GroupChatSettingController {
   @Patch('add-friends/toggle')
   toggleAddFriends(@Param('id') id: string) {
     return this.requestService.toggleAddFriends(id);
+  }
+
+  @Patch('group-type/toggle')
+  toggleGroupType(@Param('id') id: string) {
+    return this.requestService.toggleGroupType(id);
   }
 
   @Patch('chat-feature/toggle')

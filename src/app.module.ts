@@ -24,6 +24,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { SchedulerModule } from './modules/scheduler/scheduler.module';
 import { ProfileModule } from './modules/profile/profile.module';
 import { FriendModule } from './modules/friend/friend.module';
+import { SearchModule } from './modules/search/search.module';
 
 const apiV1Modules = [
   UserModule,
@@ -35,6 +36,7 @@ const apiV1Modules = [
   FCMTokenModule,
   NotificationModule,
   FriendModule,
+  SearchModule,
 ];
 
 @Module({

@@ -23,10 +23,10 @@ import { FriendRequest } from '../../friend/entities/friend-request.entity';
 
 @Entity()
 export class User extends BaseEntity {
-  @Column({ unique: true, nullable: true })
+  @Column({ nullable: true })
   email: string;
 
-  @Column({ unique: true, nullable: true })
+  @Column({ nullable: true })
   phoneNumber: string;
 
   @Column()

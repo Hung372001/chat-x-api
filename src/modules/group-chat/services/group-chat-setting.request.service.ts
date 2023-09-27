@@ -208,6 +208,35 @@ export class GroupChatSettingRequestService extends BaseService<GroupChatSetting
     }
   }
 
+  async toggleGroupType(groupChatId: string) {
+    try {
+      const currentUser = this.request.user as User;
+
+      const groupChat = await this.groupChatService.findOne({
+        id: groupChatId,
+      });
+
+      if (!groupChat) {
+        throw { message: 'Không tìm thấy thông tin nhóm chat.' };
+      }
+
+      if (!groupChat.admins.some((x) => x.id === currentUser.id)) {
+        throw {
+          message: 'Chỉ quản trị viên mới có quyền thực hiện tính năng này.',
+        };
+      }
+
+      groupChat.isPublic = !groupChat.isPublic;
+      await this.groupChatService.update(groupChat.id, {
+        isPublic: groupChat.isPublic,
+      });
+
+      return groupChat;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
   async toggleHideGroupChat(groupChatId: string) {
     try {
       const currentUser = this.request.user as User;

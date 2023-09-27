@@ -56,6 +56,7 @@ export class ChatMessageGatewayService {
       }
 
       if (
+        !groupChat.isPublic &&
         !groupChat.members.some((x) => x.id === sender.id) &&
         !groupChat.admins.some((x) => x.id === sender.id)
       ) {
@@ -73,6 +74,18 @@ export class ChatMessageGatewayService {
             message: 'Không tìm thấy danh thiếp.',
           };
         }
+      }
+
+      let isNewMember = false;
+      if (
+        groupChat.isPublic &&
+        !groupChat.members.some((x) => x.id === sender.id)
+      ) {
+        groupChat = await this.groupChatService.addMemberForPublicGroup(
+          groupChat,
+          sender,
+        );
+        isNewMember = true;
       }
 
       const groupSession = this.insideGroupSessions.getUserSession(
@@ -145,7 +158,7 @@ export class ChatMessageGatewayService {
         newMessage.group.settings.forEach((x) => delete x.groupChat);
       }
 
-      return newMessage;
+      return { ...newMessage, isNewMember };
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
@@ -197,7 +210,14 @@ export class ChatMessageGatewayService {
     try {
       const message = await this.chatMessageRepo.findOne({
         where: { id },
-        relations: ['group', 'group.admins', 'sender', 'sender.profile'],
+        relations: [
+          'group',
+          'group.admins',
+          'sender',
+          'sender.profile',
+          'nameCard',
+          'nameCard.profile',
+        ],
       });
 
       if (!message) {

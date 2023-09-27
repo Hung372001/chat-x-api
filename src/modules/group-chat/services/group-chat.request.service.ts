@@ -25,7 +25,6 @@ import { GroupChatSetting } from '../entities/group-chat-setting.entity';
 import { ERole } from '../../../common/enums/role.enum';
 import moment from 'moment';
 import { AddAdminDto } from '../dto/add-admin.dto';
-import { RemoveAdminDto } from '../dto/remove-admin.dto';
 import slugify from 'slugify';
 
 @Injectable({ scope: Scope.REQUEST })
@@ -97,13 +96,23 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       .orderBy('group_chat_setting.pinned', 'DESC');
 
     if (!isRootAdmin) {
-      queryBuilder
-        .andWhere('group_chat.id In(:...groupChatIds)', {
-          groupChatIds: groupChatIds.map((x) => x.id),
-        })
-        .andWhere('group_chat_setting.userId = :userId', {
-          userId: currentUser.id,
-        });
+      queryBuilder.andWhere(
+        new Brackets((subQuery) => {
+          subQuery.orWhere(
+            new Brackets((andSubQuery) => {
+              andSubQuery.where('group_chat.id In(:...groupChatIds)', {
+                groupChatIds: groupChatIds.map((x) => x.id),
+              });
+              andSubQuery.andWhere('group_chat_setting.userId = :userId', {
+                userId: currentUser.id,
+              });
+            }),
+          );
+          if (keyword || andKeyword) {
+            subQuery.orWhere('group_chat.isPublic = true');
+          }
+        }),
+      );
     } else {
       queryBuilder.withDeleted();
     }
@@ -572,6 +581,70 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       await this.gateway.renameGroupChat(foundGroupChat, dto.newName);
 
       return foundGroupChat;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async leaveGroup(id: string) {
+    const currentUser = this.request.user as User;
+
+    try {
+      const foundGroupChat = await this.groupChatRepo.findOne({
+        where: { id, type: EGroupChatType.GROUP },
+        relations: ['admins', 'members', 'members.profile', 'owner'],
+      });
+
+      if (!foundGroupChat) {
+        throw { message: 'Không tìm thấy nhóm chat.' };
+      }
+
+      if (!foundGroupChat.members.some((x) => x.id === currentUser.id)) {
+        throw { message: 'Bạn không phải thành viên nhóm chat.' };
+      }
+
+      // After remove members list
+      const aRMembers = differenceBy(
+        foundGroupChat.members,
+        [currentUser],
+        'id',
+      );
+
+      if (aRMembers.length > 0) {
+        // Delete member setting
+        const memberSettings = [];
+        await Promise.all(
+          aRMembers.map((member) => {
+            memberSettings.push({
+              groupChat: foundGroupChat,
+              user: member,
+            });
+          }),
+        );
+        await this.groupSettingRepo.delete(memberSettings);
+      }
+
+      // Admin group leaved
+      if (foundGroupChat.admins.some((x) => x.id === currentUser.id)) {
+        foundGroupChat.admins = differenceBy(
+          foundGroupChat.admins,
+          [currentUser],
+          'id',
+        );
+      }
+
+      foundGroupChat.members = aRMembers;
+      const res = await this.groupChatRepo.save(foundGroupChat);
+
+      // Call socket
+      await this.gateway.removeGroupMember(foundGroupChat, [currentUser]);
+
+      // Remove group if user is owner
+      if (foundGroupChat.owner.id === currentUser.id) {
+        await this.removeGroup(foundGroupChat.id);
+      }
+
+      return res;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }

@@ -67,4 +67,9 @@ export class GroupChatController {
   removeGroup(@Param('id') groupId: string) {
     return this.requestService.removeGroup(groupId);
   }
+
+  @Patch('leave-group/:id')
+  leaveGroup(@Param('id') groupId: string) {
+    return this.requestService.leaveGroup(groupId);
+  }
 }

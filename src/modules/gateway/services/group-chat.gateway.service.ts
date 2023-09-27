@@ -46,53 +46,62 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
   }
 
   async getGroupChatDou(memberIds: string[], gateway: AppGateway) {
-    const groupChat = await this.groupChatRepo
-      .createQueryBuilder('group_chat')
-      .select('group_chat.id')
-      .leftJoin('group_chat.members', 'user')
-      .where('group_chat.type = :type', { type: EGroupChatType.DOU })
-      .addGroupBy('group_chat.id')
-      .having(`array_agg(user.id) @> :userIds::uuid[]`, {
-        userIds: memberIds,
-      })
-      .getOne();
+    try {
+      const groupChat = await this.groupChatRepo
+        .createQueryBuilder('group_chat')
+        .select('group_chat.id')
+        .leftJoin('group_chat.members', 'user')
+        .where('group_chat.type = :type', { type: EGroupChatType.DOU })
+        .addGroupBy('group_chat.id')
+        .having(`array_agg(user.id) @> :userIds::uuid[]`, {
+          userIds: memberIds,
+        })
+        .getOne();
 
-    if (!groupChat) {
-      const members = await this.userService.findMany({
-        where: { id: In(memberIds) },
-        relations: ['profile'],
-      });
-      if (members?.length === 2) {
-        const newGroupChat = {
-          members: members,
-          type: EGroupChatType.DOU,
-        } as unknown as GroupChat;
+      if (!groupChat) {
+        const members = await this.userService.findMany({
+          where: { id: In(memberIds) },
+          relations: ['profile'],
+        });
+        if (members?.length === 2) {
+          const newGroupChat = {
+            members: members,
+            type: EGroupChatType.DOU,
+          } as unknown as GroupChat;
 
-        await this.groupChatRepo.save(newGroupChat);
+          await this.groupChatRepo.save(newGroupChat);
 
-        // Call socket to create group chat
-        await gateway.createGroupChat(newGroupChat);
+          // Call socket to create group chat
+          await gateway.createGroupChat(newGroupChat);
 
-        // Create member setting
-        const memberSettings = [];
-        await Promise.all(
-          members.map((member) => {
-            memberSettings.push({
-              groupChat: newGroupChat,
-              user: member,
-            });
-          }),
-        );
+          // Create member setting
+          const memberSettings = [];
+          await Promise.all(
+            members.map((member) => {
+              memberSettings.push({
+                groupChat: newGroupChat,
+                user: member,
+              });
+            }),
+          );
 
-        await this.groupSettingRepo.save(memberSettings);
-        newGroupChat.settings = memberSettings;
+          await this.groupSettingRepo.save(memberSettings);
+          newGroupChat.settings = memberSettings;
 
-        return newGroupChat;
+          return newGroupChat;
+        } else {
+          throw {
+            message:
+              'Không thể nhắn tin với tài khoản đã bị xóa hoặc không tồn tại.',
+          };
+        }
+
+        return null;
+      } else {
+        return this.findOneWithSettings({ id: groupChat.id });
       }
-
-      return null;
-    } else {
-      return this.findOneWithSettings({ id: groupChat.id });
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
   }
 
@@ -155,6 +164,20 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
         }),
       );
     }
+  }
+
+  async addMemberForPublicGroup(groupChat: GroupChat, member: User) {
+    // push new member into group members
+    groupChat.members.push(member);
+    await this.groupChatRepo.save(groupChat);
+
+    // create group chat setting for new member
+    await this.groupSettingRepo.save({
+      groupChat,
+      user: member,
+    });
+
+    return groupChat;
   }
 
   async readMessages(groupId: string, user: User) {

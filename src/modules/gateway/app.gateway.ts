@@ -112,6 +112,14 @@ export class AppGateway
     );
   }
 
+  @SubscribeMessage('isOnline')
+  async checkOnlineStatus(
+    @MessageBody() userId: string,
+    @ConnectedSocket() client: AuthSocket,
+  ) {
+    client.emit('isOnline', !!this.onlineSessions.getUserSession(userId));
+  }
+
   @SubscribeMessage('enterGroupChat')
   async enterGroupChat(
     @MessageBody() groupId: string,
@@ -341,7 +349,12 @@ export class AppGateway
         data,
         client.user,
       );
+
       if (newMessage) {
+        if (newMessage.isNewMember) {
+          await this.joinGroup(newMessage.group.id, [client.user]);
+        }
+
         this.server.to(newMessage.group.id).emit('newMessageReceived', {
           newMessage,
         });
@@ -369,6 +382,10 @@ export class AppGateway
           groupChatDou,
         );
         if (newMessage) {
+          if (newMessage.isNewMember) {
+            await this.joinGroup(newMessage.group.id, [client.user]);
+          }
+
           this.server.to(newMessage.group.id).emit('newMessageReceived', {
             newMessage,
           });

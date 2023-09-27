@@ -41,7 +41,10 @@ export class UserRequestService extends BaseService<User> {
   }
 
   async findAllUsers(query: GetAllUserDto) {
-    const findFriends = await this.findUsers({ ...query, onlyFriend: true });
+    const findFriends = await this.findUsers(
+      { ...query, onlyFriend: true },
+      null,
+    );
     if (
       findFriends.items.length === query.limit ||
       (!query.keyword && !query.andKeyword)
@@ -49,10 +52,13 @@ export class UserRequestService extends BaseService<User> {
       return findFriends;
     }
 
-    const findNotFriends = await this.findUsers({
-      ...query,
-      onlyFriend: false,
-    });
+    const findNotFriends = await this.findUsers(
+      {
+        ...query,
+        onlyFriend: false,
+      },
+      findFriends?.items?.map((x) => x.id) ?? null,
+    );
 
     return {
       items: findFriends.items.concat(findNotFriends.items),
@@ -60,7 +66,7 @@ export class UserRequestService extends BaseService<User> {
     };
   }
 
-  async findUsers(query: GetAllUserDto) {
+  async findUsers(query: GetAllUserDto, friendIds: string[]) {
     const currentUser = this.request.user as User;
     const isRootAdmin = currentUser.roles[0].type === ERole.ADMIN;
 
@@ -87,6 +93,10 @@ export class UserRequestService extends BaseService<User> {
       .leftJoinAndSelect('friendship.fromUser', 'user as friends')
       .leftJoinAndSelect('friendship.toUser', 'user as beFriends')
       .andWhere('user.id <> :userId', { userId: currentUser.id });
+
+    if (!onlyFriend && friendIds?.length) {
+      queryBuilder.where('user.id NOT IN(:...friendIds)', { friendIds });
+    }
 
     if (!isRootAdmin) {
       queryBuilder.andWhere('user.hiding = false');
