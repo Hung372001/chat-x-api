@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
-import { Brackets, Repository } from 'typeorm';
+import { Brackets, DeleteResult, Repository } from 'typeorm';
 import { BaseService } from '../../common/services/base.service';
 import { Request } from 'express';
 import { omitBy, isNull } from 'lodash';
@@ -92,7 +92,8 @@ export class UserRequestService extends BaseService<User> {
       .leftJoinAndSelect('user.friends', 'friendship')
       .leftJoinAndSelect('friendship.fromUser', 'user as friends')
       .leftJoinAndSelect('friendship.toUser', 'user as beFriends')
-      .andWhere('user.id <> :userId', { userId: currentUser.id });
+      .andWhere('user.id <> :userId', { userId: currentUser.id })
+      .andWhere('user.isActive = true');
 
     if (!onlyFriend && friendIds?.length) {
       queryBuilder.where('user.id NOT IN(:...friendIds)', { friendIds });
@@ -404,6 +405,28 @@ export class UserRequestService extends BaseService<User> {
         soundNotification: currentUser.soundNotification,
       });
       return currentUser;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  override async remove(id: string): Promise<DeleteResult> {
+    try {
+      const foundRecord = await this.findById(id);
+
+      if (!foundRecord) {
+        throw { message: `${this.name} is not found.` };
+      }
+
+      await this.userRepository.update(id, {
+        isActive: false,
+      });
+
+      return {
+        generatedMaps: [],
+        raw: [],
+        affected: 1,
+      } as DeleteResult;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }

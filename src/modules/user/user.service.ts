@@ -27,7 +27,7 @@ export class UserService extends BaseService<User> {
     query: FindOptionsWhere<User> | FindOptionsWhere<User>[],
   ): Promise<User | null> {
     return this.userRepository.findOne({
-      where: query,
+      where: { ...query, isActive: true },
       relations: ['roles', 'profile'],
     });
   }

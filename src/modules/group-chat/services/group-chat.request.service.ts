@@ -452,7 +452,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       }
 
       const members = await this.userService.findMany({
-        where: { id: In(dto.members) },
+        where: { id: In(dto.members), isActive: true },
         relations: ['profile'],
       });
       if (!members?.length || dto.members.length !== members.length) {
