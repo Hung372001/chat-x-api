@@ -56,6 +56,16 @@ export class ChatMessageGatewayService {
       }
 
       if (
+        groupChat.type === EGroupChatType.DOU &&
+        groupChat.members.some((x) => !x.isActive)
+      ) {
+        throw {
+          message:
+            'Không thể nhắn tin với tài khoản đã bị xóa hoặc không tồn tại.',
+        };
+      }
+
+      if (
         !groupChat.isPublic &&
         !groupChat.members.some((x) => x.id === sender.id) &&
         !groupChat.admins.some((x) => x.id === sender.id)
