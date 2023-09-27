@@ -70,7 +70,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         })
         .getMany();
 
-      if (!groupChatIds.length) {
+      if (!groupChatIds.length && !keyword && !andKeyword) {
         return {
           items: [],
           total: 0,
@@ -98,16 +98,18 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     if (!isRootAdmin) {
       queryBuilder.andWhere(
         new Brackets((subQuery) => {
-          subQuery.orWhere(
-            new Brackets((andSubQuery) => {
-              andSubQuery.where('group_chat.id In(:...groupChatIds)', {
-                groupChatIds: groupChatIds.map((x) => x.id),
-              });
-              andSubQuery.andWhere('group_chat_setting.userId = :userId', {
-                userId: currentUser.id,
-              });
-            }),
-          );
+          if (groupChatIds?.length) {
+            subQuery.where(
+              new Brackets((andSubQuery) => {
+                andSubQuery.where('group_chat.id In(:...groupChatIds)', {
+                  groupChatIds: groupChatIds.map((x) => x.id),
+                });
+                andSubQuery.andWhere('group_chat_setting.userId = :userId', {
+                  userId: currentUser.id,
+                });
+              }),
+            );
+          }
           if (keyword || andKeyword) {
             subQuery.orWhere('group_chat.isPublic = true');
           }
