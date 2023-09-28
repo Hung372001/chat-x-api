@@ -202,7 +202,10 @@ export class ChatMessageGatewayService {
     }: ${messageContent}`;
 
     if (group.type === EGroupChatType.DOU) {
-      title = receiver.username;
+      title =
+        friendship && friendship.nickname
+          ? friendship.nickname
+          : sender.username;
       content = `${messageContent}`;
     }
 
