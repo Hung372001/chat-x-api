@@ -110,7 +110,16 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
               }),
             );
           }
-          if (keyword || andKeyword) {
+
+          const searchNameIndex = searchBy?.indexOf('name') ?? -1;
+          const andSearchNameIndex = searchAndBy?.indexOf('name') ?? -1;
+          if (
+            (searchNameIndex !== -1 || andSearchNameIndex !== -1) &&
+            (keyword ||
+              andKeyword ||
+              keyword[searchNameIndex] ||
+              andKeyword[andSearchNameIndex])
+          ) {
             subQuery.orWhere('group_chat.isPublic = true');
           }
         }),
