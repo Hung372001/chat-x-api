@@ -352,7 +352,7 @@ export class AppGateway
 
       if (newMessage) {
         if (newMessage.isNewMember) {
-          await this.joinGroup(newMessage.group.id, [client.user]);
+          await this.addNewGroupMember(newMessage.group, [client.user]);
         }
 
         this.server.to(newMessage.group.id).emit('newMessageReceived', {
