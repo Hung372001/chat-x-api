@@ -70,7 +70,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         })
         .getMany();
 
-      if (!groupChatIds.length) {
+      if (!groupChatIds.length && !keyword && !andKeyword) {
         return {
           items: [],
           total: 0,
@@ -98,17 +98,28 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     if (!isRootAdmin) {
       queryBuilder.andWhere(
         new Brackets((subQuery) => {
-          subQuery.orWhere(
-            new Brackets((andSubQuery) => {
-              andSubQuery.where('group_chat.id In(:...groupChatIds)', {
-                groupChatIds: groupChatIds.map((x) => x.id),
-              });
-              andSubQuery.andWhere('group_chat_setting.userId = :userId', {
-                userId: currentUser.id,
-              });
-            }),
-          );
-          if (keyword || andKeyword) {
+          if (groupChatIds?.length) {
+            subQuery.where(
+              new Brackets((andSubQuery) => {
+                andSubQuery.where('group_chat.id In(:...groupChatIds)', {
+                  groupChatIds: groupChatIds.map((x) => x.id),
+                });
+                andSubQuery.andWhere('group_chat_setting.userId = :userId', {
+                  userId: currentUser.id,
+                });
+              }),
+            );
+          }
+
+          const searchNameIndex = searchBy?.indexOf('name') ?? -1;
+          const andSearchNameIndex = searchAndBy?.indexOf('name') ?? -1;
+          if (
+            (searchNameIndex !== -1 || andSearchNameIndex !== -1) &&
+            (keyword ||
+              andKeyword ||
+              keyword[searchNameIndex] ||
+              andKeyword[andSearchNameIndex])
+          ) {
             subQuery.orWhere('group_chat.isPublic = true');
           }
         }),
@@ -452,7 +463,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       }
 
       const members = await this.userService.findMany({
-        where: { id: In(dto.members) },
+        where: { id: In(dto.members), isActive: true },
         relations: ['profile'],
       });
       if (!members?.length || dto.members.length !== members.length) {

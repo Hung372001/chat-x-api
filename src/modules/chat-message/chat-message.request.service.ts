@@ -48,7 +48,9 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
 
     if (
       !isRootAdmin &&
-      (!groupChat || !groupChat.members.some((x) => x.id === currentUser.id))
+      (!groupChat ||
+        (!groupChat.members.some((x) => x.id === currentUser.id) &&
+          !groupChat.isPublic))
     ) {
       throw { message: 'Không tìm thấy nhóm chat.' };
     }
@@ -72,7 +74,7 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
     } = query;
 
     let chatSetting = null;
-    if (!isRootAdmin) {
+    if (!isRootAdmin && !groupChat.isPublic) {
       chatSetting = await this.groupSettingService.getGroupSetting(
         groupChat.id,
         currentUser.id,
@@ -97,11 +99,16 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       .where('group_chat.id = :groupChatId', { groupChatId: groupChat.id });
 
     if (!isRootAdmin) {
-      queryBuilder.andWhere('group_chat_setting.userId = :userId', {
-        userId: currentUser.id,
-      });
+      queryBuilder.andWhere(
+        new Brackets((subQuery) => {
+          subQuery.where('group_chat_setting.userId = :userId', {
+            userId: currentUser.id,
+          });
+          subQuery.orWhere('group_chat.isPublic = true');
+        }),
+      );
 
-      if (chatSetting.deleteMessageFrom) {
+      if (chatSetting?.deleteMessageFrom) {
         queryBuilder.andWhere('chat_message.created_at >= :fromDate', {
           fromDate: chatSetting.deleteMessageFrom,
         });

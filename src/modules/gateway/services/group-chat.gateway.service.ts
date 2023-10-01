@@ -95,10 +95,17 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
               'Không thể nhắn tin với tài khoản đã bị xóa hoặc không tồn tại.',
           };
         }
-
-        return null;
       } else {
-        return this.findOneWithSettings({ id: groupChat.id });
+        const foundGroupChat = await this.findOneWithSettings({
+          id: groupChat.id,
+        });
+        if (foundGroupChat.members.some((x) => !x.isActive)) {
+          throw {
+            message:
+              'Không thể nhắn tin với tài khoản đã bị xóa hoặc không tồn tại.',
+          };
+        }
+        return foundGroupChat;
       }
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);

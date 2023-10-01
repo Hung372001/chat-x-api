@@ -137,7 +137,10 @@ export abstract class BaseService<T extends BaseEntity>
   }
 
   async findById(id: string): Promise<T> {
-    return await this.repository.findOneBy({ id } as FindOptionsWhere<T>);
+    return await this.repository.findOneBy({
+      id,
+      isActive: true,
+    } as FindOptionsWhere<T>);
   }
 
   async findMany(filter: FindManyOptions<T>) {
