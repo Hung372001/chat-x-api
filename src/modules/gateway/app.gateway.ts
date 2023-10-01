@@ -80,7 +80,7 @@ export class AppGateway
 
   async handleDisconnect(client: AuthSocket) {
     this.logger.log(client.id, 'Disconnected..............................');
-    this.groupChatService.emitOnlineGroupMember(
+    this.groupChatService.emitOfflineGroupMember(
       this.server,
       client,
       client?.user,
