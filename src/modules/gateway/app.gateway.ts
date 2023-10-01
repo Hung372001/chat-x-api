@@ -92,24 +92,30 @@ export class AppGateway
   // Online and offile status of group member
   @SubscribeMessage('online')
   async handleMemberOnline(@ConnectedSocket() client: AuthSocket) {
-    this.onlineSessions.setUserSession(client?.user?.id, true);
-    this.groupChatService.emitOnlineGroupMember(
-      this.server,
-      client,
-      client?.user,
-      false,
-    );
+    const isOnline = this.onlineSessions.getUserSession(client?.user?.id);
+    if (!isOnline) {
+      this.onlineSessions.setUserSession(client?.user?.id, true);
+      this.groupChatService.emitOnlineGroupMember(
+        this.server,
+        client,
+        client?.user,
+        false,
+      );
+    }
   }
 
   @SubscribeMessage('offline')
   async handleMemberOffline(@ConnectedSocket() client: AuthSocket) {
-    this.onlineSessions.setUserSession(client?.user?.id, false);
-    this.groupChatService.emitOfflineGroupMember(
-      this.server,
-      client,
-      client?.user,
-      false,
-    );
+    const isOnline = this.onlineSessions.getUserSession(client?.user?.id);
+    if (isOnline) {
+      this.onlineSessions.setUserSession(client?.user?.id, false);
+      this.groupChatService.emitOfflineGroupMember(
+        this.server,
+        client,
+        client?.user,
+        false,
+      );
+    }
   }
 
   @SubscribeMessage('isOnline')
