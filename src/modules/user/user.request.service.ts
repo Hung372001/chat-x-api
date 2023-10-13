@@ -225,7 +225,7 @@ export class UserRequestService extends BaseService<User> {
       }
     }
 
-    if (onlyFriend) {
+    if (onlyFriend && !isRootAdmin) {
       queryBuilder.andWhere('friendship.fromUserId = :friendId', {
         friendId: currentUser.id,
       });
