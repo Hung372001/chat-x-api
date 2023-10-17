@@ -20,7 +20,11 @@ async function bootstrap() {
 
   // Cors
   app.enableCors({
-    origin: ['http://localhost:3000', 'http://localhost:4000'],
+    origin: [
+      'http://localhost:3000',
+      'http://localhost:4000',
+      'https://chat-x-black.vercel.app',
+    ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true,
   });
