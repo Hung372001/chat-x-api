@@ -35,7 +35,12 @@ export class FriendRequestService {
     const currentUser = this.request.user as User;
     return this.userRepository.findOne({
       where: { id: currentUser.id },
-      relations: ['friends', 'friends.toUser.profile', 'profile'],
+      relations: [
+        'friends',
+        'friends.toUser.profile',
+        'friends.fromUser.profile',
+        'profile',
+      ],
     });
   }
 
@@ -81,13 +86,17 @@ export class FriendRequestService {
 
       const friends = await this.userRepository.find({
         where: { id: In(dto.friends) },
-        relations: ['friends'],
+        relations: ['friends', 'friends.toUser', 'friends.fromUser'],
       });
       if (friends.length > 0 && friends.length < dto.friends.length) {
         throw { message: 'Không tìm thấy bạn bè.' };
       }
 
-      const existedMembers = intersectionBy(currentUser.friends, friends, 'id');
+      const existedMembers = intersectionBy(
+        currentUser.friends.map((x) => x.fromUser),
+        friends,
+        'id',
+      );
 
       if (existedMembers.length > 0) {
         throw {
@@ -105,7 +114,7 @@ export class FriendRequestService {
       );
 
       // Check existed request from that users
-      const existedFriendRequests = await this.friendRequestRepository
+      let existedFriendRequests = await this.friendRequestRepository
         .createQueryBuilder('friend_request')
         .where('friend_request.status = :status', {
           status: EFriendRequestStatus.WAITING,
@@ -124,6 +133,29 @@ export class FriendRequestService {
           message: `${existedFriendRequests
             .map((x) => x.fromUser.username)
             .join(', ')} đã gửi lời mời kết bạn với bạn, vui lòng chấp nhận.`,
+        };
+      }
+
+      // Check existed friend requests
+      existedFriendRequests = await this.friendRequestRepository
+        .createQueryBuilder('friend_request')
+        .where('friend_request.status = :status', {
+          status: EFriendRequestStatus.WAITING,
+        })
+        .leftJoinAndSelect('friend_request.toUser', 'user')
+        .andWhere('friend_request.toUserId In (:...toUserIds)', {
+          toUserIds: newFriends.map((x) => x.id),
+        })
+        .andWhere('friend_request.fromUserId = :fromUserId', {
+          fromUserId: currentUser.id,
+        })
+        .getMany();
+
+      if (existedFriendRequests.length > 0) {
+        throw {
+          message: `Bạn đã gửi lời mời kết bạn với ${existedFriendRequests
+            .map((x) => x.toUser.username)
+            .join(', ')}, vui lòng chờ.`,
         };
       }
 
@@ -229,42 +261,36 @@ export class FriendRequestService {
 
       const friendUser = await this.userRepository.findOne({
         where: { id: friendId },
-        relations: ['friends'],
+        relations: ['friends', 'friends.toUser', 'friends.fromUser'],
       });
 
       if (!friendUser) {
         throw { message: 'Không tìm thấy tài khoản bạn bè.' };
       }
 
-      if (
-        !currentUser.friends.some(
-          (friend: Friendship) => friend.toUser.id === friendUser.id,
-        )
-      ) {
+      const friendships = [
+        ...currentUser.friends,
+        ...friendUser.friends,
+      ].filter(
+        (friend: Friendship) =>
+          friend.toUser.id === friendUser.id ||
+          friend.fromUser.id === friendUser.id,
+      );
+      if (!friendships?.length) {
         throw {
           message: 'Tài khoản hiện tại không phải là bạn bè với tài khoản này.',
         };
       }
 
-      // Save friend list for current user
+      // Save friend list for friend user
+      await this.friendshipRepository.delete(friendships.map((x) => x.id));
+
       const cuRemovedFriends = differenceBy(
         currentUser.friends,
-        [friendUser],
+        [...friendships],
         'id',
       );
       currentUser.friends = cuRemovedFriends;
-      await this.userRepository.save(currentUser);
-
-      // Save friend list for friend user
-      const fuRemovedFriends = differenceBy(
-        friendUser.friends,
-        [currentUser],
-        'id',
-      );
-      await this.userRepository.save({
-        ...friendUser,
-        friends: fuRemovedFriends,
-      });
 
       return currentUser;
     } catch (e: any) {
