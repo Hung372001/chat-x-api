@@ -8,10 +8,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { NotificationService } from './notification.service';
 import { NotificationRequestService } from './notification.request.service';
 import { FCMTokenModule } from '../fcm-token/fcm-token.module';
+import { GroupChatSetting } from '../group-chat/entities/group-chat-setting.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Notification]),
+    TypeOrmModule.forFeature([Notification, GroupChatSetting]),
     RmqModule.register({
       name: 'NOTIFICATION_SERVICE',
     }),
