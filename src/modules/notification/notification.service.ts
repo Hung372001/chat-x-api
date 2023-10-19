@@ -133,7 +133,7 @@ export class NotificationService {
           apns: {
             payload: {
               aps: {
-                badge: unreadCount ?? 0,
+                badge: 1,
                 data: {
                   ...notification.data,
                   unreadCount: unreadCount?.toString() ?? '0',
