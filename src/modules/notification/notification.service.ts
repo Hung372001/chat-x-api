@@ -31,6 +31,15 @@ export class NotificationService {
     @Inject('NOTIFICATION_SERVICE') private rmqClient: ClientProxy,
   ) {}
 
+  async countUnread(userId: string): Promise<number> {
+    return this.notificationRepository
+      .createQueryBuilder('notification')
+      .leftJoinAndSelect('notification.user', 'user')
+      .where('user.id = :userId', { userId })
+      .andWhere('notification.isRead = false')
+      .getCount();
+  }
+
   async create(
     dto: CreateNotificationDto,
   ): Promise<ICreateNotificationResponse> {
@@ -97,6 +106,7 @@ export class NotificationService {
 
   async fcmSendMessage(notification: Notification, deviceToken: string) {
     try {
+      const unreadCount = await this.countUnread(notification.user.id);
       await firebase
         .messaging()
         .send({
@@ -109,11 +119,11 @@ export class NotificationService {
             isNull,
           ),
           token: deviceToken,
-          data: notification.data,
+          data: { ...notification.data, unreadCount },
           apns: {
             payload: {
               aps: {
-                data: notification.data,
+                data: { ...notification.data, unreadCount },
               },
             },
           },
