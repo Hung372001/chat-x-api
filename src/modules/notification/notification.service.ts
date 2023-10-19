@@ -127,7 +127,7 @@ export class NotificationService {
           },
           android: {
             notification: {
-              notificationCount: unreadCount ?? 0,
+              notificationCount: 1,
             },
           },
           apns: {
