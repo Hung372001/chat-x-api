@@ -123,14 +123,20 @@ export class NotificationService {
           token: deviceToken,
           data: {
             ...notification.data,
-            unreadCount: unreadCount.toString() ?? '0',
+            unreadCount: unreadCount?.toString() ?? '0',
+          },
+          android: {
+            notification: {
+              notificationCount: unreadCount ?? 0,
+            },
           },
           apns: {
             payload: {
               aps: {
+                badge: unreadCount ?? 0,
                 data: {
                   ...notification.data,
-                  unreadCount: unreadCount.toString() ?? '0',
+                  unreadCount: unreadCount?.toString() ?? '0',
                 },
               },
             },
