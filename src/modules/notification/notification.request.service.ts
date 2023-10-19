@@ -155,7 +155,7 @@ export class NotificationRequestService extends BaseService<Notification> {
       .leftJoinAndSelect('notification.user', 'user')
       .update(Notification)
       .set({ isRead: true })
-      .where('user.id := userId', { userId: currentUser.id })
+      .where('user.id = :userId', { userId: currentUser.id })
       .execute();
 
     return res.raw[0];
