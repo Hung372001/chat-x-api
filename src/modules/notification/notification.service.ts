@@ -119,11 +119,17 @@ export class NotificationService {
             isNull,
           ),
           token: deviceToken,
-          data: { ...notification.data, unreadCount },
+          data: {
+            ...notification.data,
+            unreadCount: unreadCount.toString() ?? '0',
+          },
           apns: {
             payload: {
               aps: {
-                data: { ...notification.data, unreadCount },
+                data: {
+                  ...notification.data,
+                  unreadCount: unreadCount.toString() ?? '0',
+                },
               },
             },
           },
