@@ -12,6 +12,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserService } from '../user/user.service';
 import { omitBy, isNull } from 'lodash';
+import { GroupChatSetting } from '../group-chat/entities/group-chat-setting.entity';
 
 firebase.initializeApp({
   credential: firebase.credential.cert({
@@ -26,17 +27,18 @@ export class NotificationService {
   constructor(
     @InjectRepository(Notification)
     private readonly notificationRepository: Repository<Notification>,
+    @InjectRepository(GroupChatSetting)
+    private readonly groupSettingRepo: Repository<GroupChatSetting>,
     @Inject(UserService) private userService: UserService,
     @Inject(FCMTokenService) private fcmTokenService: FCMTokenService,
     @Inject('NOTIFICATION_SERVICE') private rmqClient: ClientProxy,
   ) {}
 
   async countUnread(userId: string): Promise<number> {
-    return this.notificationRepository
-      .createQueryBuilder('notification')
-      .leftJoinAndSelect('notification.user', 'user')
-      .where('user.id = :userId', { userId })
-      .andWhere('notification.isRead = false')
+    return this.groupSettingRepo
+      .createQueryBuilder('group_chat_setting')
+      .where('group_chat_setting.userId = :userId', { userId })
+      .andWhere('group_chat_setting.unReadMessages > 0')
       .getCount();
   }
 
@@ -119,11 +121,23 @@ export class NotificationService {
             isNull,
           ),
           token: deviceToken,
-          data: { ...notification.data, unreadCount },
+          data: {
+            ...notification.data,
+            unreadCount: unreadCount?.toString() ?? '0',
+          },
+          android: {
+            notification: {
+              notificationCount: 1,
+            },
+          },
           apns: {
             payload: {
               aps: {
-                data: { ...notification.data, unreadCount },
+                badge: 1,
+                data: {
+                  ...notification.data,
+                  unreadCount: unreadCount?.toString() ?? '0',
+                },
               },
             },
           },

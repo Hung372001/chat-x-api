@@ -295,12 +295,12 @@ export class AppGateway
   // Call socket after remove user from group chat successfully
   async removeGroupMember(groupChat: GroupChat, removeMembers: User[]) {
     if (groupChat && removeMembers?.length > 0) {
-      await this.leaveGroup(groupChat.id, removeMembers);
-
       this.server.to(groupChat.id).emit('groupMembersRemoved', {
         groupChat,
         removeMembers,
       });
+
+      await this.leaveGroup(groupChat.id, removeMembers);
     }
   }
 
