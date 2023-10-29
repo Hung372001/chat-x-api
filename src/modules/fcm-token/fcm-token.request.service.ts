@@ -14,6 +14,7 @@ import { BaseService } from '../../common/services/base.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DeleteResult, Repository } from 'typeorm';
 import { User } from '../user/entities/user.entity';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable({ scope: Scope.REQUEST })
 export class FCMTokenRequestService extends BaseService<FCMToken> {
@@ -21,6 +22,7 @@ export class FCMTokenRequestService extends BaseService<FCMToken> {
     @Inject(REQUEST) private request: Request,
     @InjectRepository(FCMToken)
     private readonly fcmTokenRepository: Repository<FCMToken>,
+    @Inject('NOTIFICATION_SERVICE') private rmqClient: ClientProxy,
   ) {
     super(fcmTokenRepository);
   }
@@ -29,20 +31,13 @@ export class FCMTokenRequestService extends BaseService<FCMToken> {
     try {
       const currentUser = this.request.user as User;
 
-      const foundToken = await this.fcmTokenRepository
-        .createQueryBuilder('fcm_token')
-        .leftJoinAndSelect('fcm_token.user', 'user')
-        .where('fcm_token."deviceToken" = :deviceToken', {
-          deviceToken: dto.deviceToken,
-        })
-        .andWhere('user.id = :userId', { userId: currentUser.id })
-        .getOne();
+      // Emit job to queue (avoid duplicate create notification token request)
+      await this.rmqClient.emit('addFCMToken', {
+        user: currentUser,
+        createTokenDto: dto,
+      });
 
-      if (foundToken) {
-        return foundToken;
-      }
-
-      return this.fcmTokenRepository.save({ ...dto, user: currentUser });
+      return { ...dto, user: currentUser } as FCMToken;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
