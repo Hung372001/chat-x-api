@@ -108,7 +108,9 @@ export class NotificationService {
 
   async fcmSendMessage(notification: Notification, deviceToken: string) {
     try {
-      const unreadCount = await this.countUnread(notification.user.id);
+      const unreadCount = notification?.user?.id
+        ? await this.countUnread(notification.user.id)
+        : 0;
       await firebase
         .messaging()
         .send({

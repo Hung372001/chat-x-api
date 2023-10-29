@@ -243,6 +243,9 @@ export class FriendRequestService {
         );
 
         await this.friendshipRepository.save(friendship);
+
+        // emit socket event accept friend request
+        await this.gateway.acceptFriendRequest(friend, currentUser);
       }
 
       return friendRequest;

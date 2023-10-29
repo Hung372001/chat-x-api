@@ -339,6 +339,7 @@ export class ChatMessageGatewayService {
           'group.members',
           'group.settings',
           'group.settings.user',
+          'group.admins',
         ],
       });
 
@@ -350,9 +351,12 @@ export class ChatMessageGatewayService {
         throw { message: 'Bỏ ghim để xóa tin nhắn.' };
       }
 
-      if (!chatMessage.group.members.some((x) => x.id === deletedBy.id)) {
+      if (
+        !chatMessage.group.admins.some((x) => x.id === deletedBy.id) ||
+        chatMessage.sender.id !== deletedBy.id
+      ) {
         throw {
-          message: 'Bạn không phải là thành viên nhóm chat.',
+          message: 'Bạn không có quyền xóa tin nhắn.',
         };
       }
 
