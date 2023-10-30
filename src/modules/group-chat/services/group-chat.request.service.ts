@@ -90,7 +90,14 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       .leftJoinAndSelect('user.profile', 'profile')
       .leftJoinAndSelect('group_chat.owner', 'user as owners')
       .leftJoinAndSelect('group_chat.admins', 'user as admins')
-      .leftJoinAndSelect('group_chat.latestMessage', 'chat_message')
+      .leftJoinAndSelect(
+        'group_chat.latestMessage',
+        'chat_message as latestMessages',
+      )
+      .leftJoinAndSelect(
+        'chat_message as latestMessages.nameCard',
+        'user as nameCards',
+      )
       .leftJoinAndSelect('group_chat.settings', 'group_chat_setting')
       .andWhere('group_chat_setting as userSetting.groupChatId = group_chat.id')
       .orderBy('group_chat_setting.pinned', 'DESC');

@@ -128,19 +128,29 @@ export class NotificationService {
             unreadCount: unreadCount?.toString() ?? '0',
           },
           android: {
-            notification: {
-              notificationCount: 1,
-            },
+            notification: omitBy(
+              {
+                notificationCount: 1,
+                sound: notification?.user.soundNotification ? 'default' : null,
+              },
+              isNull,
+            ),
           },
           apns: {
             payload: {
-              aps: {
-                badge: 1,
-                data: {
-                  ...notification.data,
-                  unreadCount: unreadCount?.toString() ?? '0',
+              aps: omitBy(
+                {
+                  sound: notification?.user.soundNotification
+                    ? 'default'
+                    : null,
+                  badge: 1,
+                  data: {
+                    ...notification.data,
+                    unreadCount: unreadCount?.toString() ?? '0',
+                  },
                 },
-              },
+                isNull,
+              ),
             },
           },
         })

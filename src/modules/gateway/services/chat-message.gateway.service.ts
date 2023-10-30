@@ -39,7 +39,7 @@ export class ChatMessageGatewayService {
   async sendMessage(dto: SendMessageDto, sender: User, groupChat?: GroupChat) {
     try {
       if (!groupChat) {
-        groupChat = await this.groupChatService.findOneWithSettings({
+        groupChat = await this.groupChatService.findOne({
           id: dto.groupId,
         });
       }
@@ -122,9 +122,28 @@ export class ChatMessageGatewayService {
         isFriendRequest: dto.isFriendRequest,
       } as ChatMessage);
 
-      if (groupChat?.settings?.length) {
-        Promise.all(
-          groupChat.settings.map(async (setting) => {
+      // Save latest message for group
+      groupChat.latestMessage = newMessage;
+      await this.groupChatService.update(groupChat.id, {
+        latestMessage: groupChat.latestMessage,
+      });
+
+      if (newMessage.group.latestMessage) {
+        delete newMessage.group.latestMessage;
+      }
+
+      if (newMessage.group.settings?.length) {
+        newMessage.group.settings.forEach((x) => delete x.groupChat);
+      }
+
+      Promise.all(
+        groupChat.members.map(async (member) => {
+          const setting = await this.groupChatService.findSetting(
+            member.id,
+            groupChat.id,
+          );
+
+          if (setting) {
             if (!insideGroupMembers.some((x) => x.id === setting.user.id)) {
               if (
                 !this.onlineSessions.getUserSession(setting.user.id) &&
@@ -150,23 +169,9 @@ export class ChatMessageGatewayService {
                 unReadMessages: setting.unReadMessages + 1,
               });
             }
-          }),
-        );
-      }
-
-      // Save latest message for group
-      groupChat.latestMessage = newMessage;
-      await this.groupChatService.update(groupChat.id, {
-        latestMessage: groupChat.latestMessage,
-      });
-
-      if (newMessage.group.latestMessage) {
-        delete newMessage.group.latestMessage;
-      }
-
-      if (newMessage.group.settings?.length) {
-        newMessage.group.settings.forEach((x) => delete x.groupChat);
-      }
+          }
+        }),
+      );
 
       return { ...newMessage, isNewMember };
     } catch (e: any) {
