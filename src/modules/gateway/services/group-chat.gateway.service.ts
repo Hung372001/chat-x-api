@@ -36,6 +36,10 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     });
   }
 
+  async updatedAt(id: string) {
+    return this.groupChatRepo.update(id, {});
+  }
+
   async findOneWithSettings(
     query: FindOptionsWhere<GroupChat> | FindOptionsWhere<GroupChat>[],
   ): Promise<GroupChat | null> {
@@ -43,6 +47,18 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
       where: query,
       relations: ['members', 'admins', 'settings', 'settings.user'],
     });
+  }
+
+  async findSetting(
+    userId: string,
+    groupId: string,
+  ): Promise<GroupChatSetting | null> {
+    return this.groupSettingRepo
+      .createQueryBuilder('group_chat_setting')
+      .leftJoinAndSelect('group_chat_setting.user', 'user')
+      .where('group_chat_setting.userId = :userId', { userId })
+      .andWhere('group_chat_setting.groupChatId = :groupId', { groupId })
+      .getOne();
   }
 
   async getGroupChatDou(memberIds: string[], gateway: AppGateway) {

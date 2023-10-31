@@ -280,6 +280,56 @@ export class AppGateway
     }
   }
 
+  async acceptFriendRequest(friend: User, currentUser: User) {
+    const clients = this.socketSessions.getUserSession(currentUser.id);
+
+    try {
+      const groupChatDou = await this.groupChatService.getGroupChatDou(
+        [friend.id, currentUser.id],
+        this,
+      );
+
+      // notify to friend for friend request is accepted
+      this.notifyService.send({
+        title: `${currentUser.username} đã chấp nhận lời mời kết bạn`,
+        content: `Bạn và ${currentUser.username} đã trở thành bạn bè.`,
+        userId: friend.id,
+        imageUrl: currentUser.profile?.avatar ?? null,
+        notificationType: ENotificationType.ACCEPT_FRIEND_REQUEST,
+        data: { groupId: groupChatDou?.id },
+      });
+
+      if (groupChatDou) {
+        const newMessage = await this.chatMessageService.sendMessage(
+          {
+            message: `Bạn và ${friend.username} đã trở thành bạn bè, hãy gửi lời chào cho ${friend.username} nhé!`,
+            imageUrls: null,
+            documentUrls: null,
+            groupId: groupChatDou.id,
+            isFriendRequest: true,
+          } as SendMessageDto,
+          currentUser,
+          groupChatDou,
+        );
+        if (newMessage) {
+          this.server.to(groupChatDou.id).emit('newMessageReceived', {
+            newMessage,
+          });
+        }
+
+        this.server.to(groupChatDou.id).emit('acceptFriendRequest', {
+          friend,
+        });
+      }
+    } catch (e: any) {
+      if (clients?.length) {
+        clients.forEach((client) =>
+          client.emit('chatError', { errorMsg: e.message }),
+        );
+      }
+    }
+  }
+
   // Call socket after add user into group chat successfully
   async addNewGroupMember(groupChat: GroupChat, newMembers: User[]) {
     if (groupChat && newMembers?.length > 0) {
