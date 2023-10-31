@@ -331,16 +331,21 @@ export class FriendRequestService {
           relations: ['friends', 'friends.toUser', 'friends.fromUser'],
         });
 
-        const friendships = [
-          ...currentUser.friends,
-          ...friendUser.friends,
-        ].filter(
-          (friend: Friendship) =>
-            friend.toUser.id === friendUser.id ||
-            friend.fromUser.id === friendUser.id,
-        );
+        if (!friendUser) {
+          throw { message: 'Không tìm thấy bạn bè.' };
+        }
 
-        isFriend = !!friendships?.length;
+        if (currentUser.friends && friendUser.friends) {
+          const friendships = [
+            ...currentUser.friends,
+            ...friendUser.friends,
+          ].filter(
+            (friend: Friendship) =>
+              friend.toUser.id === friendUser.id ||
+              friend.fromUser.id === friendUser.id,
+          );
+          isFriend = !!friendships?.length;
+        }
       }
 
       return {
