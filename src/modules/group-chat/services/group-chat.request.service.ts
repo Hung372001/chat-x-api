@@ -51,12 +51,13 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       searchBy = !query.searchBy && !query.searchAndBy
         ? ['name']
         : query.searchBy,
-      sortBy = 'createdAt',
       sortOrder = 'DESC',
       limit = 10,
       page = 1,
       isGetAll = false,
     } = query;
+
+    let { sortBy = 'createdAt' } = query;
 
     let groupChatIds = [];
     if (!isRootAdmin) {
@@ -76,6 +77,10 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
           total: 0,
         };
       }
+    }
+
+    if (sortBy === 'chat_message as latestMessages.createdAt') {
+      sortBy = 'group_chat_setting.updatedAt';
     }
 
     const queryBuilder = this.groupChatRepo
