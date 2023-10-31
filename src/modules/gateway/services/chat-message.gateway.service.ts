@@ -173,6 +173,8 @@ export class ChatMessageGatewayService {
         }),
       );
 
+      await this.groupChatService.updatedAt(groupChat.id);
+
       return { ...newMessage, isNewMember };
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);

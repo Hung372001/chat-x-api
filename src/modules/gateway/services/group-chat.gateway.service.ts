@@ -36,6 +36,10 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     });
   }
 
+  async updatedAt(id: string) {
+    return this.groupChatRepo.update(id, {});
+  }
+
   async findOneWithSettings(
     query: FindOptionsWhere<GroupChat> | FindOptionsWhere<GroupChat>[],
   ): Promise<GroupChat | null> {

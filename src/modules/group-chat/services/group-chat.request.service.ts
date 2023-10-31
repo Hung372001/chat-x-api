@@ -80,7 +80,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     }
 
     if (sortBy === 'chat_message as latestMessages.createdAt') {
-      sortBy = 'group_chat_setting.updatedAt';
+      sortBy = 'updatedAt';
     }
 
     const queryBuilder = this.groupChatRepo
