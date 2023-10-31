@@ -305,7 +305,11 @@ export class FriendRequestService {
     try {
       const currentUser = this.request.user as User;
 
-      return this.friendRequestRepository
+      if (userId === currentUser.id) {
+        throw { message: 'Friend id không hợp lệ.' };
+      }
+
+      const friendRequest = await this.friendRequestRepository
         .createQueryBuilder('friend_request')
         .where('friend_request.status = :status', {
           status: EFriendRequestStatus.WAITING,
@@ -317,6 +321,32 @@ export class FriendRequestService {
           toUserId: currentUser.id,
         })
         .getOne();
+
+      let isFriend = false;
+      if (!friendRequest) {
+        const currentUser = await this.findOneWithFriends();
+
+        const friendUser = await this.userRepository.findOne({
+          where: { id: userId },
+          relations: ['friends', 'friends.toUser', 'friends.fromUser'],
+        });
+
+        const friendships = [
+          ...currentUser.friends,
+          ...friendUser.friends,
+        ].filter(
+          (friend: Friendship) =>
+            friend.toUser.id === friendUser.id ||
+            friend.fromUser.id === friendUser.id,
+        );
+
+        isFriend = !!friendships?.length;
+      }
+
+      return {
+        isFriend,
+        friendRequest,
+      };
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
