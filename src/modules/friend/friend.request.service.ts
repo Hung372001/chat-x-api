@@ -291,8 +291,10 @@ export class FriendRequestService {
         ...friendUser.friends,
       ].filter(
         (friend: Friendship) =>
-          friend.toUser.id === friendUser.id ||
-          friend.fromUser.id === friendUser.id,
+          (friend?.toUser?.id === friendUser?.id &&
+            friend?.fromUser?.id === currentUser?.id) ||
+          (friend?.fromUser?.id === friendUser?.id &&
+            friend?.toUser?.id === currentUser?.id),
       );
       if (!friendships?.length) {
         throw {
@@ -356,8 +358,10 @@ export class FriendRequestService {
             ...friendUser.friends,
           ].filter(
             (friend: Friendship) =>
-              friend.toUser.id === friendUser.id ||
-              friend.fromUser.id === friendUser.id,
+              (friend?.toUser?.id === friendUser?.id &&
+                friend?.fromUser?.id === currentUser?.id) ||
+              (friend?.fromUser?.id === friendUser?.id &&
+                friend?.toUser?.id === currentUser?.id),
           );
           isFriend = !!friendships?.length;
         }
