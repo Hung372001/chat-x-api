@@ -359,27 +359,6 @@ export class UserRequestService extends BaseService<User> {
     }
   }
 
-  async getFriendRequest(userId: string) {
-    try {
-      const currentUser = this.request.user as User;
-
-      return this.friendRequestRepository
-        .createQueryBuilder('friend_request')
-        .where('friend_request.status = :status', {
-          status: EFriendRequestStatus.WAITING,
-        })
-        .andWhere('friend_request.fromUserId = :fromUserId', {
-          fromUserId: userId,
-        })
-        .andWhere('friend_request.toUserId = :toUserId', {
-          toUserId: currentUser.id,
-        })
-        .getOne();
-    } catch (e: any) {
-      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
-    }
-  }
-
   async hiding() {
     try {
       const currentUser = this.request.user as User;

@@ -92,18 +92,20 @@ export class FriendRequestService {
         throw { message: 'Không tìm thấy bạn bè.' };
       }
 
-      const existedMembers = intersectionBy(
-        currentUser.friends.map((x) => x.fromUser),
-        friends,
-        'id',
-      );
+      if (currentUser.friends?.length) {
+        const existedMembers = intersectionBy(
+          currentUser.friends.map((x) => x.fromUser),
+          friends,
+          'id',
+        );
 
-      if (existedMembers.length > 0) {
-        throw {
-          message: `${existedMembers
-            .map((x) => x.username)
-            .join(', ')} đã là bạn bè của bạn.`,
-        };
+        if (existedMembers.length > 0) {
+          throw {
+            message: `${existedMembers
+              .map((x) => x.username)
+              .join(', ')} đã là bạn bè của bạn.`,
+          };
+        }
       }
 
       // Push friend into friend list
@@ -114,15 +116,23 @@ export class FriendRequestService {
       );
 
       // Check existed request from that users
-      let existedFriendRequests = await this.friendRequestRepository
+      const queryBuilder = this.friendRequestRepository
         .createQueryBuilder('friend_request')
         .where('friend_request.status = :status', {
           status: EFriendRequestStatus.WAITING,
         })
-        .leftJoinAndSelect('friend_request.fromUser', 'user')
-        .andWhere('friend_request.fromUserId In (:...fromUserIds)', {
-          fromUserIds: newFriends.map((x) => x.id),
-        })
+        .leftJoinAndSelect('friend_request.fromUser', 'user');
+
+      if (newFriends?.length) {
+        queryBuilder.andWhere(
+          'friend_request.fromUserId In (:...fromUserIds)',
+          {
+            fromUserIds: newFriends.map((x) => x.id),
+          },
+        );
+      }
+
+      let existedFriendRequests = await queryBuilder
         .andWhere('friend_request.toUserId = :toUserId', {
           toUserId: currentUser.id,
         })
@@ -137,15 +147,20 @@ export class FriendRequestService {
       }
 
       // Check existed friend requests
-      existedFriendRequests = await this.friendRequestRepository
+      const frQueryBuilder = this.friendRequestRepository
         .createQueryBuilder('friend_request')
         .where('friend_request.status = :status', {
           status: EFriendRequestStatus.WAITING,
         })
-        .leftJoinAndSelect('friend_request.toUser', 'user')
-        .andWhere('friend_request.toUserId In (:...toUserIds)', {
+        .leftJoinAndSelect('friend_request.toUser', 'user');
+
+      if (newFriends?.length) {
+        frQueryBuilder.andWhere('friend_request.toUserId In (:...toUserIds)', {
           toUserIds: newFriends.map((x) => x.id),
-        })
+        });
+      }
+
+      existedFriendRequests = await frQueryBuilder
         .andWhere('friend_request.fromUserId = :fromUserId', {
           fromUserId: currentUser.id,
         })
@@ -276,8 +291,10 @@ export class FriendRequestService {
         ...friendUser.friends,
       ].filter(
         (friend: Friendship) =>
-          friend.toUser.id === friendUser.id ||
-          friend.fromUser.id === friendUser.id,
+          (friend?.toUser?.id === friendUser?.id &&
+            friend?.fromUser?.id === currentUser?.id) ||
+          (friend?.fromUser?.id === friendUser?.id &&
+            friend?.toUser?.id === currentUser?.id),
       );
       if (!friendships?.length) {
         throw {
@@ -305,7 +322,11 @@ export class FriendRequestService {
     try {
       const currentUser = this.request.user as User;
 
-      return this.friendRequestRepository
+      if (userId === currentUser.id) {
+        throw { message: 'Friend id không hợp lệ.' };
+      }
+
+      const friendRequest = await this.friendRequestRepository
         .createQueryBuilder('friend_request')
         .where('friend_request.status = :status', {
           status: EFriendRequestStatus.WAITING,
@@ -317,6 +338,39 @@ export class FriendRequestService {
           toUserId: currentUser.id,
         })
         .getOne();
+
+      let isFriend = false;
+      if (!friendRequest) {
+        const currentUser = await this.findOneWithFriends();
+
+        const friendUser = await this.userRepository.findOne({
+          where: { id: userId },
+          relations: ['friends', 'friends.toUser', 'friends.fromUser'],
+        });
+
+        if (!friendUser) {
+          throw { message: 'Không tìm thấy bạn bè.' };
+        }
+
+        if (currentUser.friends?.length && friendUser.friends?.length) {
+          const friendships = [
+            ...currentUser.friends,
+            ...friendUser.friends,
+          ].filter(
+            (friend: Friendship) =>
+              (friend?.toUser?.id === friendUser?.id &&
+                friend?.fromUser?.id === currentUser?.id) ||
+              (friend?.fromUser?.id === friendUser?.id &&
+                friend?.toUser?.id === currentUser?.id),
+          );
+          isFriend = !!friendships?.length;
+        }
+      }
+
+      return {
+        isFriend,
+        friendRequest,
+      };
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }

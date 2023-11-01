@@ -15,6 +15,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DeleteResult, Repository } from 'typeorm';
 import { User } from '../user/entities/user.entity';
 import { ClientProxy } from '@nestjs/microservices';
+import { RemoveFCMTokenDto } from './dto/remove-fcm-token.dto';
 
 @Injectable({ scope: Scope.REQUEST })
 export class FCMTokenRequestService extends BaseService<FCMToken> {
@@ -57,5 +58,21 @@ export class FCMTokenRequestService extends BaseService<FCMToken> {
     }
 
     return this.fcmTokenRepository.delete(id);
+  }
+
+  async removeByToken(dto: RemoveFCMTokenDto): Promise<DeleteResult> {
+    const foundToken = await this.fcmTokenRepository
+      .createQueryBuilder('fcm_token')
+      .leftJoinAndSelect('fcm_token.user', 'user')
+      .where('fcm_token.deviceToken = :deviceToken', {
+        deviceToken: dto.deviceToken,
+      })
+      .getOne();
+
+    if (!foundToken) {
+      throw new BadRequestException('Không tìm thấy device token.');
+    }
+
+    return this.fcmTokenRepository.delete(foundToken.id);
   }
 }

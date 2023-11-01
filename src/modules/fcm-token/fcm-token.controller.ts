@@ -13,6 +13,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { FCMTokenRequestService } from './fcm-token.request.service';
 import { Roles } from '../../decorators/roles.decorator';
 import { ERole } from '../../common/enums/role.enum';
+import { RemoveFCMTokenDto } from './dto/remove-fcm-token.dto';
 
 @Controller('notification-token')
 @ApiTags('notification-token')
@@ -30,5 +31,10 @@ export class FCMTokenController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.fcmTokenService.remove(id);
+  }
+
+  @Delete()
+  removeByToken(@Body() dto: RemoveFCMTokenDto) {
+    return this.fcmTokenService.removeByToken(dto);
   }
 }
