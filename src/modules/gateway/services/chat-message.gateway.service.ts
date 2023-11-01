@@ -359,7 +359,7 @@ export class ChatMessageGatewayService {
       }
 
       if (
-        !chatMessage.group.admins.some((x) => x.id === deletedBy.id) ||
+        !chatMessage.group.admins.some((x) => x.id === deletedBy.id) &&
         chatMessage.sender.id !== deletedBy.id
       ) {
         throw {
