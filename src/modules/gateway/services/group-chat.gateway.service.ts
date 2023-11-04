@@ -11,6 +11,7 @@ import { GroupChatSetting } from '../../group-chat/entities/group-chat-setting.e
 import { ChatMessage } from '../../chat-message/entities/chat-message.entity';
 import { GatewaySessionManager } from '../sessions/gateway.session';
 import { UserGatewayService } from './user.gateway.service';
+import { intersectionBy } from 'lodash';
 
 @Injectable()
 export class GroupChatGatewayService extends BaseService<GroupChat> {
@@ -156,10 +157,15 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
           if (joinGroup) {
             await client.join(group.id);
           }
-          server.to(group.id).emit('someoneOnline', {
-            groupChat: group,
-            member,
-          });
+          const insideMembers = this.insideGroupSessions.getUserSession(
+            group.id,
+          );
+          if (insideMembers?.length) {
+            client.to(group.id).emit('someoneOnline', {
+              groupChat: group,
+              member,
+            });
+          }
         }),
       );
     }
@@ -180,10 +186,15 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
           if (leaveGroup) {
             await client.leave(group.id);
           }
-          server.to(group.id).emit('someoneOffline', {
-            groupChat: group,
-            member,
-          });
+          const insideMembers = this.insideGroupSessions.getUserSession(
+            group.id,
+          );
+          if (insideMembers?.length) {
+            client.to(group.id).emit('someoneOffline', {
+              groupChat: group,
+              member,
+            });
+          }
         }),
       );
     }
