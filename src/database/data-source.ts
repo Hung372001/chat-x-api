@@ -12,6 +12,9 @@ const dataSource = new DataSource({
   migrations: ['dist/database/migrations/**/*{.ts,.js}'],
   migrationsTableName: 'migrations',
   migrationsRun: false,
+  extra: {
+    idleTimeoutMillis: 30000,
+  },
   cli: {
     migrationsDir: 'src/database/migrations',
   },
