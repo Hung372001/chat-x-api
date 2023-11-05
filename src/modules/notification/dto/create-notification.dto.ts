@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional } from 'class-validator';
 import { ENotificationType } from './enum-notification';
+import { User } from '../../user/entities/user.entity';
 
 export class CreateNotificationDto {
   @ApiProperty({
@@ -20,6 +21,8 @@ export class CreateNotificationDto {
   })
   @IsNotEmpty()
   userId: string;
+
+  user?: User;
 
   @ApiPropertyOptional({
     example: 'Image url',

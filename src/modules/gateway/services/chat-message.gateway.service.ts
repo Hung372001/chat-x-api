@@ -220,6 +220,7 @@ export class ChatMessageGatewayService {
       title,
       content,
       userId: receiver.id,
+      user: receiver,
       imageUrl: sender.profile.avatar,
       notificationType: ENotificationType.UNREAD_MESSAGE,
       data: { groupId: group.id },

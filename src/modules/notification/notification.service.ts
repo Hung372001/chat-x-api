@@ -46,22 +46,23 @@ export class NotificationService {
     dto: CreateNotificationDto,
   ): Promise<ICreateNotificationResponse> {
     try {
-      const foundUser = await this.userService.findOne({ id: dto.userId });
+      if (dto.user) {
+        dto.user = await this.userService.findOne({ id: dto.userId });
 
-      if (!foundUser) {
-        throw { message: 'Không tìm thấy người dùng.' };
+        if (!dto.user) {
+          throw { message: 'Không tìm thấy người dùng.' };
+        }
       }
 
       const newNotification = await this.notificationRepository.create({
         ...pick(dto, Object.keys(dto)),
-        user: foundUser,
       } as Notification);
 
       await this.notificationRepository.save(newNotification);
 
       return {
         notification: newNotification,
-        fcmTokens: await this.fcmTokenService.findByUser(foundUser.id),
+        fcmTokens: await this.fcmTokenService.findByUser(dto.user.id),
       };
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
