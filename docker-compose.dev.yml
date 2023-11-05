@@ -52,7 +52,7 @@ services:
     depends_on:
       - postgres-server-master
     ports:
-      - "5432"
+      - "5437:5432"
     environment:
       - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRESQL_MASTER_HOST=postgres-server-master
