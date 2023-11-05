@@ -32,7 +32,7 @@ services:
     restart: always
     volumes: 
       - /home/chat-x-api/bitnami-postgres:/bitnami/postgresql
-      - ./db.sql:/docker-entrypoint-initdb.d/db.sql
+      - /home/chat-x-api/bitnami-postgres/db.sql:/docker-entrypoint-initdb.d/db.sql
     ports:
       - "5436:5432"
     environment:
