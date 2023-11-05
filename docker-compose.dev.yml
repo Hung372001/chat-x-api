@@ -27,25 +27,41 @@ services:
         condition: any
     networks:
       - chat-x_net
-  postgres-server:
-    image: "postgres:15"
+  postgres-server-master:
+    image: "bitnami/postgresql"
+    restart: always
     volumes: 
-      - /home/chat-x-api/postgres:/data/postgres
+      - /home/chat-x-api/bitnami-postgres:/bitnami/postgresql
+      - /home/chat-x-api/bitnami-postgres/db.sql:/docker-entrypoint-initdb.d/db.sql
     ports:
-      - "5434:5432"
+      - "5436:5432"
     environment:
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - PGDATA=/data/postgres
-      - POSTGRES_DB=${POSTGRES_DB}
-    command: [ "postgres", "-c", "wal_level=logical" ]
-    deploy:
-      placement:
-          constraints: [node.role == manager]
-      update_config:
-        parallelism: 1
-        delay: 10s
-      restart_policy:
-        condition: any
+      - POSTGRESQL_PGAUDIT_LOG=READ,WRITE
+      - POSTGRESQL_LOG_HOSTNAME=true
+      - POSTGRESQL_REPLICATION_MODE=master
+      - POSTGRESQL_REPLICATION_USER=repl_postgres
+      - POSTGRESQL_REPLICATION_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRESQL_USERNAME=postgres
+      - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRESQL_DATABASE=${POSTGRES_DB}
+    networks:
+      - chat-x_net
+  postgres-server-slave:
+    image: "bitnami/postgresql"
+    restart: always
+    depends_on:
+      - postgres-server-master
+    ports:
+      - "5437:5432"
+    environment:
+      - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRESQL_MASTER_HOST=postgres-server-master
+      - POSTGRESQL_PGAUDIT_LOG=READ
+      - POSTGRESQL_LOG_HOSTNAME=true
+      - POSTGRESQL_REPLICATION_MODE=slave
+      - POSTGRESQL_REPLICATION_USER=repl_postgres
+      - POSTGRESQL_REPLICATION_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRESQL_MASTER_PORT_NUMBER=5432
     networks:
       - chat-x_net
   redis-server:

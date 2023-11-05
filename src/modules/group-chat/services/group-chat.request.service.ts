@@ -687,7 +687,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       }
 
       if (!foundGroupChat.admins.some((x) => x.id === currentUser.id)) {
-        throw { message: 'Bạn không có quyền thêm thành viên nhóm.' };
+        throw { message: 'Bạn không có quyền xóa thành viên nhóm.' };
       }
 
       const members = await this.userService.findMany({

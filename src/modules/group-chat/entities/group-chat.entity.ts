@@ -23,7 +23,7 @@ export class GroupChat extends BaseEntity {
   @Column({ nullable: true })
   name: string;
 
-  @Column({ unique: true, nullable: true })
+  @Column({ nullable: true })
   uniqueName: string;
 
   @OneToMany(() => ChatMessage, (chatMessage) => chatMessage.group)
