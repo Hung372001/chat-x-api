@@ -34,7 +34,7 @@ services:
       - /home/chat-x-api/bitnami-postgres:/bitnami/postgresql
       - ./db.sql:/docker-entrypoint-initdb.d/db.sql
     ports:
-      - "5434:5432"
+      - "5436:5432"
     environment:
       - POSTGRESQL_PGAUDIT_LOG=READ,WRITE
       - POSTGRESQL_LOG_HOSTNAME=true
