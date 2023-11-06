@@ -33,10 +33,11 @@ export class User extends BaseEntity {
   username: string;
 
   @Column()
+  @Exclude({ toPlainOnly: true })
   hashedPassword: string;
 
   @Column({ nullable: true })
-  @Exclude()
+  @Exclude({ toPlainOnly: true })
   currentRefreshToken: string;
 
   @Column({ default: false })
