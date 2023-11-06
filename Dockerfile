@@ -21,4 +21,4 @@ RUN apk --no-cache --virtual build-dependencies add \
   && apk del build-dependencies
 
 # Running the app
-CMD [ "npm", "start" ]
+CMD [ "npm", "start:prod" ]
