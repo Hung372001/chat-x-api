@@ -16,6 +16,7 @@ import moment from 'moment';
 import { EGroupChatType } from '../../group-chat/dto/group-chat.enum';
 import { UserGatewayService } from './user.gateway.service';
 import { Friendship } from '../../friend/entities/friendship.entity';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
 export class ChatMessageGatewayService {
@@ -34,6 +35,7 @@ export class ChatMessageGatewayService {
     private readonly onlineSessions: OnlinesSessionManager,
     @Inject(NotificationService)
     private readonly notifyService: NotificationService,
+    @Inject('CHAT-MESSAGE_SERVICE') private rmqClient: ClientProxy,
   ) {}
 
   async sendMessage(dto: SendMessageDto, sender: User, groupChat?: GroupChat) {
@@ -344,10 +346,8 @@ export class ChatMessageGatewayService {
           'sender',
           'sender.profile',
           'group',
-          'group.members',
-          'group.settings',
-          'group.settings.user',
           'group.admins',
+          'group.latestMessage',
         ],
       });
 
@@ -372,19 +372,26 @@ export class ChatMessageGatewayService {
       await this.chatMessageRepo.update(chatMessage.id, { deletedBy });
       await this.chatMessageRepo.softDelete(chatMessage.id);
 
-      const unReadSettings = chatMessage.group.settings.filter(
-        (x) => x.unReadMessages > 0 && x.user.id !== chatMessage.sender.id,
-      );
-      if (unReadSettings.length) {
-        Promise.all(
-          unReadSettings.map(async (setting) => {
-            await this.groupSettingRepo.update(setting.id, {
-              unReadMessages:
-                setting.unReadMessages > 1 ? setting.unReadMessages - 1 : 0,
-            });
-          }),
-        );
+      if (
+        chatMessage?.group?.id &&
+        chatMessage?.group?.latestMessage?.id === chatMessage?.id
+      ) {
+        const latestMessage = await this.chatMessageRepo
+          .createQueryBuilder('chat_message')
+          .where('chat_message.groupId = :groupId', {
+            groupId: chatMessage.group.id,
+          })
+          .orderBy('chat_message.createdAt', 'DESC')
+          .getOne();
+
+        if (latestMessage) {
+          await this.groupChatService.update(chatMessage.group.id, {
+            latestMessage,
+          });
+        }
       }
+
+      await this.rmqClient.emit('updateUnReadSettings', { chatMessageId });
 
       return chatMessage;
     } catch (e: any) {

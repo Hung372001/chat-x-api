@@ -13,6 +13,8 @@ import { OnlinesSessionManager } from './sessions/onlines.session';
 import { UserGatewayService } from './services/user.gateway.service';
 import { User } from '../user/entities/user.entity';
 import { Friendship } from '../friend/entities/friendship.entity';
+import { RmqModule } from '../rmq/rmq.module';
+import { ChatMessageConsumer } from './consumers/chat-message.consumer';
 
 @Module({
   imports: [
@@ -25,7 +27,11 @@ import { Friendship } from '../friend/entities/friendship.entity';
     ]),
     JwtModule.register({}),
     NotificationModule,
+    RmqModule.register({
+      name: 'CHAT-MESSAGE_SERVICE',
+    }),
   ],
+  controllers: [ChatMessageConsumer],
   providers: [
     AppGateway,
     GatewaySessionManager,
