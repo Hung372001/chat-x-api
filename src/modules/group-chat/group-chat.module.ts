@@ -10,10 +10,11 @@ import { GroupChatService } from './services/group-chat.service';
 import { GroupChatSetting } from './entities/group-chat-setting.entity';
 import { GroupChatController } from './controllers/group-chat.controller';
 import { GroupChatRequestService } from './services/group-chat.request.service';
+import { Friendship } from '../friend/entities/friendship.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([GroupChat, GroupChatSetting]),
+    TypeOrmModule.forFeature([Friendship, GroupChat, GroupChatSetting]),
     UserModule,
     GatewayModule,
   ],
