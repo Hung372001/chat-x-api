@@ -32,7 +32,11 @@ import { ENotificationType } from '../notification/dto/enum-notification';
   pingInterval: 10000,
   pingTimeout: 15000,
   cors: {
-    origin: ['http://localhost:3000', 'http://localhost:4000'],
+    origin: [
+      'http://localhost:3000',
+      'http://localhost:4000',
+      'https://chat-x-black.vercel.app',
+    ],
     methods: ['GET', 'POST'],
     credentials: true,
   },
