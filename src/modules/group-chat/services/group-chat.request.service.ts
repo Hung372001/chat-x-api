@@ -8,8 +8,8 @@ import {
 import { BaseService } from '../../../common/services/base.service';
 import { AddMemberDto } from '../dto/add-member.dto';
 import { CreateGroupChatDto } from '../dto/create-group-chat.dto';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, In, Repository } from 'typeorm';
+import { InjectConnection, InjectRepository } from '@nestjs/typeorm';
+import { Brackets, Connection, In, Repository } from 'typeorm';
 import { UserService } from '../../user/user.service';
 import { GroupChat } from '../entities/group-chat.entity';
 import { RemoveMemberDto } from '../dto/remove-member.dto';
@@ -26,16 +26,21 @@ import { ERole } from '../../../common/enums/role.enum';
 import moment from 'moment';
 import { AddAdminDto } from '../dto/add-admin.dto';
 import slugify from 'slugify';
+import { Friendship } from '../../friend/entities/friendship.entity';
+import { pick } from 'lodash';
 
 @Injectable({ scope: Scope.REQUEST })
 export class GroupChatRequestService extends BaseService<GroupChat> {
   constructor(
     @Inject(REQUEST) private request: Request,
     @InjectRepository(GroupChat) private groupChatRepo: Repository<GroupChat>,
+    @InjectRepository(Friendship)
+    private friendShipRepo: Repository<Friendship>,
     @InjectRepository(GroupChatSetting)
     private groupSettingRepo: Repository<GroupChatSetting>,
     @Inject(UserService) private userService: UserService,
     @Inject(AppGateway) private readonly gateway: AppGateway,
+    @InjectConnection() private readonly connection: Connection,
   ) {
     super(groupChatRepo);
   }
@@ -85,14 +90,6 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
 
     const queryBuilder = this.groupChatRepo
       .createQueryBuilder('group_chat')
-      .leftJoinAndSelect('group_chat.members', 'user')
-      .leftJoinAndSelect('user.friends', 'friendship')
-      .leftJoinAndSelect('friendship.fromUser', 'user as friends')
-      .leftJoinAndSelect(
-        'user.groupChatSettings',
-        'group_chat_setting as userSetting',
-      )
-      .leftJoinAndSelect('user.profile', 'profile')
       .leftJoinAndSelect('group_chat.owner', 'user as owners')
       .leftJoinAndSelect('group_chat.admins', 'user as admins')
       .leftJoinAndSelect(
@@ -104,7 +101,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         'user as nameCards',
       )
       .leftJoinAndSelect('group_chat.settings', 'group_chat_setting')
-      .andWhere('group_chat_setting as userSetting.groupChatId = group_chat.id')
+      .andWhere('group_chat_setting.groupChatId = group_chat.id')
       .orderBy('group_chat_setting.pinned', 'DESC');
 
     if (!isRootAdmin) {
@@ -227,10 +224,91 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       .getManyAndCount();
 
     return {
-      items: items.map((iterator) => {
-        return this.mappingGroup(iterator, currentUser);
-      }),
+      items: await Promise.all(
+        items.map(async (iterator) => {
+          return await this.mappingGroup(iterator, currentUser);
+        }),
+      ),
       total,
+    };
+  }
+
+  async getAllMember(id: string, query: FilterDto) {
+    const currentUser = this.request.user as User;
+    const { limit = 10, page = 1, isGetAll = false } = query;
+
+    const members = await this.connection.query(
+      `
+            SELECT *
+            FROM "group_chat_members_user"
+            LEFT JOIN "user" ON "user"."id" = "group_chat_members_user"."userId"
+            LEFT JOIN "profile" ON "profile"."id" = "user"."profileId"
+            WHERE "group_chat_members_user"."groupChatId" = '${id}'
+            ORDER BY "user"."username" ASC
+            ${isGetAll ? '' : `LIMIT ${limit}`}
+            ${isGetAll ? '' : `OFFSET ${(page - 1) * limit}`}
+          `,
+    );
+
+    let mappingMembers = members;
+    if (members.length > 0) {
+      mappingMembers = await Promise.all(
+        members.map(async (member) => {
+          const friendship = await this.friendShipRepo
+            .createQueryBuilder('friendship')
+            .where('friendship.fromUserId = :fromUserId', {
+              fromUserId: currentUser.id,
+            })
+            .andWhere('friendship.toUserId = :toUserId', {
+              toUserId: member.userId,
+            })
+            .getOne();
+
+          member['nickname'] = '';
+          member['profile'] = {
+            id: member.profileId,
+            avatar: member.avatar,
+            gender: member.gender,
+          };
+          member.id = member.userId;
+          member['isActive'] = member.is_active;
+          member['createdAt'] = member.created_at;
+          member['updatedAt'] = member.updated_at;
+          member['deletedAt'] = member.deleted_at;
+          member = pick(member, [
+            'id',
+            'email',
+            'phoneNumber',
+            'username',
+            'hiding',
+            'soundNotification',
+            'nickname',
+            'profile',
+            'isActive',
+            'createdAt',
+            'updatedAt',
+            'deletedAt',
+          ]);
+          if (friendship) {
+            member['nickname'] = friendship.nickname;
+          }
+
+          return member;
+        }),
+      );
+    }
+
+    const countRes = await this.connection.query(
+      `
+            SELECT COUNT(*)
+            FROM "group_chat_members_user"
+            WHERE "group_chat_members_user"."groupChatId" = '${id}'
+          `,
+    );
+
+    return {
+      items: mappingMembers,
+      total: countRes?.length ? +countRes[0]?.count ?? 0 : 0,
     };
   }
 
@@ -303,33 +381,44 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     }
   }
 
-  mappingGroup(groupChat: GroupChat, currentUser: User) {
+  async mappingGroup(groupChat: GroupChat, currentUser: User) {
+    const { items: members, total } = await this.getAllMember(groupChat.id, {
+      limit: 3,
+      page: 1,
+    } as FilterDto);
     return omitBy(
       groupChat.type === EGroupChatType.GROUP
         ? {
             ...groupChat,
-            isAdmin: groupChat.admins.some((x) => x.id === currentUser.id),
-            isOwner: groupChat.owner.id === currentUser.id,
+            isAdmin:
+              groupChat.admins?.some((x) => x.id === currentUser.id) ?? false,
+            isOwner: groupChat.owner?.id === currentUser.id ?? false,
             admins:
-              groupChat.owner.id === currentUser.id ? groupChat.admins : null,
+              groupChat.owner?.id === currentUser.id ? groupChat.admins : null,
             owner: null,
-            members: this.mappingFriendship(groupChat.members, currentUser),
-            latestMessage: moment(groupChat.latestMessage?.createdAt).isBefore(
-              moment(groupChat?.settings[0]?.deleteMessageFrom),
-            )
-              ? null
-              : groupChat?.latestMessage,
+            members,
+            latestMessage:
+              groupChat?.settings?.length &&
+              moment(groupChat.latestMessage?.createdAt).isBefore(
+                moment(groupChat?.settings[0]?.deleteMessageFrom),
+              )
+                ? null
+                : groupChat?.latestMessage,
+            memberQty: total ?? 0,
           }
         : {
             ...groupChat,
             admins: null,
             owner: null,
-            members: this.mappingFriendship(groupChat.members, currentUser),
-            latestMessage: moment(groupChat.latestMessage?.createdAt).isBefore(
-              moment(groupChat?.settings[0]?.deleteMessageFrom),
-            )
-              ? null
-              : groupChat?.latestMessage,
+            members,
+            latestMessage:
+              groupChat?.settings?.length &&
+              moment(groupChat.latestMessage?.createdAt).isBefore(
+                moment(groupChat?.settings[0]?.deleteMessageFrom),
+              )
+                ? null
+                : groupChat?.latestMessage,
+            memberQty: total ?? 0,
           },
       isNull,
     );
