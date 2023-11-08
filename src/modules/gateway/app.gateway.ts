@@ -36,6 +36,7 @@ import { ENotificationType } from '../notification/dto/enum-notification';
       'http://localhost:3000',
       'http://localhost:4000',
       'https://chat-x-black.vercel.app',
+      'http://45.32.11.150:3002',
     ],
     methods: ['GET', 'POST'],
     credentials: true,

@@ -24,6 +24,7 @@ async function bootstrap() {
       'http://localhost:3000',
       'http://localhost:4000',
       'https://chat-x-black.vercel.app',
+      'http://45.32.11.150:3002',
     ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true,
