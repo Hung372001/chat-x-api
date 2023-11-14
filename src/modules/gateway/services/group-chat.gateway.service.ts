@@ -133,9 +133,8 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     try {
       return this.groupChatRepo
         .createQueryBuilder('group_chat')
-        .leftJoinAndSelect('group_chat.members', 'user', 'user.id = :userId', {
-          userId,
-        })
+        .leftJoinAndSelect('group_chat.members', 'user')
+        .where('user.id = :userId', { userId })
         .getMany();
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
