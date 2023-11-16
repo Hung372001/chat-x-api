@@ -7,17 +7,12 @@ export class RmqService {
   constructor(private readonly configService: ConfigService) {}
 
   getOptions(queue: string, noAck = false): RmqOptions {
-    const rmqUser = this.configService.get('RABBITMQ_USER');
-    const rmqPassword = this.configService.get('RABBITMQ_PASSWORD');
-    const rmqHost = this.configService.get('RABBITMQ_HOST');
-
     return {
       transport: Transport.RMQ,
       options: {
-        urls: [`amqp://${rmqUser}:${rmqPassword}@${rmqHost}`],
+        urls: [this.configService.get('RABBITMQ_URI').toString()],
         queue: queue,
         noAck,
-        prefetchCount: 1,
         persistent: true,
         queueOptions: {
           durable: true,

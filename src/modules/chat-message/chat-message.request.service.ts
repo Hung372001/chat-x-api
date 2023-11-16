@@ -1,8 +1,8 @@
 import { Inject, Injectable, Scope } from '@nestjs/common';
 import { ChatMessage } from './entities/chat-message.entity';
 import { BaseService } from '../../common/services/base.service';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, Repository } from 'typeorm';
+import { InjectConnection, InjectRepository } from '@nestjs/typeorm';
+import { Brackets, Connection, Repository } from 'typeorm';
 import { User } from '../user/entities/user.entity';
 import { FilterDto } from '../../common/dto/filter.dto';
 import { REQUEST } from '@nestjs/core';
@@ -34,30 +34,25 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
     const currentUser = this.request.user as User;
     const isRootAdmin = currentUser.roles[0].type === ERole.ADMIN;
 
-    let groupChat = null;
-    if (groupChatId) {
-      groupChat = await this.groupChatService.findOne({ id: groupChatId });
-    }
-
     if (contactUserId) {
-      groupChat = await this.groupChatService.getGroupChatDou([
+      const groupChat = await this.groupChatService.getGroupChatDou([
         currentUser.id,
         contactUserId,
       ]);
+
+      if (!groupChat) {
+        throw { message: 'Không tìm thấy nhóm chat.' };
+      }
+
+      groupChatId = groupChat?.id;
     }
 
-    if (
-      !isRootAdmin &&
-      (!groupChat ||
-        (!groupChat.members.some((x) => x.id === currentUser.id) &&
-          !groupChat.isPublic))
-    ) {
-      throw { message: 'Không tìm thấy nhóm chat.' };
-    }
-
+    const isGroupAdmin = await this.groupChatService.isGroupAdmin(
+      groupChatId,
+      currentUser.id,
+    );
     const adminPermission =
-      currentUser.roles[0].type === ERole.ADMIN ||
-      groupChat.admins.some((x) => x.id === currentUser.id);
+      currentUser.roles[0].type === ERole.ADMIN || isGroupAdmin;
 
     const {
       keyword = '',
@@ -74,9 +69,9 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
     } = query;
 
     let chatSetting = null;
-    if (!isRootAdmin && !groupChat.isPublic) {
+    if (!isRootAdmin) {
       chatSetting = await this.groupSettingService.getGroupSetting(
-        groupChat.id,
+        groupChatId,
         currentUser.id,
       );
     }
@@ -88,26 +83,14 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       .leftJoinAndSelect('user.friends', 'friendship')
       .leftJoinAndSelect('friendship.fromUser', 'user as friends')
       .leftJoinAndSelect('user.profile', 'profile')
-      .leftJoin('group_chat.settings', 'group_chat_setting')
-      .leftJoin('chat_message.deletedBy', 'user as delMsgUser')
-      .leftJoinAndSelect('chat_message.readsBy', 'user as readsByUser')
       .leftJoinAndSelect('chat_message.nameCard', 'user as nameCardUser')
       .leftJoinAndSelect(
         'user as nameCardUser.profile',
         'profile as nameCardProfile',
       )
-      .where('group_chat.id = :groupChatId', { groupChatId: groupChat.id });
+      .where('group_chat.id = :groupChatId', { groupChatId });
 
     if (!isRootAdmin) {
-      queryBuilder.andWhere(
-        new Brackets((subQuery) => {
-          subQuery.where('group_chat_setting.userId = :userId', {
-            userId: currentUser.id,
-          });
-          subQuery.orWhere('group_chat.isPublic = true');
-        }),
-      );
-
       if (chatSetting?.deleteMessageFrom) {
         queryBuilder.andWhere('chat_message.created_at >= :fromDate', {
           fromDate: chatSetting.deleteMessageFrom,
@@ -216,7 +199,7 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
         'user as nameCardUser.profile',
         'profile as nameCardProfile',
       )
-      .where('group_chat.id = :groupChatId', { groupChatId: groupChat.id })
+      .where('group_chat.id = :groupChatId', { groupChatId })
       .andWhere('chat_message.pinned = true')
       .orderBy(`chat_message.updated_at`, 'DESC')
       .getMany();

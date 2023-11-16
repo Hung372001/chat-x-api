@@ -44,17 +44,9 @@ export class GroupChatSettingRequestService extends BaseService<GroupChatSetting
         throw { message: 'Không tìm thấy thiết lập nhóm.' };
       }
 
-      const groupChat = await this.groupChatService.findOne({
-        id: groupChatId,
-      });
-
-      if (!groupChat) {
-        throw { message: 'Không tìm thấy nhóm chat.' };
-      }
-
       return {
         ...setting,
-        userId: groupChat?.members?.find((x) => x.id !== userId)?.id ?? '',
+        userId: userId,
         groupId: groupChatId,
       };
     } catch (e: any) {
@@ -130,7 +122,11 @@ export class GroupChatSettingRequestService extends BaseService<GroupChatSetting
         throw { message: 'Không tìm thấy thông tin nhóm chat.' };
       }
 
-      if (!groupChat.admins.some((x) => x.id === currentUser.id)) {
+      const isAdmin = await this.groupChatService.isGroupAdmin(
+        groupChatId,
+        currentUser.id,
+      );
+      if (!isAdmin) {
         throw {
           message: 'Chỉ quản trị viên mới có quyền thực hiện tính năng này.',
         };
@@ -159,7 +155,11 @@ export class GroupChatSettingRequestService extends BaseService<GroupChatSetting
         throw { message: 'Không tìm thấy thông tin nhóm chat.' };
       }
 
-      if (!groupChat.admins.some((x) => x.id === currentUser.id)) {
+      const isAdmin = await this.groupChatService.isGroupAdmin(
+        groupChatId,
+        currentUser.id,
+      );
+      if (!isAdmin) {
         throw {
           message: 'Chỉ quản trị viên mới có quyền thực hiện tính năng này.',
         };
@@ -191,7 +191,11 @@ export class GroupChatSettingRequestService extends BaseService<GroupChatSetting
         throw { message: 'Không tìm thấy thông tin nhóm chat.' };
       }
 
-      if (!groupChat.admins.some((x) => x.id === currentUser.id)) {
+      const isAdmin = await this.groupChatService.isGroupAdmin(
+        groupChatId,
+        currentUser.id,
+      );
+      if (!isAdmin) {
         throw {
           message: 'Chỉ quản trị viên mới có quyền thực hiện tính năng này.',
         };
@@ -220,7 +224,11 @@ export class GroupChatSettingRequestService extends BaseService<GroupChatSetting
         throw { message: 'Không tìm thấy thông tin nhóm chat.' };
       }
 
-      if (!groupChat.admins.some((x) => x.id === currentUser.id)) {
+      const isAdmin = await this.groupChatService.isGroupAdmin(
+        groupChatId,
+        currentUser.id,
+      );
+      if (!isAdmin) {
         throw {
           message: 'Chỉ quản trị viên mới có quyền thực hiện tính năng này.',
         };

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { Notification } from './entities/notification.entity';
 import { NotificationController } from './notification.controller';
-import { NotificationConsumer } from './consumers/notification.consumer';
+import { NotificationConsumer } from './consumers/NotificationConsumer';
 import { RmqModule } from '../rmq/rmq.module';
 import { UserModule } from '../user/user.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
