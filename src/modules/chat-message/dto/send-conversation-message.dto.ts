@@ -31,4 +31,8 @@ export class SendConversationMessageDto {
   })
   @IsOptional()
   nameCardUserId: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  tmpId: string;
 }
