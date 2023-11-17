@@ -106,6 +106,7 @@ export class ChatMessageGatewayService {
         nameCard,
         readsBy: insideGroupMembers,
         isFriendRequest: dto.isFriendRequest,
+        createdAt: moment.utc().toDate(),
       } as ChatMessage;
 
       this.rmqClient.emit('saveMsgAndSendNoti', {
