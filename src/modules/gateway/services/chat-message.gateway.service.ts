@@ -97,7 +97,7 @@ export class ChatMessageGatewayService {
         );
       }
 
-      const newMessage = {
+      const newMessage = await this.chatMessageRepo.create({
         message: dto.message,
         imageUrls: dto.imageUrls,
         documentUrls: dto.documentUrls,
@@ -106,8 +106,8 @@ export class ChatMessageGatewayService {
         nameCard,
         readsBy: insideGroupMembers,
         isFriendRequest: dto.isFriendRequest,
-        createdAt: moment.utc().toDate(),
-      } as ChatMessage;
+      } as ChatMessage);
+      await this.chatMessageRepo.save(newMessage);
 
       this.rmqClient.emit('saveMsgAndSendNoti', {
         newMessage,
