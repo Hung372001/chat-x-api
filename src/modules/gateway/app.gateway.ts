@@ -98,6 +98,7 @@ export class AppGateway
   // Online and offile status of group member
   @SubscribeMessage('online')
   async handleMemberOnline(@ConnectedSocket() client: AuthSocket) {
+    this.logger.log(`Online ${client?.user?.id}`);
     const isOnline = this.onlineSessions.getUserSession(client?.user?.id);
     if (!isOnline) {
       this.onlineSessions.setUserSession(client?.user?.id, true);
@@ -112,6 +113,7 @@ export class AppGateway
 
   @SubscribeMessage('offline')
   async handleMemberOffline(@ConnectedSocket() client: AuthSocket) {
+    this.logger.log(`Offline ${client?.user?.id}`);
     const isOnline = this.onlineSessions.getUserSession(client?.user?.id);
     if (isOnline) {
       this.onlineSessions.setUserSession(client?.user?.id, false);
