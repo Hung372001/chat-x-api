@@ -22,6 +22,8 @@ firebase.initializeApp({
   }),
 });
 
+const turnOnNoti = process.env.TURN_ON_NOTIFICATION === 'false' ?? true;
+
 @Injectable()
 export class NotificationService {
   constructor(
@@ -54,14 +56,14 @@ export class NotificationService {
         }
       }
 
-      const newNotification = await this.notificationRepository.create({
-        ...pick(dto, Object.keys(dto)),
-      } as Notification);
+      // const newNotification = await this.notificationRepository.create({
+      //   ...pick(dto, Object.keys(dto)),
+      // } as Notification);
 
-      await this.notificationRepository.save(newNotification);
+      // await this.notificationRepository.save(newNotification);
 
       return {
-        notification: newNotification,
+        notification: dto as unknown as Notification,
         fcmTokens: await this.fcmTokenService.findByUser(dto.user.id),
       };
     } catch (e: any) {
@@ -69,12 +71,16 @@ export class NotificationService {
     }
   }
 
-  sendWithQueue(dto: CreateNotificationDto) {
-    return this.createAndSend(dto);
+  sendWithoutQueue(dto: CreateNotificationDto) {
+    if (turnOnNoti) {
+      return this.createAndSend(dto);
+    }
   }
 
   send(dto: CreateNotificationDto) {
-    return this.rmqClient.emit('sendNotification', dto);
+    if (turnOnNoti) {
+      return this.rmqClient.emit('sendNotification', dto);
+    }
   }
 
   async testing(dto: SendNotificationDto) {

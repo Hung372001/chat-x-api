@@ -105,6 +105,13 @@ export class ChatMessageGatewayService {
       } as ChatMessage);
       await this.chatMessageRepo.save(newMessage);
 
+      // Save latest message for group
+      groupChat.latestMessage = newMessage;
+      await this.groupChatService.update(groupChat.id, {
+        latestMessage: groupChat.latestMessage,
+      });
+
+      // Publish queue message
       this.rmqClient.emit('saveMsgAndSendNoti', {
         newMessage,
         sender,

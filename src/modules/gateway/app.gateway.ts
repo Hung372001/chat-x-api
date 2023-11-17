@@ -475,12 +475,10 @@ export class AppGateway
     @ConnectedSocket() client: AuthSocket,
   ) {
     try {
-      const groupChat = await this.groupChatService.readMessages(
-        groupId,
-        client.user,
-      );
+      const { groupChat, unReadMessages } =
+        await this.groupChatService.readMessages(groupId, client.user);
 
-      if (groupChat) {
+      if (groupChat && unReadMessages) {
         this.server.to(groupChat.id).emit('messagesRead', {
           groupChat,
         });
@@ -511,12 +509,13 @@ export class AppGateway
       );
 
       if (groupChatDou) {
-        const groupChat = await this.groupChatService.readMessages(
-          groupChatDou.id,
-          client.user,
-        );
+        const { groupChat, unReadMessages } =
+          await this.groupChatService.readMessages(
+            groupChatDou.id,
+            client.user,
+          );
 
-        if (groupChat) {
+        if (groupChat && unReadMessages) {
           this.server.to(groupChat.id).emit('messagesRead', {
             groupChat,
           });
