@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { BaseService } from '../../../common/services/base.service';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, In, Repository } from 'typeorm';
+import { InjectConnection, InjectRepository } from '@nestjs/typeorm';
+import { Connection, FindOptionsWhere, In, Repository } from 'typeorm';
 import { GroupChat } from '../../group-chat/entities/group-chat.entity';
 import { Server, Socket } from 'socket.io';
 import { User } from '../../user/entities/user.entity';
@@ -24,6 +24,7 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     @Inject(UserGatewayService) private userService: UserGatewayService,
     @Inject(GatewaySessionManager)
     private readonly insideGroupSessions: GatewaySessionManager<string>,
+    @InjectConnection() private readonly connection: Connection,
   ) {
     super(groupChatRepo);
   }
@@ -33,8 +34,27 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
   ): Promise<GroupChat | null> {
     return this.groupChatRepo.findOne({
       where: query,
-      relations: ['members', 'admins'],
+      relations: ['admins'],
     });
+  }
+
+  async findOneWithMemberIds(
+    query: FindOptionsWhere<GroupChat> | FindOptionsWhere<GroupChat>[],
+  ) {
+    const groupChat = await this.groupChatRepo.findOne({
+      where: query,
+    });
+
+    groupChat.members = await this.connection.query(
+      `
+        SELECT "userId" as "id"
+        FROM "group_chat_members_user"
+        LEFT JOIN "user" ON "group_chat_members_user"."userId" = "user"."id"
+        WHERE "groupChatId" = '${groupChat.id}' and "user"."deleted_at" IS NULL;
+      `,
+    );
+
+    return groupChat;
   }
 
   async updatedAt(id: string) {

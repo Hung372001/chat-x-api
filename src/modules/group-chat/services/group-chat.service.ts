@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { BaseService } from '../../../common/services/base.service';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, Repository } from 'typeorm';
+import { InjectConnection, InjectRepository } from '@nestjs/typeorm';
+import { Connection, FindOptionsWhere, Repository } from 'typeorm';
 import { UserService } from '../../user/user.service';
 import { GroupChat } from '../entities/group-chat.entity';
 import { EGroupChatType } from '../dto/group-chat.enum';
@@ -11,6 +11,7 @@ export class GroupChatService extends BaseService<GroupChat> {
   constructor(
     @InjectRepository(GroupChat) private groupChatRepo: Repository<GroupChat>,
     @Inject(UserService) private userService: UserService,
+    @InjectConnection() private readonly connection: Connection,
   ) {
     super(groupChatRepo);
   }
@@ -20,7 +21,6 @@ export class GroupChatService extends BaseService<GroupChat> {
   ): Promise<GroupChat | null> {
     return this.groupChatRepo.findOne({
       where: query,
-      relations: ['members', 'admins'],
     });
   }
 
@@ -44,5 +44,25 @@ export class GroupChatService extends BaseService<GroupChat> {
     }
 
     return this.findOne({ id: groupChat.id });
+  }
+
+  async isGroupAdmin(groupId: string, userId: string) {
+    const isAdmin = await this.connection.query(`
+      SELECT COUNT("userId")
+      FROM "group_chat_admins_user"
+      WHERE "groupChatId" = '${groupId}' and "userId" = '${userId}'
+    `);
+
+    return isAdmin.length ? isAdmin[0]?.count === '1' : false;
+  }
+
+  async isGroupMember(groupId: string, userId: string) {
+    const isMember = await this.connection.query(`
+      SELECT COUNT("userId")
+      FROM "group_chat_members_user"
+      WHERE "groupChatId" = '${groupId}' and "userId" = '${userId}'
+    `);
+
+    return isMember.length ? isMember[0]?.count === '1' : false;
   }
 }

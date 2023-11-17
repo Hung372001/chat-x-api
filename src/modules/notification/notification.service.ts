@@ -69,6 +69,10 @@ export class NotificationService {
     }
   }
 
+  sendWithQueue(dto: CreateNotificationDto) {
+    return this.createAndSend(dto);
+  }
+
   send(dto: CreateNotificationDto) {
     return this.rmqClient.emit('sendNotification', dto);
   }

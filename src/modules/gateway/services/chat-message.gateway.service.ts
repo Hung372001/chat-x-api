@@ -9,13 +9,9 @@ import { GroupChat } from '../../group-chat/entities/group-chat.entity';
 import { GroupChatSetting } from '../../group-chat/entities/group-chat-setting.entity';
 import { GatewaySessionManager } from '../sessions/gateway.session';
 import { intersectionBy } from 'lodash';
-import { NotificationService } from '../../notification/notification.service';
-import { ENotificationType } from '../../notification/dto/enum-notification';
-import { OnlinesSessionManager } from '../sessions/onlines.session';
 import moment from 'moment';
 import { EGroupChatType } from '../../group-chat/dto/group-chat.enum';
 import { UserGatewayService } from './user.gateway.service';
-import { Friendship } from '../../friend/entities/friendship.entity';
 import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
@@ -31,17 +27,13 @@ export class ChatMessageGatewayService {
     private userService: UserGatewayService,
     @Inject(GatewaySessionManager)
     private readonly insideGroupSessions: GatewaySessionManager<string>,
-    @Inject(OnlinesSessionManager)
-    private readonly onlineSessions: OnlinesSessionManager,
-    @Inject(NotificationService)
-    private readonly notifyService: NotificationService,
     @Inject('CHAT-MESSAGE_SERVICE') private rmqClient: ClientProxy,
   ) {}
 
   async sendMessage(dto: SendMessageDto, sender: User, groupChat?: GroupChat) {
     try {
       if (!groupChat) {
-        groupChat = await this.groupChatService.findOne({
+        groupChat = await this.groupChatService.findOneWithMemberIds({
           id: dto.groupId,
         });
       }
@@ -51,15 +43,8 @@ export class ChatMessageGatewayService {
       }
 
       if (
-        !groupChat.enabledChat &&
-        !groupChat.admins.some((x) => x.id === sender.id)
-      ) {
-        throw { message: 'Tính năng chat đang bị khóa.' };
-      }
-
-      if (
         groupChat.type === EGroupChatType.DOU &&
-        groupChat.members.some((x) => !x.isActive)
+        groupChat?.members?.length === 2
       ) {
         throw {
           message:
@@ -69,8 +54,7 @@ export class ChatMessageGatewayService {
 
       if (
         !groupChat.isPublic &&
-        !groupChat.members.some((x) => x.id === sender.id) &&
-        !groupChat.admins.some((x) => x.id === sender.id)
+        !groupChat.members.some((x) => x.id === sender.id)
       ) {
         throw {
           message: 'Phải là thành viên nhóm chat mới được gửi tin nhắn.',
@@ -113,7 +97,7 @@ export class ChatMessageGatewayService {
         );
       }
 
-      const newMessage = await this.chatMessageRepo.save({
+      const newMessage = {
         message: dto.message,
         imageUrls: dto.imageUrls,
         documentUrls: dto.documentUrls,
@@ -122,111 +106,19 @@ export class ChatMessageGatewayService {
         nameCard,
         readsBy: insideGroupMembers,
         isFriendRequest: dto.isFriendRequest,
-      } as ChatMessage);
+      } as ChatMessage;
 
-      // Save latest message for group
-      groupChat.latestMessage = newMessage;
-      await this.groupChatService.update(groupChat.id, {
-        latestMessage: groupChat.latestMessage,
+      this.rmqClient.emit('saveMsgAndSendNoti', {
+        newMessage,
+        sender,
+        insideGroupMembers,
+        groupChat,
       });
-
-      if (newMessage.group.latestMessage) {
-        delete newMessage.group.latestMessage;
-      }
-
-      if (newMessage.group.settings?.length) {
-        newMessage.group.settings.forEach((x) => delete x.groupChat);
-      }
-
-      Promise.all(
-        groupChat.members.map(async (member) => {
-          const setting = await this.groupChatService.findSetting(
-            member.id,
-            groupChat.id,
-          );
-
-          if (setting) {
-            if (!insideGroupMembers.some((x) => x.id === setting.user.id)) {
-              if (
-                !this.onlineSessions.getUserSession(setting.user.id) &&
-                !setting.muteNotification
-              ) {
-                // get friendship
-                const friendship = await this.userService.findFriendship(
-                  setting.user.id,
-                  sender.id,
-                );
-
-                // send notification
-                this.sendMessageNotification(
-                  groupChat,
-                  sender,
-                  setting.user,
-                  friendship,
-                  newMessage,
-                );
-              }
-
-              await this.groupSettingRepo.update(setting.id, {
-                unReadMessages: setting.unReadMessages + 1,
-              });
-            }
-          }
-        }),
-      );
-
-      await this.groupChatService.updatedAt(groupChat.id);
 
       return { ...newMessage, isNewMember };
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
-  }
-
-  sendMessageNotification(
-    group: GroupChat,
-    sender: User,
-    receiver: User,
-    friendship: Friendship,
-    chatMessage: ChatMessage,
-  ) {
-    let title = group.name;
-
-    let messageContent = chatMessage.message;
-    if (!chatMessage.message) {
-      if (chatMessage.nameCard) {
-        messageContent = `Danh thiếp ${chatMessage.nameCard.username}`;
-      } else {
-        messageContent = 'Photos';
-        if (!chatMessage.imageUrls) {
-          if (!chatMessage.documentUrls) {
-            messageContent = 'Attach files';
-          }
-        }
-      }
-    }
-
-    let content = `${
-      friendship && friendship.nickname ? friendship.nickname : sender.username
-    }: ${messageContent}`;
-
-    if (group.type === EGroupChatType.DOU) {
-      title =
-        friendship && friendship.nickname
-          ? friendship.nickname
-          : sender.username;
-      content = `${messageContent}`;
-    }
-
-    this.notifyService.send({
-      title,
-      content,
-      userId: receiver.id,
-      user: receiver,
-      imageUrl: sender.profile.avatar,
-      notificationType: ENotificationType.UNREAD_MESSAGE,
-      data: { groupId: group.id },
-    });
   }
 
   async togglePinMessage(id: string, user: User, pinMessage: boolean) {

@@ -23,16 +23,9 @@ export class RmqModule {
             useFactory: (configService: ConfigService) => ({
               transport: Transport.RMQ,
               options: {
-                urls: [
-                  `amqp://${configService.get(
-                    'RABBITMQ_USER',
-                  )}:${configService.get(
-                    'RABBITMQ_PASSWORD',
-                  )}@${configService.get('RABBITMQ_HOST')}`,
-                ],
+                urls: [configService.get('RABBITMQ_URI').toString()],
                 queue: queueName || configService.get('RABBITMQ_QUEUE_NAME'),
                 noAck: false,
-                prefetchCount: 1,
                 queueOptions: {
                   durable: true,
                 },
