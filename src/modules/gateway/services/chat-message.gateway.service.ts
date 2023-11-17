@@ -40,7 +40,7 @@ export class ChatMessageGatewayService {
 
       if (
         groupChat.type === EGroupChatType.DOU &&
-        groupChat?.members?.length === 2
+        groupChat?.members?.length !== 2
       ) {
         throw {
           message:
