@@ -25,6 +25,7 @@ import { OnlinesSessionManager } from './sessions/onlines.session';
 import { UserGatewayService } from './services/user.gateway.service';
 import { NotificationService } from '../notification/notification.service';
 import { ENotificationType } from '../notification/dto/enum-notification';
+import { compact } from 'lodash';
 
 @WebSocketGateway({
   namespace: 'socket/chats',
@@ -154,15 +155,16 @@ export class AppGateway
     @MessageBody() groupId: string,
     @ConnectedSocket() client: AuthSocket,
   ) {
-    const groupChat = await this.groupChatService.findOne({ id: groupId });
+    const groupChat = await this.groupChatService.findOneWithMemberIds({
+      id: groupId,
+    });
     if (groupChat) {
       const onlineMembers = groupChat.members.map((member) =>
         this.onlineSessions.getUserSession(member.id) ? member : null,
       );
 
       client.emit('onlineGroupMembersResponse', {
-        onlineMembers,
-        allMembers: groupChat.members,
+        onlineMembers: compact(onlineMembers),
       });
     }
   }
