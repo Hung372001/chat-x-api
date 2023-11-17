@@ -35,4 +35,8 @@ export class SendMessageDto {
   @ApiPropertyOptional()
   @IsOptional()
   isFriendRequest? = false;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  tmpId: string;
 }

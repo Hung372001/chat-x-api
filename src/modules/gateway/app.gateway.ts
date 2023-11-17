@@ -417,6 +417,7 @@ export class AppGateway
     @MessageBody() data: SendMessageDto,
     @ConnectedSocket() client: AuthSocket,
   ) {
+    const { tmpId } = data;
     try {
       const newMessage = await this.chatMessageService.sendMessage(
         data,
@@ -430,10 +431,11 @@ export class AppGateway
 
         this.server.to(newMessage.group.id).emit('newMessageReceived', {
           newMessage,
+          tmpId,
         });
       }
     } catch (e: any) {
-      client.emit('chatError', { errorMsg: e.message });
+      client.emit('chatError', { errorMsg: e.message, tmpId });
     }
   }
 
@@ -442,6 +444,7 @@ export class AppGateway
     @MessageBody() data: SendConversationMessageDto,
     @ConnectedSocket() client: AuthSocket,
   ) {
+    const { tmpId } = data;
     try {
       const groupChatDou = await this.groupChatService.getGroupChatDou(
         [data.receiverId, client.user.id],
@@ -461,11 +464,12 @@ export class AppGateway
 
           this.server.to(newMessage.group.id).emit('newMessageReceived', {
             newMessage,
+            tmpId,
           });
         }
       }
     } catch (e: any) {
-      client.emit('chatError', { errorMsg: e.message });
+      client.emit('chatError', { errorMsg: e.message, tmpId });
     }
   }
 

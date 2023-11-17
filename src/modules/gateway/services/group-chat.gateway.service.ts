@@ -144,6 +144,7 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
         const foundGroupChat = await this.findOneWithSettings({
           id: groupChat.id,
         });
+
         if (foundGroupChat.members.some((x) => !x.isActive)) {
           throw {
             message:
