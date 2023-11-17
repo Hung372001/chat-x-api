@@ -261,6 +261,7 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
       const messages = await this.chatMessageRepo
         .createQueryBuilder('chat_message')
         .where('chat_message.groupId = :groupId', { groupId })
+        .andWhere('chat_message.isRead = false')
         .getMany();
 
       if (messages.length) {
@@ -279,7 +280,7 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
         }
       }
 
-      return groupChat;
+      return { groupChat, unReadMessages: messages?.length ?? 0 };
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }

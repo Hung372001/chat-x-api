@@ -81,12 +81,6 @@ export class ChatMessageConsumer {
         // Change updated at
         await this.groupChatService.updatedAt(data.groupChat.id);
 
-        // Save latest message for group
-        data.groupChat.latestMessage = data.newMessage;
-        await this.groupChatService.update(data.groupChat.id, {
-          latestMessage: data.groupChat.latestMessage,
-        });
-
         if (data.newMessage.group.latestMessage) {
           delete data.newMessage.group.latestMessage;
         }
@@ -175,7 +169,7 @@ export class ChatMessageConsumer {
       content = `${messageContent}`;
     }
 
-    this.notifyService.sendWithQueue({
+    this.notifyService.sendWithoutQueue({
       title,
       content,
       userId: receiver.id,
