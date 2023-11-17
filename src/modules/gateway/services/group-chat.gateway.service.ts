@@ -41,20 +41,28 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
   async findOneWithMemberIds(
     query: FindOptionsWhere<GroupChat> | FindOptionsWhere<GroupChat>[],
   ) {
-    const groupChat = await this.groupChatRepo.findOne({
-      where: query,
-    });
+    try {
+      const groupChat = await this.groupChatRepo.findOne({
+        where: query,
+      });
 
-    groupChat.members = await this.connection.query(
-      `
+      if (!groupChat) {
+        throw { message: 'Không tìm thấy nhóm chat.' };
+      }
+
+      groupChat.members = await this.connection.query(
+        `
         SELECT "userId" as "id"
         FROM "group_chat_members_user"
         LEFT JOIN "user" ON "group_chat_members_user"."userId" = "user"."id"
         WHERE "groupChatId" = '${groupChat.id}' and "user"."deleted_at" IS NULL;
       `,
-    );
+      );
 
-    return groupChat;
+      return groupChat;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
   }
 
   async updatedAt(id: string) {
@@ -250,28 +258,17 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
         throw { message: 'Không tìm thấy nhóm chat.' };
       }
 
-      let messages = await this.chatMessageRepo
+      const messages = await this.chatMessageRepo
         .createQueryBuilder('chat_message')
-        .leftJoinAndSelect('chat_message.readsBy', 'user')
         .where('chat_message.groupId = :groupId', { groupId })
         .getMany();
 
-      messages = messages.filter(
-        (x) => !x.readsBy.some((x) => x.id === user.id),
-      );
-
       if (messages.length) {
-        Promise.all(
-          messages.map(async (message) => {
-            if (!message.readsBy.some((x) => x.id === user.id)) {
-              message.readsBy.push(user);
-              await this.chatMessageRepo.save({
-                ...message,
-                isRead: true,
-                readsBy: message.readsBy,
-              });
-            }
-          }),
+        await this.chatMessageRepo.update(
+          messages.map((x) => x.id),
+          {
+            isRead: true,
+          },
         );
 
         if (groupChat.settings.length) {
@@ -286,5 +283,25 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
+  }
+
+  async isGroupAdmin(groupId: string, userId: string) {
+    const isAdmin = await this.connection.query(`
+      SELECT COUNT("userId")
+      FROM "group_chat_admins_user"
+      WHERE "groupChatId" = '${groupId}' and "userId" = '${userId}'
+    `);
+
+    return isAdmin.length ? isAdmin[0]?.count === '1' : false;
+  }
+
+  async isGroupMember(groupId: string, userId: string) {
+    const isMember = await this.connection.query(`
+      SELECT COUNT("userId")
+      FROM "group_chat_members_user"
+      WHERE "groupChatId" = '${groupId}' and "userId" = '${userId}'
+    `);
+
+    return isMember.length ? isMember[0]?.count === '1' : false;
   }
 }

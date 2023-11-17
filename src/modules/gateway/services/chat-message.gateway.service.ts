@@ -38,10 +38,6 @@ export class ChatMessageGatewayService {
         });
       }
 
-      if (!groupChat) {
-        throw { message: 'Không tìm thấy nhóm chat.' };
-      }
-
       if (
         groupChat.type === EGroupChatType.DOU &&
         groupChat?.members?.length === 2
