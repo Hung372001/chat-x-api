@@ -81,23 +81,21 @@ export class ChatMessageConsumer {
         // Change updated at
         await this.groupChatService.updatedAt(data.groupChat.id);
 
-        const newMessage = await this.chatMessageRepo.save(data.newMessage);
-
         // Save latest message for group
-        data.groupChat.latestMessage = newMessage;
+        data.groupChat.latestMessage = data.newMessage;
         await this.groupChatService.update(data.groupChat.id, {
           latestMessage: data.groupChat.latestMessage,
         });
 
-        if (newMessage.group.latestMessage) {
-          delete newMessage.group.latestMessage;
+        if (data.newMessage.group.latestMessage) {
+          delete data.newMessage.group.latestMessage;
         }
 
-        if (newMessage.group.settings?.length) {
-          newMessage.group.settings.forEach((x) => delete x.groupChat);
+        if (data.newMessage.group.settings?.length) {
+          data.newMessage.group.settings.forEach((x) => delete x.groupChat);
         }
 
-        Promise.all(
+        await Promise.all(
           data.groupChat.members.map(async (member) => {
             const setting = await this.groupChatService.findSetting(
               member.id,
@@ -124,7 +122,7 @@ export class ChatMessageConsumer {
                     data.sender,
                     setting.user,
                     friendship,
-                    newMessage,
+                    data.newMessage,
                   );
                 }
 
