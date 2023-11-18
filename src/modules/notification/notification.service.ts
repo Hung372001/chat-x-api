@@ -22,7 +22,7 @@ firebase.initializeApp({
   }),
 });
 
-const turnOnNoti = process.env.TURN_ON_NOTIFICATION === 'false' ?? true;
+const turnOnNoti = process.env.TURN_ON_NOTIFICATION === 'true';
 
 @Injectable()
 export class NotificationService {
