@@ -126,6 +126,27 @@ export class AppGateway
     }
   }
 
+  async offline(user: User) {
+    const clients = this.socketSessions.getUserSession(user?.id);
+    if (clients?.length) {
+      this.logger.log(`Offline ${user?.id}`);
+      const isOnline = this.onlineSessions.getUserSession(user?.id);
+      if (isOnline) {
+        this.onlineSessions.setUserSession(user?.id, false);
+        await Promise.all(
+          clients.map(async (client) => {
+            await this.groupChatService.emitOfflineGroupMember(
+              this.server,
+              client,
+              user,
+              false,
+            );
+          }),
+        );
+      }
+    }
+  }
+
   @SubscribeMessage('isOnline')
   async checkOnlineStatus(
     @MessageBody() userId: string,

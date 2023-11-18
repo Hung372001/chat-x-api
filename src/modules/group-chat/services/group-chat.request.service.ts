@@ -858,4 +858,10 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
   }
+
+  async offline() {
+    const currentUser = this.request.user as User;
+    await this.gateway.offline(currentUser);
+    return true;
+  }
 }
