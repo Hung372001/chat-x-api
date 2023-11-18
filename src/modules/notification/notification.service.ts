@@ -13,6 +13,7 @@ import { Repository } from 'typeorm';
 import { UserService } from '../user/user.service';
 import { omitBy, isNull } from 'lodash';
 import { GroupChatSetting } from '../group-chat/entities/group-chat-setting.entity';
+import { ConfigService } from '@nestjs/config';
 
 firebase.initializeApp({
   credential: firebase.credential.cert({
@@ -22,19 +23,21 @@ firebase.initializeApp({
   }),
 });
 
-const turnOnNoti = process.env.TURN_ON_NOTIFICATION === 'true';
-
 @Injectable()
 export class NotificationService {
+  private turnOnNoti = false;
   constructor(
     @InjectRepository(Notification)
     private readonly notificationRepository: Repository<Notification>,
+    @Inject(ConfigService) private readonly configService: ConfigService,
     @InjectRepository(GroupChatSetting)
     private readonly groupSettingRepo: Repository<GroupChatSetting>,
     @Inject(UserService) private userService: UserService,
     @Inject(FCMTokenService) private fcmTokenService: FCMTokenService,
     @Inject('NOTIFICATION_SERVICE') private rmqClient: ClientProxy,
-  ) {}
+  ) {
+    this.turnOnNoti = this.configService.get('TURN_ON_NOTIFICATION') === 'true';
+  }
 
   async countUnread(userId: string): Promise<number> {
     return this.groupSettingRepo
@@ -72,13 +75,13 @@ export class NotificationService {
   }
 
   sendWithoutQueue(dto: CreateNotificationDto) {
-    if (turnOnNoti) {
+    if (this.turnOnNoti) {
       return this.createAndSend(dto);
     }
   }
 
   send(dto: CreateNotificationDto) {
-    if (turnOnNoti) {
+    if (this.turnOnNoti) {
       return this.rmqClient.emit('sendNotification', dto);
     }
   }
@@ -169,7 +172,8 @@ export class NotificationService {
           console.error(error);
           if (
             error.errorInfo.code ===
-            'messaging/registration-token-not-registered'
+              'messaging/registration-token-not-registered' ||
+            error.errorInfo.code === 'messaging/mismatched-credential'
           ) {
             return this.fcmTokenService.clearToken(deviceToken);
           }
