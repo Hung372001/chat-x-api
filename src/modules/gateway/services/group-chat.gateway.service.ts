@@ -272,13 +272,16 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
             isRead: true,
           },
         );
+      }
 
-        if (groupChat.settings.length) {
-          groupChat.settings[0].unReadMessages = 0;
-          await this.groupSettingRepo.update(groupChat.settings[0].id, {
-            unReadMessages: groupChat.settings[0].unReadMessages,
-          });
-        }
+      if (
+        groupChat.settings.length &&
+        groupChat.settings[0].unReadMessages > 0
+      ) {
+        groupChat.settings[0].unReadMessages = 0;
+        await this.groupSettingRepo.update(groupChat.settings[0].id, {
+          unReadMessages: groupChat.settings[0].unReadMessages,
+        });
       }
 
       return { groupChat, unReadMessages: messages?.length ?? 0 };
