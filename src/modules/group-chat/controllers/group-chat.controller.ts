@@ -77,4 +77,9 @@ export class GroupChatController {
   leaveGroup(@Param('id') groupId: string) {
     return this.requestService.leaveGroup(groupId);
   }
+
+  @Patch('offline')
+  offline() {
+    return this.requestService.offline();
+  }
 }
