@@ -8,11 +8,13 @@ import { Profile } from '../profile/entities/profile.entity';
 import { UserRequestService } from './user.request.service';
 import { RollCall } from './entities/roll-call.entity';
 import { FriendRequest } from '../friend/entities/friend-request.entity';
+import { CustomeCacheModule } from '../cache/cache.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, Profile, FriendRequest, RollCall]),
     RoleModule,
+    CustomeCacheModule,
   ],
   controllers: [UserController],
   providers: [UserService, UserRequestService],

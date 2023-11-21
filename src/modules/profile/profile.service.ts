@@ -15,6 +15,7 @@ import { UpdateProfileDto } from './dto/update.dto';
 import { User } from '../user/entities/user.entity';
 import { UpdateAvatarDto } from './dto/update-avatar.dto';
 import { UpdateNicknameDto } from '../friend/dto/update-nickname.dto';
+import { CacheService } from '../cache/cache.service';
 
 @Injectable({ scope: Scope.REQUEST })
 export class ProfileService extends BaseService<Profile> {
@@ -24,6 +25,7 @@ export class ProfileService extends BaseService<Profile> {
     private profileRepository: Repository<Profile>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    private cacheService: CacheService,
   ) {
     super(profileRepository);
   }
@@ -72,6 +74,10 @@ export class ProfileService extends BaseService<Profile> {
         });
       }
 
+      await this.cacheService.del(
+        `User_${currentUser.email}_${currentUser.phoneNumber}`,
+      );
+
       return currentUser;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
@@ -84,6 +90,11 @@ export class ProfileService extends BaseService<Profile> {
     await this.profileRepository.update(currentUser.profile.id, {
       avatar: currentUser.profile.avatar,
     });
+
+    await this.cacheService.del(
+      `User_${currentUser.email}_${currentUser.phoneNumber}`,
+    );
+
     return currentUser;
   }
 }

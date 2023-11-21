@@ -22,6 +22,7 @@ import { Profile } from '../profile/entities/profile.entity';
 import { CreateRollCallDto } from './dto/create-roll-calls.dto';
 import { ERole } from '../../common/enums/role.enum';
 import { FriendRequest } from '../friend/entities/friend-request.entity';
+import { CacheService } from '../cache/cache.service';
 
 @Injectable({ scope: Scope.REQUEST })
 export class UserRequestService extends BaseService<User> {
@@ -30,12 +31,11 @@ export class UserRequestService extends BaseService<User> {
     private configService: ConfigService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
-    @InjectRepository(FriendRequest)
-    private friendRequestRepository: Repository<FriendRequest>,
     @InjectRepository(RollCall)
     private rollCallRepository: Repository<RollCall>,
     @InjectRepository(Profile)
     private profileRepository: Repository<Profile>,
+    private cacheService: CacheService,
   ) {
     super(userRepository);
   }
@@ -368,6 +368,11 @@ export class UserRequestService extends BaseService<User> {
       await this.userRepository.update(currentUser.id, {
         hiding: currentUser.hiding,
       });
+
+      await this.cacheService.del(
+        `User_${currentUser.email}_${currentUser.phoneNumber}`,
+      );
+
       return currentUser;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
@@ -383,6 +388,10 @@ export class UserRequestService extends BaseService<User> {
       await this.userRepository.update(currentUser.id, {
         soundNotification: currentUser.soundNotification,
       });
+
+      await this.cacheService.del(
+        `User_${currentUser.email}_${currentUser.phoneNumber}`,
+      );
       return currentUser;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
@@ -400,6 +409,10 @@ export class UserRequestService extends BaseService<User> {
       await this.userRepository.update(id, {
         isActive: false,
       });
+
+      await this.cacheService.del(
+        `User_${foundRecord.email}_${foundRecord.phoneNumber}`,
+      );
 
       return {
         generatedMaps: [],
