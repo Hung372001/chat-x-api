@@ -127,7 +127,7 @@ export class AuthService {
       throw new HttpException('Mật khẩu không đúng.', HttpStatus.BAD_REQUEST);
     }
 
-    const authResponse = await this.genToken(user, isCachedData);
+    const authResponse = await this.genToken(user);
 
     return {
       ...user,
@@ -135,7 +135,7 @@ export class AuthService {
     };
   }
 
-  async genToken(user: User, isCachedData: boolean) {
+  async genToken(user: User) {
     const payload = {
       ...pick(user, ['id', 'email', 'phoneNumber', 'username']),
       permissions: user?.roles
@@ -143,31 +143,14 @@ export class AuthService {
         : [],
     };
 
-    let loginToken = await this.cacheService.get(`JWT_${user.id}`);
-    const loginTime = await this.cacheService.get(`Login-time_${user.id}`);
+    const accessToken = this.generateAccessToken(payload);
+    const refreshToken = this.generateRefreshToken(payload);
+    await this.storeRefreshToken(payload.id, refreshToken);
 
-    if (
-      !isCachedData ||
-      !loginToken ||
-      !loginTime ||
-      moment(loginTime)
-        .add(+this.configService.get('JWT_ACCESS_TOKEN_EXPIRATION_TIME'), 's')
-        .isBefore(moment())
-    ) {
-      const accessToken = this.generateAccessToken(payload);
-      const refreshToken = this.generateRefreshToken(payload);
-      await this.storeRefreshToken(payload.id, refreshToken);
-
-      loginToken = {
-        accessToken,
-        refreshToken,
-      };
-
-      await this.cacheService.set(`JWT_${user.id}`, loginToken);
-      await this.cacheService.set(`Login-time_${user.id}`, moment().toDate());
-    }
-
-    return loginToken;
+    return {
+      accessToken,
+      refreshToken,
+    };
   }
 
   async signUp(dto: SignUpDto) {
@@ -189,7 +172,7 @@ export class AuthService {
 
     const registedUser = await this.userService.createUserAccount(dto);
     await this.cacheService.set(`User_${dto.email}_${dto.phoneNumber}`, user);
-    const authResponse = await this.genToken(registedUser, false);
+    const authResponse = await this.genToken(registedUser);
 
     return {
       ...registedUser,
