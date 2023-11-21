@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 import { NestFactory } from '@nestjs/core';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -9,7 +10,8 @@ import * as AWS from 'aws-sdk';
 import { AllExceptionsFilter } from './interceptors/all-exception.filter';
 import { RmqService } from './modules/rmq/rmq.service';
 import { MicroserviceOptions } from '@nestjs/microservices';
-import { CacheInterceptor } from './interceptors/cache.interceptor';
+const cluster = require('cluster');
+const numCPUs = require('os').cpus().length;
 
 async function bootstrap() {
   const logger = new Logger(bootstrap.name);
@@ -51,12 +53,26 @@ async function bootstrap() {
 
   // Swagger
   initSwagger(app);
-
-  // Port listener
-  const port = appConfigs.get('PORT') ?? 3000;
   await app.startAllMicroservices();
-  await app.listen(port, () => {
-    logger.log(`Application running on port ${port}`);
-  });
+
+  if (cluster.isMaster) {
+    console.log(`Master ${process.pid} is running`);
+
+    // Fork workers.
+    for (let i = 0; i < numCPUs; i++) {
+      cluster.fork();
+    }
+
+    cluster.on('exit', (worker, code, signal) => {
+      console.log(`worker ${worker.process.pid} died`);
+    });
+  } else {
+    // Port listener
+    const port = appConfigs.get('PORT') ?? 3001;
+
+    await app.listen(port, () => {
+      logger.log(`Application running on port ${port}`);
+    });
+  }
 }
 bootstrap();

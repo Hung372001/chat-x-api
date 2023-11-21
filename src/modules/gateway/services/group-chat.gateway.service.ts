@@ -131,7 +131,7 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
           );
 
           await this.groupSettingRepo.save(memberSettings);
-          newGroupChat.settings = memberSettings;
+          // newGroupChat.settings = memberSettings;
 
           return newGroupChat;
         } else {
