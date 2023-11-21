@@ -68,7 +68,7 @@ async function bootstrap() {
     });
   } else {
     // Port listener
-    const port = appConfigs.get('PORT') ?? 3001;
+    const port = appConfigs.get('PORT') ?? 3000;
 
     await app.listen(port, () => {
       logger.log(`Application running on port ${port}`);
