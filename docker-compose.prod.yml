@@ -20,7 +20,7 @@ services:
       mode: replicated
       placement:
         constraints: [node.role == manager]
-      replicas: 1
+      replicas: 3
       update_config:
         parallelism: 1
         delay: 10s
