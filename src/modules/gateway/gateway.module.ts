@@ -15,6 +15,7 @@ import { User } from '../user/entities/user.entity';
 import { Friendship } from '../friend/entities/friendship.entity';
 import { RmqModule } from '../rmq/rmq.module';
 import { ChatMessageConsumer } from './consumers/chat-message.consumer';
+import { CustomeCacheModule } from '../cache/cache.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { ChatMessageConsumer } from './consumers/chat-message.consumer';
     RmqModule.register({
       name: 'CHAT-MESSAGE_SERVICE',
     }),
+    CustomeCacheModule,
   ],
   controllers: [ChatMessageConsumer],
   providers: [
