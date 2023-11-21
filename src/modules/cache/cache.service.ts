@@ -43,7 +43,7 @@ export class CacheService {
     return res;
   }
 
-  async get(key: string) {
+  async get(key: string): Promise<any> {
     let res: string = await this.cacheManager.get(key);
     try {
       res = JSON.parse(res);

@@ -19,6 +19,8 @@ import * as bcrypt from 'bcryptjs';
 import { SignUpDto } from './dto/sign-up.dto';
 import { SALT_ROUND } from '../../constraints/auth.constraint';
 import { User } from '../user/entities/user.entity';
+import { CacheService } from '../cache/cache.service';
+import moment from 'moment';
 
 @Injectable()
 export class AuthService {
@@ -26,6 +28,7 @@ export class AuthService {
     private userService: UserService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private cacheService: CacheService,
   ) {}
 
   generateAccessToken(payload: TokenPayload) {
@@ -86,10 +89,18 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     let user = null;
-    if (dto.email) {
-      user = await this.userService.findOne({ email: dto.email });
+    let isCachedData = false;
+
+    // Get user from cache user
+    user = await this.cacheService.get(`User_${dto.email}_${dto.phoneNumber}`);
+    if (!user) {
+      if (dto.email) {
+        user = await this.userService.findOne({ email: dto.email });
+      } else {
+        user = await this.userService.findOne({ phoneNumber: dto.phoneNumber });
+      }
     } else {
-      user = await this.userService.findOne({ phoneNumber: dto.phoneNumber });
+      isCachedData = true;
     }
 
     if (!user) {
@@ -99,6 +110,11 @@ export class AuthService {
           : 'Không tìm thấy số điện thoại.',
         HttpStatus.BAD_REQUEST,
       );
+    }
+
+    // Cache user
+    if (!isCachedData) {
+      await this.cacheService.set(`User_${dto.email}_${dto.phoneNumber}`, user);
     }
 
     // const hashedPassword = await bcrypt.hash(dto.password, SALT_ROUND);
@@ -111,7 +127,7 @@ export class AuthService {
       throw new HttpException('Mật khẩu không đúng.', HttpStatus.BAD_REQUEST);
     }
 
-    const authResponse = await this.genToken(user);
+    const authResponse = await this.genToken(user, isCachedData);
 
     return {
       ...user,
@@ -119,7 +135,7 @@ export class AuthService {
     };
   }
 
-  async genToken(user: User) {
+  async genToken(user: User, isCachedData: boolean) {
     const payload = {
       ...pick(user, ['id', 'email', 'phoneNumber', 'username']),
       permissions: user?.roles
@@ -127,14 +143,31 @@ export class AuthService {
         : [],
     };
 
-    const accessToken = this.generateAccessToken(payload);
-    const refreshToken = this.generateRefreshToken(payload);
-    await this.storeRefreshToken(payload.id, refreshToken);
+    let loginToken = await this.cacheService.get(`JWT_${user.id}`);
+    const loginTime = await this.cacheService.get(`Login-time_${user.id}`);
 
-    return {
-      accessToken,
-      refreshToken,
-    };
+    if (
+      !isCachedData ||
+      !loginToken ||
+      !loginTime ||
+      moment(loginTime)
+        .add(+this.configService.get('JWT_ACCESS_TOKEN_EXPIRATION_TIME'), 's')
+        .isBefore(moment())
+    ) {
+      const accessToken = this.generateAccessToken(payload);
+      const refreshToken = this.generateRefreshToken(payload);
+      await this.storeRefreshToken(payload.id, refreshToken);
+
+      loginToken = {
+        accessToken,
+        refreshToken,
+      };
+
+      await this.cacheService.set(`JWT_${user.id}`, loginToken);
+      await this.cacheService.set(`Login-time_${user.id}`, moment().toDate());
+    }
+
+    return loginToken;
   }
 
   async signUp(dto: SignUpDto) {
@@ -155,7 +188,8 @@ export class AuthService {
     }
 
     const registedUser = await this.userService.createUserAccount(dto);
-    const authResponse = await this.genToken(registedUser);
+    await this.cacheService.set(`User_${dto.email}_${dto.phoneNumber}`, user);
+    const authResponse = await this.genToken(registedUser, false);
 
     return {
       ...registedUser,

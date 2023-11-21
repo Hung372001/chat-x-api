@@ -14,6 +14,7 @@ import { REQUEST } from '@nestjs/core';
 import { Request } from 'express';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { AuthService } from './auth.service';
+import { CacheService } from '../cache/cache.service';
 
 @Injectable({ scope: Scope.REQUEST })
 export class AuthRequestService {
@@ -21,6 +22,7 @@ export class AuthRequestService {
     @Inject(REQUEST) private request: Request,
     private userService: UserService,
     private authService: AuthService,
+    private cacheService: CacheService,
   ) {}
 
   async changePassword(dto: ChangePasswordDto) {
@@ -50,9 +52,16 @@ export class AuthRequestService {
       const salt = await bcrypt.genSalt(SALT_ROUND);
       const newHashedPassword = await bcrypt.hash(dto.newPassword, salt);
 
+      currentUser.hashedPassword = newHashedPassword;
       await this.userService.update(currentUser.id, {
         hashedPassword: newHashedPassword,
       });
+
+      // Cache user
+      await this.cacheService.set(
+        `User_${currentUser.email}_${currentUser.phoneNumber}`,
+        currentUser,
+      );
 
       // Gen new authenticate token
       const accessToken = this.authService.generateAccessToken(payload);

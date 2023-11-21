@@ -18,7 +18,7 @@ export class GroupChatScheduler {
     private chatMessageRepo: Repository<ChatMessage>,
   ) {}
 
-  @Cron('0 */1 * * * *', { utcOffset: 0 })
+  @Cron('0 */30 * * * *', { utcOffset: 0 })
   async clearChatHistory() {
     console.log(
       `[${moment

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 import { ClassSerializerInterceptor, Module } from '@nestjs/common';
 import { CacheModule } from '@nestjs/cache-manager';
 import { AppController } from './app.controller';
@@ -7,7 +8,7 @@ import type { RedisClientOptions } from 'redis';
 import * as redisStore from 'cache-manager-redis-store';
 import { configsValidator } from './configs/configs.validate';
 import { DatabaseModule } from './database/database.module';
-import { APP_INTERCEPTOR, RouterModule } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR, RouterModule } from '@nestjs/core';
 import { RoleModule } from './modules/role/role.module';
 import { UserModule } from './modules/user/user.module';
 import { CustomeCacheModule } from './modules/cache/cache.module';
@@ -55,7 +56,7 @@ const apiV1Modules = [
     CacheModule.register<RedisClientOptions>({
       isGlobal: true,
       store: redisStore,
-      url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
+      url: `${process.env.REDIS_URI}`,
       ttl: 0,
     }),
     ScheduleModule.forRoot(),
@@ -70,10 +71,6 @@ const apiV1Modules = [
   controllers: [AppController],
   providers: [
     AppService,
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: CacheInterceptor,
-    },
     {
       provide: APP_INTERCEPTOR,
       useClass: ClassSerializerInterceptor,
