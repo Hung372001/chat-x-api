@@ -1,41 +1,22 @@
 import { Injectable } from '@nestjs/common';
 import { differenceBy } from 'lodash';
-import { CacheService } from '../../cache/cache.service';
 
 export interface IGatewaySessionManager<T> {
   getUserSession(id: string): T[];
-  setUserSession(name: string, id: string, data: T): void;
-  removeUserSession(name: string, id: string, data: T): void;
+  setUserSession(id: string, data: T): void;
+  removeUserSession(id: string, data: T): void;
   getSession(): Map<string, T[]>;
 }
 
 @Injectable()
 export class GatewaySessionManager<T> implements IGatewaySessionManager<T> {
-  private sessions: Map<string, T[]> = null;
-
-  constructor(private cacheService: CacheService) {}
-
-  async fetchMapData(name: string) {
-    if (!this.sessions) {
-      const cacheData = await this.cacheService.get(`GatwaySessions_${name}`);
-      if (cacheData) {
-        this.sessions = new Map(JSON.parse(cacheData));
-      } else {
-        this.sessions = new Map();
-      }
-    }
-  }
-
-  async cacheMapData(name: string) {
-    const str = JSON.stringify(Array.from(this.sessions.entries()));
-    this.cacheService.set(`GatwaySessions_${name}`, str);
-  }
+  private readonly sessions: Map<string, T[]> = new Map();
 
   getUserSession(id: string) {
-    return this.sessions?.get(id) ?? null;
+    return this.sessions.get(id);
   }
 
-  async setUserSession(name: string, id: string, data: T) {
+  setUserSession(id: string, data: T) {
     let userSession = this.sessions.get(id);
     if (userSession) {
       userSession.push(data);
@@ -43,10 +24,9 @@ export class GatewaySessionManager<T> implements IGatewaySessionManager<T> {
       userSession = [data];
     }
     this.sessions.set(id, userSession);
-    await this.cacheMapData(name);
   }
 
-  async removeUserSession(name: string, id: string, data: T) {
+  removeUserSession(id: string, data: T) {
     const userSession = this.sessions.get(id);
     const remainSession = differenceBy(userSession, [data], 'user.id');
     if (remainSession.length) {
@@ -54,7 +34,6 @@ export class GatewaySessionManager<T> implements IGatewaySessionManager<T> {
     } else {
       this.sessions.delete(id);
     }
-    await this.cacheMapData(name);
   }
 
   getSession(): Map<string, T[]> {

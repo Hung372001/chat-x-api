@@ -32,7 +32,6 @@ export class ChatMessageGatewayService {
 
   async sendMessage(dto: SendMessageDto, sender: User, groupChat?: GroupChat) {
     try {
-      await this.insideGroupSessions.fetchMapData('insideGroup');
       if (!groupChat) {
         groupChat = await this.groupChatService.findOneWithMemberIds({
           id: dto.groupId,

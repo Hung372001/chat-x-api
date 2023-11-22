@@ -50,7 +50,7 @@ export class AppGateway
   private logger: Logger = new Logger(AppGateway.name);
   constructor(
     @Inject(GatewaySessionManager)
-    private readonly socketSessions: GatewaySessionManager<string>,
+    private readonly socketSessions: GatewaySessionManager<AuthSocket>,
     @Inject(GatewaySessionManager)
     private readonly insideGroupSessions: GatewaySessionManager<string>,
     @Inject(OnlinesSessionManager)
@@ -74,16 +74,9 @@ export class AppGateway
 
   // Connection and disconnect socket
   async handleConnection(client: AuthSocket) {
-    await this.onlineSessions.fetchMapData();
-    await this.socketSessions.fetchMapData('socket');
-    await this.insideGroupSessions.fetchMapData('insideGroup');
     this.logger.log(client.id, 'Connected..............................');
-    await this.socketSessions.setUserSession(
-      'socket',
-      client?.user?.id,
-      client.id,
-    );
-    await this.onlineSessions.setUserSession(client?.user?.id, true);
+    this.socketSessions.setUserSession(client?.user?.id, client);
+    this.onlineSessions.setUserSession(client?.user?.id, true);
     this.groupChatService.emitOnlineGroupMember(
       this.server,
       client,
@@ -98,12 +91,8 @@ export class AppGateway
       client,
       client?.user,
     );
-    await this.onlineSessions.removeUserSession(client?.user?.id);
-    await this.socketSessions.removeUserSession(
-      'socket',
-      client.user.id,
-      client.id,
-    );
+    this.onlineSessions.removeUserSession(client?.user?.id);
+    this.socketSessions.removeUserSession(client.user.id, client);
   }
 
   // Online and offile status of group member
@@ -112,7 +101,7 @@ export class AppGateway
     this.logger.log(`Online ${client?.user?.id}`);
     const isOnline = this.onlineSessions.getUserSession(client?.user?.id);
     if (!isOnline) {
-      await this.onlineSessions.setUserSession(client?.user?.id, true);
+      this.onlineSessions.setUserSession(client?.user?.id, true);
       this.groupChatService.emitOnlineGroupMember(
         this.server,
         client,
@@ -127,7 +116,7 @@ export class AppGateway
     this.logger.log(`Offline ${client?.user?.id}`);
     const isOnline = this.onlineSessions.getUserSession(client?.user?.id);
     if (isOnline) {
-      await this.onlineSessions.setUserSession(client?.user?.id, false);
+      this.onlineSessions.setUserSession(client?.user?.id, false);
       this.groupChatService.emitOfflineGroupMember(
         this.server,
         client,
@@ -138,17 +127,17 @@ export class AppGateway
   }
 
   async offline(user: User) {
-    const clientIds = this.socketSessions.getUserSession(user?.id);
-    if (clientIds?.length) {
+    const clients = this.socketSessions.getUserSession(user?.id);
+    if (clients?.length) {
       this.logger.log(`Offline ${user?.id}`);
       const isOnline = this.onlineSessions.getUserSession(user?.id);
-      if (isOnline && this.server.sockets['size']) {
-        await this.onlineSessions.setUserSession(user?.id, false);
+      if (isOnline) {
+        this.onlineSessions.setUserSession(user?.id, false);
         await Promise.all(
-          clientIds.map(async (clientId) => {
+          clients.map(async (client) => {
             await this.groupChatService.emitOfflineGroupMember(
               this.server,
-              (this.server.sockets as any).get(clientId),
+              client,
               user,
               false,
             );
@@ -171,11 +160,7 @@ export class AppGateway
     @MessageBody() groupId: string,
     @ConnectedSocket() client: AuthSocket,
   ) {
-    await this.insideGroupSessions.setUserSession(
-      'insideGroup',
-      groupId,
-      client?.user?.id,
-    );
+    this.insideGroupSessions.setUserSession(groupId, client?.user?.id);
     client.emit('enterGroupChat', true);
   }
 
@@ -184,11 +169,7 @@ export class AppGateway
     @MessageBody() groupId: string,
     @ConnectedSocket() client: AuthSocket,
   ) {
-    this.insideGroupSessions.removeUserSession(
-      'insideGroup',
-      groupId,
-      client?.user?.id,
-    );
+    this.insideGroupSessions.removeUserSession(groupId, client?.user?.id);
     client.emit('outGroupChat', true);
   }
 
@@ -248,33 +229,25 @@ export class AppGateway
   }
 
   joinGroup(groupChatId: string, groupMembers: User[]) {
-    if (this.server.sockets['size']) {
-      return Promise.all(
-        groupMembers.map((member) => {
-          const clientIds = this.socketSessions.getUserSession(member.id);
-          if (clientIds?.length) {
-            clientIds.forEach((clientId) =>
-              (this.server.sockets as any).get(clientId).join(groupChatId),
-            );
-          }
-        }),
-      );
-    }
+    return Promise.all(
+      groupMembers.map((member) => {
+        const clients = this.socketSessions.getUserSession(member.id);
+        if (clients?.length) {
+          clients.forEach((client) => client.join(groupChatId));
+        }
+      }),
+    );
   }
 
   leaveGroup(groupChatId: string, groupMembers: User[]) {
-    if (this.server.sockets['size']) {
-      return Promise.all(
-        groupMembers.map((member) => {
-          const clientIds = this.socketSessions.getUserSession(member.id);
-          if (clientIds?.length) {
-            clientIds.forEach((clientId) =>
-              (this.server.sockets as any).get(clientId).leave(groupChatId),
-            );
-          }
-        }),
-      );
-    }
+    return Promise.all(
+      groupMembers.map((member) => {
+        const clients = this.socketSessions.getUserSession(member.id);
+        if (clients?.length) {
+          clients.forEach((client) => client.leave(groupChatId));
+        }
+      }),
+    );
   }
 
   // Call socket after group chat created successfully
@@ -300,6 +273,8 @@ export class AppGateway
   }
 
   async createNewFriendGroup(friend: User, currentUser: User) {
+    const clients = this.socketSessions.getUserSession(currentUser.id);
+
     try {
       const groupChatDou = await this.groupChatService.getGroupChatDou(
         [friend.id, currentUser.id],
@@ -336,18 +311,17 @@ export class AppGateway
         }
       }
     } catch (e: any) {
-      const clientIds = this.socketSessions.getUserSession(currentUser.id);
-      if (clientIds?.length) {
-        clientIds.forEach((clientId) =>
-          (this.server.sockets as any)
-            .get(clientId)
-            .emit('chatError', { errorMsg: e.message }),
+      if (clients?.length) {
+        clients.forEach((client) =>
+          client.emit('chatError', { errorMsg: e.message }),
         );
       }
     }
   }
 
   async acceptFriendRequest(friend: User, currentUser: User) {
+    const clients = this.socketSessions.getUserSession(currentUser.id);
+
     try {
       const groupChatDou = await this.groupChatService.getGroupChatDou(
         [friend.id, currentUser.id],
@@ -388,12 +362,9 @@ export class AppGateway
         });
       }
     } catch (e: any) {
-      const clientIds = this.socketSessions.getUserSession(currentUser.id);
-      if (clientIds?.length) {
-        clientIds.forEach((clientId) =>
-          (this.server.sockets as any)
-            .get(clientId)
-            .emit('chatError', { errorMsg: e.message }),
+      if (clients?.length) {
+        clients.forEach((client) =>
+          client.emit('chatError', { errorMsg: e.message }),
         );
       }
     }

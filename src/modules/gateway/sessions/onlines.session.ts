@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { differenceBy } from 'lodash';
-import { CacheService } from '../../cache/cache.service';
 
 export interface IOnlineSessionManager {
   getUserSession(id: string): boolean;
@@ -11,39 +10,18 @@ export interface IOnlineSessionManager {
 
 @Injectable()
 export class OnlinesSessionManager implements IOnlineSessionManager {
-  private sessions: Map<string, boolean> = null;
-  private cacheKey = 'SocketOnlineSessions';
-
-  constructor(private cacheService: CacheService) {}
-
-  async fetchMapData() {
-    if (!this.sessions) {
-      const cacheData = await this.cacheService.get(this.cacheKey);
-      if (cacheData) {
-        this.sessions = new Map(JSON.parse(cacheData));
-      } else {
-        this.sessions = new Map();
-      }
-    }
-  }
-
-  async cacheMapData() {
-    const str = JSON.stringify(Array.from(this.sessions.entries()));
-    this.cacheService.set(this.cacheKey, str);
-  }
+  private readonly sessions: Map<string, boolean> = new Map();
 
   getUserSession(id: string) {
-    return this.sessions?.get(id) ?? null;
+    return this.sessions.get(id);
   }
 
-  async setUserSession(id: string, isOnline: boolean) {
+  setUserSession(id: string, isOnline: boolean) {
     this.sessions.set(id, isOnline);
-    await this.cacheMapData();
   }
 
-  async removeUserSession(id: string) {
+  removeUserSession(id: string) {
     this.sessions.delete(id);
-    await this.cacheMapData();
   }
 
   getSession(): Map<string, boolean> {

@@ -176,7 +176,6 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     member: User,
     joinGroup = true,
   ) {
-    await this.insideGroupSessions.fetchMapData('insideGroup');
     const groupChats = await this.getJoinedGroups(member.id);
 
     // Join socket to all group
@@ -206,7 +205,6 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     member: User,
     leaveGroup = true,
   ) {
-    await this.insideGroupSessions.fetchMapData('insideGroup');
     const groupChats = await this.getJoinedGroups(member.id);
 
     // Leave all joined group
