@@ -65,6 +65,9 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     let { sortBy = 'createdAt' } = query;
 
     let groupChatIds = [];
+    const searchNameIndex = searchBy?.indexOf('name') ?? -1;
+    const andSearchNameIndex = searchAndBy?.indexOf('name') ?? -1;
+
     if (!isRootAdmin) {
       groupChatIds = await this.groupChatRepo
         .createQueryBuilder('group_chat')
@@ -76,7 +79,11 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         })
         .getMany();
 
-      if (!groupChatIds.length && !keyword && !andKeyword) {
+      if (
+        !groupChatIds.length &&
+        ((!keyword && !andKeyword) ||
+          (searchNameIndex === -1 && andSearchNameIndex === -1))
+      ) {
         return {
           items: [],
           total: 0,
@@ -120,8 +127,6 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
             );
           }
 
-          const searchNameIndex = searchBy?.indexOf('name') ?? -1;
-          const andSearchNameIndex = searchAndBy?.indexOf('name') ?? -1;
           if (
             (searchNameIndex !== -1 || andSearchNameIndex !== -1) &&
             (keyword ||
