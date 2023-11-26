@@ -837,6 +837,9 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       // Call socket
       await this.gateway.removeGroupMember(foundGroupChat, members);
 
+      const cacheKey = `GroupChatIds_${currentUser.id}`;
+      await this.cacheService.del(cacheKey);
+
       return res;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
