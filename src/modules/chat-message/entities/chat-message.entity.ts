@@ -33,10 +33,6 @@ export class ChatMessage extends BaseEntity {
   @Column({ default: false })
   isRead: boolean;
 
-  @ManyToMany(() => User)
-  @JoinTable()
-  readsBy: User[];
-
   @ManyToOne(() => User, (deletedBy) => deletedBy.deletedMessages)
   @JoinTable()
   deletedBy: User;

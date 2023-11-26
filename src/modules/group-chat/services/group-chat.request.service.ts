@@ -28,6 +28,8 @@ import { AddAdminDto } from '../dto/add-admin.dto';
 import slugify from 'slugify';
 import { Friendship } from '../../friend/entities/friendship.entity';
 import { pick } from 'lodash';
+import { CacheService } from '../../cache/cache.service';
+import { GroupChatService } from './group-chat.service';
 
 @Injectable({ scope: Scope.REQUEST })
 export class GroupChatRequestService extends BaseService<GroupChat> {
@@ -40,6 +42,9 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     private groupSettingRepo: Repository<GroupChatSetting>,
     @Inject(UserService) private userService: UserService,
     @Inject(AppGateway) private readonly gateway: AppGateway,
+    @Inject(GroupChatService)
+    private readonly groupChatService: GroupChatService,
+    @Inject(CacheService) private readonly cacheService: CacheService,
     @InjectConnection() private readonly connection: Connection,
   ) {
     super(groupChatRepo);
@@ -69,25 +74,29 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     const andSearchNameIndex = searchAndBy?.indexOf('name') ?? -1;
 
     if (!isRootAdmin) {
-      groupChatIds = await this.groupChatRepo
-        .createQueryBuilder('group_chat')
-        .select('group_chat.id')
-        .leftJoin('group_chat.members', 'user')
-        .addGroupBy('group_chat.id')
-        .having(`array_agg(user.id) @> :userIds::uuid[]`, {
-          userIds: [currentUser.id],
-        })
-        .getMany();
+      const cacheKey = `GroupChatIds_${currentUser.id}`;
+      groupChatIds = await this.cacheService.get(cacheKey);
 
-      if (
-        !groupChatIds.length &&
-        ((!keyword && !andKeyword) ||
-          (searchNameIndex === -1 && andSearchNameIndex === -1))
-      ) {
-        return {
-          items: [],
-          total: 0,
-        };
+      if (!groupChatIds?.length) {
+        groupChatIds = await this.connection.query(`
+        select distinct "groupChatId"
+        from "group_chat_members_user"
+        where "userId" = '${currentUser.id}'
+      `);
+
+        if (
+          !groupChatIds?.length &&
+          ((!keyword && !andKeyword) ||
+            (searchNameIndex === -1 && andSearchNameIndex === -1))
+        ) {
+          return {
+            items: [],
+            total: 0,
+          };
+        } else {
+          groupChatIds = groupChatIds.map((x) => x.groupChatId);
+          this.cacheService.set(cacheKey, groupChatIds);
+        }
       }
     }
 
@@ -97,8 +106,6 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
 
     const queryBuilder = this.groupChatRepo
       .createQueryBuilder('group_chat')
-      .leftJoinAndSelect('group_chat.owner', 'user as owners')
-      .leftJoinAndSelect('group_chat.admins', 'user as admins')
       .leftJoinAndSelect(
         'group_chat.latestMessage',
         'chat_message as latestMessages',
@@ -118,7 +125,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
             subQuery.where(
               new Brackets((andSubQuery) => {
                 andSubQuery.where('group_chat.id In(:...groupChatIds)', {
-                  groupChatIds: groupChatIds.map((x) => x.id),
+                  groupChatIds,
                 });
                 andSubQuery.andWhere('group_chat_setting.userId = :userId', {
                   userId: currentUser.id,
@@ -332,8 +339,6 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
           'group_chat_setting as userSetting',
         )
         .leftJoinAndSelect('user.profile', 'profile')
-        .leftJoinAndSelect('group_chat.owner', 'user as owners')
-        .leftJoinAndSelect('group_chat.admins', 'user as admins')
         .leftJoinAndSelect('group_chat.latestMessage', 'chat_message')
         .leftJoinAndSelect('group_chat.settings', 'group_chat_setting')
         .where('group_chat_setting as userSetting.groupChatId = group_chat.id')
@@ -391,42 +396,48 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       limit: 3,
       page: 1,
     } as FilterDto);
-    return omitBy(
-      groupChat.type === EGroupChatType.GROUP
-        ? {
-            ...groupChat,
-            isAdmin:
-              groupChat.admins?.some((x) => x.id === currentUser.id) ?? false,
-            isOwner: groupChat.owner?.id === currentUser.id ?? false,
-            admins:
-              groupChat.owner?.id === currentUser.id ? groupChat.admins : null,
-            owner: null,
-            members,
-            latestMessage:
-              groupChat?.settings?.length &&
-              moment(groupChat.latestMessage?.createdAt).isBefore(
-                moment(groupChat?.settings[0]?.deleteMessageFrom),
-              )
-                ? null
-                : groupChat?.latestMessage,
-            memberQty: total ?? 0,
-          }
-        : {
-            ...groupChat,
-            admins: null,
-            owner: null,
-            members,
-            latestMessage:
-              groupChat?.settings?.length &&
-              moment(groupChat.latestMessage?.createdAt).isBefore(
-                moment(groupChat?.settings[0]?.deleteMessageFrom),
-              )
-                ? null
-                : groupChat?.latestMessage,
-            memberQty: total ?? 0,
-          },
-      isNull,
-    );
+
+    if (groupChat.type === EGroupChatType.GROUP) {
+      const owner = await this.groupChatService.getGroupOwner(groupChat.id);
+      const admins = await this.groupChatService.getGroupAdmins(groupChat.id);
+      return omitBy(
+        {
+          ...groupChat,
+          isAdmin: admins?.some((x) => x.id === currentUser.id) ?? false,
+          isOwner: owner?.id === currentUser.id ?? false,
+          admins: owner?.id === currentUser.id ? admins : null,
+          owner: null,
+          members,
+          latestMessage:
+            groupChat?.settings?.length &&
+            moment(groupChat.latestMessage?.createdAt).isBefore(
+              moment(groupChat?.settings[0]?.deleteMessageFrom),
+            )
+              ? null
+              : groupChat?.latestMessage,
+          memberQty: total ?? 0,
+        },
+        isNull,
+      );
+    } else {
+      return omitBy(
+        {
+          ...groupChat,
+          admins: null,
+          owner: null,
+          members,
+          latestMessage:
+            groupChat?.settings?.length &&
+            moment(groupChat.latestMessage?.createdAt).isBefore(
+              moment(groupChat?.settings[0]?.deleteMessageFrom),
+            )
+              ? null
+              : groupChat?.latestMessage,
+          memberQty: total ?? 0,
+        },
+        isNull,
+      );
+    }
   }
 
   mappingFriendship(members: any[], currentUser: User) {
@@ -662,6 +673,8 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         ...foundGroupChat,
         admins,
       });
+
+      await this.cacheService.del(`GroupChatAdmins_${foundGroupChat.id}`);
 
       // Call socket to add new admin
       await this.gateway.modifyGroupAdmin(foundGroupChat, admins);

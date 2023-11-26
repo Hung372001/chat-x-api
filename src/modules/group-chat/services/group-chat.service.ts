@@ -5,13 +5,14 @@ import { Connection, FindOptionsWhere, Repository } from 'typeorm';
 import { UserService } from '../../user/user.service';
 import { GroupChat } from '../entities/group-chat.entity';
 import { EGroupChatType } from '../dto/group-chat.enum';
+import { CacheService } from '../../cache/cache.service';
 
 @Injectable()
 export class GroupChatService extends BaseService<GroupChat> {
   constructor(
     @InjectRepository(GroupChat) private groupChatRepo: Repository<GroupChat>,
-    @Inject(UserService) private userService: UserService,
     @InjectConnection() private readonly connection: Connection,
+    @Inject(CacheService) private readonly cacheService: CacheService,
   ) {
     super(groupChatRepo);
   }
@@ -64,5 +65,60 @@ export class GroupChatService extends BaseService<GroupChat> {
     `);
 
     return isMember.length ? isMember[0]?.count === '1' : false;
+  }
+
+  async getGroupOwner(groupChatId: string) {
+    try {
+      const cacheKey = `GroupChatOwner_${groupChatId}`;
+      const cacheData = await this.cacheService.get(cacheKey);
+
+      if (cacheData) {
+        return cacheData;
+      }
+
+      const groupChat = await this.groupChatRepo
+        .createQueryBuilder('group_chat')
+        .leftJoinAndSelect('group_chat.owner', 'user')
+        .select(['group_chat.id', 'user.id'])
+        .where('group_chat.id = :groupChatId', { groupChatId })
+        .getOne();
+
+      await this.cacheService.set(cacheKey, groupChat.owner);
+
+      return groupChat.owner;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async getGroupAdmins(groupChatId: string) {
+    try {
+      const cacheKey = `GroupChatAdmins_${groupChatId}`;
+      const cacheData = await this.cacheService.get(cacheKey);
+
+      if (cacheData) {
+        return cacheData;
+      }
+
+      const groupChat = await this.groupChatRepo
+        .createQueryBuilder('group_chat')
+        .leftJoin('group_chat.admins', 'user')
+        .select([
+          'group_chat.id',
+          'user.id',
+          'user.createdAt',
+          'user.email',
+          'user.phoneNumber',
+          'user.username',
+        ])
+        .where('group_chat.id = :groupChatId', { groupChatId })
+        .getOne();
+
+      await this.cacheService.set(cacheKey, groupChat.admins);
+
+      return groupChat.admins;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
   }
 }

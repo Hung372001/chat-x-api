@@ -100,7 +100,6 @@ export class ChatMessageGatewayService {
         sender,
         group: groupChat,
         nameCard,
-        readsBy: insideGroupMembers,
         isFriendRequest: dto.isFriendRequest,
       } as ChatMessage);
       await this.chatMessageRepo.save(newMessage);

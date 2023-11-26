@@ -11,12 +11,14 @@ import { GroupChatSetting } from './entities/group-chat-setting.entity';
 import { GroupChatController } from './controllers/group-chat.controller';
 import { GroupChatRequestService } from './services/group-chat.request.service';
 import { Friendship } from '../friend/entities/friendship.entity';
+import { CustomeCacheModule } from '../cache/cache.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Friendship, GroupChat, GroupChatSetting]),
     UserModule,
     GatewayModule,
+    CustomeCacheModule,
   ],
   controllers: [GroupChatController, GroupChatSettingController],
   providers: [
