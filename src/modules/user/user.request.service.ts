@@ -369,9 +369,11 @@ export class UserRequestService extends BaseService<User> {
         hiding: currentUser.hiding,
       });
 
+      // Clear cache
       await this.cacheService.del(
         `User_${currentUser.email}_${currentUser.phoneNumber}`,
       );
+      await this.cacheService.del(`User_${currentUser.id}`);
 
       return currentUser;
     } catch (e: any) {
@@ -389,9 +391,12 @@ export class UserRequestService extends BaseService<User> {
         soundNotification: currentUser.soundNotification,
       });
 
+      // Clear cache
       await this.cacheService.del(
         `User_${currentUser.email}_${currentUser.phoneNumber}`,
       );
+      await this.cacheService.del(`User_${currentUser.id}`);
+
       return currentUser;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
@@ -410,9 +415,11 @@ export class UserRequestService extends BaseService<User> {
         isActive: false,
       });
 
+      // Clear cache
       await this.cacheService.del(
         `User_${foundRecord.email}_${foundRecord.phoneNumber}`,
       );
+      await this.cacheService.del(`User_${id}`);
 
       return {
         generatedMaps: [],

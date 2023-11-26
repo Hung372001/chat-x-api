@@ -71,7 +71,13 @@ export class AppGateway
     if (this.logger) {
       this.logger.log('Gateway init!!!');
     }
-    client.use(WSAuthMiddleware(this.jwtService, this.userService) as any);
+    client.use(
+      WSAuthMiddleware(
+        this.jwtService,
+        this.userService,
+        this.cacheService,
+      ) as any,
+    );
   }
 
   // Connection and disconnect socket

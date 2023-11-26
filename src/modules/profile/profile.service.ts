@@ -74,9 +74,11 @@ export class ProfileService extends BaseService<Profile> {
         });
       }
 
+      // Clear cache
       await this.cacheService.del(
         `User_${currentUser.email}_${currentUser.phoneNumber}`,
       );
+      await this.cacheService.del(`User_${currentUser.id}`);
 
       return currentUser;
     } catch (e: any) {
@@ -91,9 +93,11 @@ export class ProfileService extends BaseService<Profile> {
       avatar: currentUser.profile.avatar,
     });
 
+    // Clear cache
     await this.cacheService.del(
       `User_${currentUser.email}_${currentUser.phoneNumber}`,
     );
+    await this.cacheService.del(`User_${currentUser.id}`);
 
     return currentUser;
   }

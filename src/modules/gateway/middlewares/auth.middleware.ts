@@ -2,6 +2,7 @@ import { Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { AuthSocket } from '../interfaces/auth.interface';
 import { UserGatewayService } from '../services/user.gateway.service';
+import { CacheService } from '../../cache/cache.service';
 
 export type SocketMiddleware = (
   socket: Socket,
@@ -11,6 +12,7 @@ export type SocketMiddleware = (
 export const WSAuthMiddleware = (
   jwtService: JwtService,
   userService: UserGatewayService,
+  cacheService: CacheService,
 ): SocketMiddleware => {
   return async (socket: AuthSocket, next) => {
     try {
@@ -29,10 +31,16 @@ export const WSAuthMiddleware = (
         throw Error('System cannot decode the token.');
       }
 
-      const currentUser = await userService.findOne({ id: decodedJwt.id });
+      const cacheKey = `User_${decodedJwt.id}`;
+      let currentUser = await cacheService.get(cacheKey);
 
       if (!currentUser) {
-        throw Error('User doesnot found.');
+        currentUser = await userService.findOne({ id: decodedJwt.id });
+        if (!currentUser) {
+          throw Error('User doesnot found.');
+        }
+
+        await cacheService.set(cacheKey, currentUser);
       }
 
       socket.user = currentUser;
