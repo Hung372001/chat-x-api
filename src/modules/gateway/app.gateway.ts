@@ -26,6 +26,7 @@ import { UserGatewayService } from './services/user.gateway.service';
 import { NotificationService } from '../notification/notification.service';
 import { ENotificationType } from '../notification/dto/enum-notification';
 import { compact } from 'lodash';
+import { CacheService } from '../cache/cache.service';
 
 @WebSocketGateway({
   namespace: 'socket/chats',
@@ -63,6 +64,7 @@ export class AppGateway
     private chatMessageService: ChatMessageGatewayService,
     @Inject(NotificationService)
     private readonly notifyService: NotificationService,
+    @Inject(CacheService) private cacheService: CacheService,
   ) {}
 
   afterInit(client: Socket) {
@@ -253,6 +255,13 @@ export class AppGateway
   // Call socket after group chat created successfully
   async createGroupChat(groupChat: GroupChat) {
     if (groupChat && groupChat.members?.length > 0) {
+      await Promise.all(
+        groupChat.members.map(async (x) => {
+          const cacheKey = `GroupChatIds_${x.id}`;
+          await this.cacheService.del(cacheKey);
+        }),
+      );
+
       await this.joinGroup(groupChat.id, groupChat.members);
 
       this.server.to(groupChat.id).emit('newGroupChatCreated', {

@@ -13,6 +13,7 @@ import moment from 'moment';
 import { EGroupChatType } from '../../group-chat/dto/group-chat.enum';
 import { UserGatewayService } from './user.gateway.service';
 import { ClientProxy } from '@nestjs/microservices';
+import { CacheService } from '../../cache/cache.service';
 
 @Injectable()
 export class ChatMessageGatewayService {
@@ -28,6 +29,7 @@ export class ChatMessageGatewayService {
     @Inject(GatewaySessionManager)
     private readonly insideGroupSessions: GatewaySessionManager<string>,
     @Inject('CHAT-MESSAGE_SERVICE') private rmqClient: ClientProxy,
+    @Inject(CacheService) private cacheService: CacheService,
   ) {}
 
   async sendMessage(dto: SendMessageDto, sender: User, groupChat?: GroupChat) {
@@ -162,6 +164,9 @@ export class ChatMessageGatewayService {
 
       message.pinned = pinMessage;
       await this.chatMessageRepo.update(id, { pinned: pinMessage });
+
+      const cacheKey = `PinnedMessage_${message.group.id}`;
+      await this.cacheService.del(cacheKey);
 
       return message;
     } catch (e: any) {

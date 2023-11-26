@@ -7,12 +7,14 @@ import { GroupChatModule } from '../group-chat/group-chat.module';
 import { ChatMessageRequestService } from './chat-message.request.service';
 import { GatewayModule } from '../gateway/gateway.module';
 import { GroupChatSetting } from '../group-chat/entities/group-chat-setting.entity';
+import { CustomeCacheModule } from '../cache/cache.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([ChatMessage]),
     GroupChatModule,
     GatewayModule,
+    CustomeCacheModule,
   ],
   controllers: [ChatMessageController],
   providers: [ChatMessageService, ChatMessageRequestService],

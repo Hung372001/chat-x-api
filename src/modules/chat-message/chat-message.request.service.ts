@@ -12,6 +12,7 @@ import { AppGateway } from '../gateway/app.gateway';
 import { GroupChatSettingRequestService } from '../group-chat/services/group-chat-setting.request.service';
 import { ERole } from '../../common/enums/role.enum';
 import { omitBy, isNull } from 'lodash';
+import { CacheService } from '../cache/cache.service';
 
 @Injectable({ scope: Scope.REQUEST })
 export class ChatMessageRequestService extends BaseService<ChatMessage> {
@@ -21,7 +22,7 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
     private chatMessageRepo: Repository<ChatMessage>,
     private groupChatService: GroupChatService,
     private groupSettingService: GroupChatSettingRequestService,
-    @Inject(AppGateway) private readonly gateway: AppGateway,
+    @Inject(CacheService) private readonly cacheService: CacheService,
   ) {
     super(chatMessageRepo);
   }
@@ -79,10 +80,21 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
     const queryBuilder = this.chatMessageRepo
       .createQueryBuilder('chat_message')
       .leftJoin('chat_message.group', 'group_chat')
-      .leftJoinAndSelect('chat_message.sender', 'user')
-      .leftJoinAndSelect('user.friends', 'friendship')
-      .leftJoinAndSelect('friendship.fromUser', 'user as friends')
-      .leftJoinAndSelect('user.profile', 'profile')
+      .leftJoin('chat_message.sender', 'user')
+      .addSelect([
+        'user.id',
+        'user.isActive',
+        'user.deletedAt',
+        'user.email',
+        'user.phoneNumber',
+        'user.username',
+      ])
+      .leftJoin('user.profile', 'profile')
+      .addSelect(['profile.id', 'profile.avatar'])
+      .leftJoin('user.friends', 'friendship')
+      .addSelect(['friendship.nickname'])
+      .leftJoin('friendship.fromUser', 'user as friends')
+      .addSelect(['user as friends.id'])
       .leftJoinAndSelect('chat_message.nameCard', 'user as nameCardUser')
       .leftJoinAndSelect(
         'user as nameCardUser.profile',
@@ -185,24 +197,46 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       .skip(isGetAll ? null : (page - 1) * limit)
       .getManyAndCount();
 
-    const pinnedMessages = await this.chatMessageRepo
-      .createQueryBuilder('chat_message')
-      .leftJoin('chat_message.group', 'group_chat')
-      .leftJoinAndSelect('chat_message.sender', 'user')
-      .leftJoinAndSelect('user.friends', 'friendship')
-      .leftJoinAndSelect('friendship.fromUser', 'user as friends')
-      .leftJoinAndSelect('user.profile', 'profile')
-      .leftJoinAndSelect('chat_message.pinnedBy', 'user as pinner')
-      .leftJoinAndSelect('user as pinner.profile', 'profile as pinnerProfile')
-      .leftJoinAndSelect('chat_message.nameCard', 'user as nameCardUser')
-      .leftJoinAndSelect(
-        'user as nameCardUser.profile',
-        'profile as nameCardProfile',
-      )
-      .where('group_chat.id = :groupChatId', { groupChatId })
-      .andWhere('chat_message.pinned = true')
-      .orderBy(`chat_message.updated_at`, 'DESC')
-      .getMany();
+    const cacheKey = `PinnedMessage_${groupChatId}`;
+    let pinnedMessages = await this.cacheService.get(cacheKey);
+
+    if (!pinnedMessages) {
+      pinnedMessages = await this.chatMessageRepo
+        .createQueryBuilder('chat_message')
+        .leftJoin('chat_message.group', 'group_chat')
+        .leftJoin('chat_message.sender', 'user')
+        .addSelect([
+          'user.id',
+          'user.isActive',
+          'user.deletedAt',
+          'user.email',
+          'user.phoneNumber',
+          'user.username',
+        ])
+        .leftJoin('user.profile', 'profile')
+        .addSelect(['profile.id', 'profile.avatar'])
+        .leftJoin('user.friends', 'friendship')
+        .addSelect(['friendship.nickname'])
+        .leftJoin('friendship.fromUser', 'user as friends')
+        .addSelect(['user as friends.id'])
+        .leftJoinAndSelect('chat_message.nameCard', 'user as nameCardUser')
+        .leftJoinAndSelect(
+          'user as nameCardUser.profile',
+          'profile as nameCardProfile',
+        )
+        .where('group_chat.id = :groupChatId', { groupChatId })
+        .andWhere('chat_message.pinned = true')
+        .orderBy(`chat_message.updated_at`, 'DESC')
+        .getMany();
+
+      if (pinnedMessages?.length) {
+        pinnedMessages = pinnedMessages.map((iterator) =>
+          this.mappingFriendship(iterator, currentUser),
+        );
+      }
+
+      await this.cacheService.set(cacheKey, pinnedMessages);
+    }
 
     return {
       items: items.map((iterator) =>
@@ -219,9 +253,7 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
               isNull,
             ),
       ),
-      pinnedMessages: pinnedMessages.map((iterator) =>
-        this.mappingFriendship(iterator, currentUser),
-      ),
+      pinnedMessages,
       total,
     };
   }
@@ -229,14 +261,17 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
   mappingFriendship(iterator: any, currentUser: User) {
     return {
       ...iterator,
-      sender: {
-        ...iterator.sender,
-        nickname:
-          iterator.sender.friends?.find(
-            (x) => x.fromUser?.id === currentUser.id,
-          )?.nickname ?? '',
-        friends: null,
-      },
+      sender: omitBy(
+        {
+          ...iterator.sender,
+          nickname:
+            iterator.sender.friends?.find(
+              (x) => x.fromUser?.id === currentUser.id,
+            )?.nickname ?? '',
+          friends: null,
+        },
+        isNull,
+      ),
     };
   }
 }
