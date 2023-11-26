@@ -12,6 +12,7 @@ import { ChatMessage } from '../../chat-message/entities/chat-message.entity';
 import { GatewaySessionManager } from '../sessions/gateway.session';
 import { UserGatewayService } from './user.gateway.service';
 import { intersectionBy } from 'lodash';
+import { CacheService } from '../../cache/cache.service';
 
 @Injectable()
 export class GroupChatGatewayService extends BaseService<GroupChat> {
@@ -24,6 +25,7 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     @Inject(UserGatewayService) private userService: UserGatewayService,
     @Inject(GatewaySessionManager)
     private readonly insideGroupSessions: GatewaySessionManager<string>,
+    @Inject(CacheService) private cacheService: CacheService,
     @InjectConnection() private readonly connection: Connection,
   ) {
     super(groupChatRepo);
@@ -38,26 +40,31 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     });
   }
 
-  async findOneWithMemberIds(
-    query: FindOptionsWhere<GroupChat> | FindOptionsWhere<GroupChat>[],
-  ) {
+  async findOneWithMemberIds(groupId: string) {
     try {
-      const groupChat = await this.groupChatRepo.findOne({
-        where: query,
-      });
+      const cacheKey = `GroupChat_${groupId}`;
+      let groupChat = await this.cacheService.get(cacheKey);
 
       if (!groupChat) {
-        throw { message: 'Không tìm thấy nhóm chat.' };
-      }
+        groupChat = await this.groupChatRepo.findOne({
+          where: { id: groupId },
+        });
 
-      groupChat.members = await this.connection.query(
-        `
-        SELECT "userId" as "id"
-        FROM "group_chat_members_user"
-        LEFT JOIN "user" ON "group_chat_members_user"."userId" = "user"."id"
-        WHERE "groupChatId" = '${groupChat.id}' and "user"."deleted_at" IS NULL;
-      `,
-      );
+        if (!groupChat) {
+          throw { message: 'Không tìm thấy nhóm chat.' };
+        }
+
+        groupChat.members = await this.connection.query(
+          `
+          SELECT "userId" as "id"
+          FROM "group_chat_members_user"
+          LEFT JOIN "user" ON "group_chat_members_user"."userId" = "user"."id"
+          WHERE "groupChatId" = '${groupChat.id}' and "user"."deleted_at" IS NULL;
+        `,
+        );
+
+        await this.cacheService.set(cacheKey, groupChat);
+      }
 
       return groupChat;
     } catch (e: any) {

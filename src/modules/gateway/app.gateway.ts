@@ -186,9 +186,7 @@ export class AppGateway
     @MessageBody() groupId: string,
     @ConnectedSocket() client: AuthSocket,
   ) {
-    const groupChat = await this.groupChatService.findOneWithMemberIds({
-      id: groupId,
-    });
+    const groupChat = await this.groupChatService.findOneWithMemberIds(groupId);
     if (groupChat) {
       const onlineMembers = groupChat.members.map((member) =>
         this.onlineSessions.getUserSession(member.id) ? member : null,
@@ -261,6 +259,7 @@ export class AppGateway
   // Call socket after group chat created successfully
   async createGroupChat(groupChat: GroupChat) {
     if (groupChat && groupChat.members?.length > 0) {
+      await this.cacheService.del(`GroupChat_${groupChat.id}`);
       await Promise.all(
         groupChat.members.map(async (x) => {
           const cacheKey = `GroupChatIds_${x.id}`;
@@ -279,6 +278,7 @@ export class AppGateway
   // Call socket after group chat soft deleted successfully
   async removeGroupChat(groupChat: GroupChat) {
     if (groupChat && groupChat.members?.length > 0) {
+      await this.cacheService.del(`GroupChat_${groupChat.id}`);
       await Promise.all(
         groupChat.members.map(async (x) => {
           const cacheKey = `GroupChatIds_${x.id}`;
@@ -395,6 +395,7 @@ export class AppGateway
   // Call socket after add user into group chat successfully
   async addNewGroupMember(groupChat: GroupChat, newMembers: User[]) {
     if (groupChat && newMembers?.length > 0) {
+      await this.cacheService.del(`GroupChat_${groupChat.id}`);
       await Promise.all(
         groupChat.members.map(async (x) => {
           const cacheKey = `GroupChatIds_${x.id}`;
@@ -414,6 +415,7 @@ export class AppGateway
   // Call socket after remove user from group chat successfully
   async removeGroupMember(groupChat: GroupChat, removeMembers: User[]) {
     if (groupChat && removeMembers?.length > 0) {
+      await this.cacheService.del(`GroupChat_${groupChat.id}`);
       await Promise.all(
         groupChat.members.map(async (x) => {
           const cacheKey = `GroupChatIds_${x.id}`;

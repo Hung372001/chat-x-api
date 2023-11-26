@@ -35,9 +35,9 @@ export class ChatMessageGatewayService {
   async sendMessage(dto: SendMessageDto, sender: User, groupChat?: GroupChat) {
     try {
       if (!groupChat) {
-        groupChat = await this.groupChatService.findOneWithMemberIds({
-          id: dto.groupId,
-        });
+        groupChat = await this.groupChatService.findOneWithMemberIds(
+          dto.groupId,
+        );
       }
 
       if (

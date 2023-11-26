@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
-import { FindOptionsWhere, Repository } from 'typeorm';
+import { DeleteResult, FindOptionsWhere, Repository } from 'typeorm';
 import { RoleService } from '../role/role.service';
 import { BaseService } from '../../common/services/base.service';
 import { ERole } from '../../common/enums/role.enum';
@@ -10,6 +10,7 @@ import { SignUpDto } from '../auth/dto/sign-up.dto';
 import * as bcrypt from 'bcryptjs';
 import { SALT_ROUND } from '../../constraints/auth.constraint';
 import { Profile } from '../profile/entities/profile.entity';
+import { CacheService } from '../cache/cache.service';
 
 @Injectable()
 export class UserService extends BaseService<User> {
@@ -19,6 +20,7 @@ export class UserService extends BaseService<User> {
     @InjectRepository(Profile)
     private profileRepository: Repository<Profile>,
     private roleService: RoleService,
+    private cacheService: CacheService,
   ) {
     super(userRepository);
   }
@@ -74,5 +76,25 @@ export class UserService extends BaseService<User> {
     })) as unknown as User;
     const newUser = await this.userRepository.save(user);
     return newUser;
+  }
+
+  override async remove(id: string): Promise<DeleteResult> {
+    try {
+      const currentUser = await this.findById(id);
+
+      if (!currentUser) {
+        throw { message: `${this.name} is not found.` };
+      }
+
+      // Clear cache
+      await this.cacheService.del(
+        `User_${currentUser.email}_${currentUser.phoneNumber}`,
+      );
+      await this.cacheService.del(`User_${currentUser.id}`);
+
+      return await this.userRepository.softDelete(id);
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
   }
 }
