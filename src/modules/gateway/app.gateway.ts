@@ -203,15 +203,16 @@ export class AppGateway
     @MessageBody() groupId: string,
     @ConnectedSocket() client: AuthSocket,
   ) {
-    const groupChat = await this.groupChatService.findOne({ id: groupId });
     const isMember = await this.groupChatService.isGroupMember(
-      groupChat.id,
+      groupId,
       client.user.id,
     );
-    if (groupChat && isMember) {
+    if (isMember) {
       client.broadcast.to(groupId).emit('someoneIsTyping', {
         typingMember: client.user,
-        groupChat: groupChat,
+        groupChat: {
+          id: groupId,
+        },
       });
     }
   }
@@ -221,15 +222,16 @@ export class AppGateway
     @MessageBody() groupId: string,
     @ConnectedSocket() client: AuthSocket,
   ) {
-    const groupChat = await this.groupChatService.findOne({ id: groupId });
     const isMember = await this.groupChatService.isGroupMember(
-      groupChat.id,
+      groupId,
       client.user.id,
     );
-    if (groupChat && isMember) {
+    if (isMember) {
       client.broadcast.to(groupId).emit('someoneStopTyping', {
         typingMember: client.user,
-        groupChat: groupChat,
+        groupChat: {
+          id: groupId,
+        },
       });
     }
   }
