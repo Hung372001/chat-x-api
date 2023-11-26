@@ -49,6 +49,12 @@ export class ProfileService extends BaseService<Profile> {
         this.userRepository.update(currentUser.id, { username: dto.username });
       }
 
+      // Clear cache
+      await this.cacheService.del(
+        `User_${currentUser.email}_${currentUser.phoneNumber}`,
+      );
+      await this.cacheService.del(`User_${currentUser.id}`);
+
       if (currentUser.phoneNumber !== dto.phoneNumber) {
         const existedPhoneNumber = await this.userRepository.findOne({
           where: {
@@ -73,12 +79,6 @@ export class ProfileService extends BaseService<Profile> {
           gender: currentUser.profile.gender,
         });
       }
-
-      // Clear cache
-      await this.cacheService.del(
-        `User_${currentUser.email}_${currentUser.phoneNumber}`,
-      );
-      await this.cacheService.del(`User_${currentUser.id}`);
 
       return currentUser;
     } catch (e: any) {

@@ -13,6 +13,7 @@ import { BaseEntity } from '../../../common/entities/base.entity';
 import { ChatMessage } from '../../chat-message/entities/chat-message.entity';
 import { EGroupChatType } from '../dto/group-chat.enum';
 import { GroupChatSetting } from './group-chat-setting.entity';
+import { AllChatMessage } from '../../chat-message/entities/all-chat-message.entity';
 
 @Entity()
 export class GroupChat extends BaseEntity {
@@ -29,6 +30,10 @@ export class GroupChat extends BaseEntity {
   @OneToMany(() => ChatMessage, (chatMessage) => chatMessage.group)
   @JoinTable()
   chatMessages: ChatMessage[];
+
+  @OneToMany(() => AllChatMessage, (allChatMessages) => allChatMessages.group)
+  @JoinTable()
+  allChatMessages: AllChatMessage[];
 
   @OneToOne(() => ChatMessage, (message) => message.id)
   @JoinColumn()

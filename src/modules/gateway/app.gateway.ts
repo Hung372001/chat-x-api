@@ -261,7 +261,6 @@ export class AppGateway
   // Call socket after group chat created successfully
   async createGroupChat(groupChat: GroupChat) {
     if (groupChat && groupChat.members?.length > 0) {
-      await this.cacheService.del(`GroupChat_${groupChat.id}`);
       await Promise.all(
         groupChat.members.map(async (x) => {
           const cacheKey = `GroupChatIds_${x.id}`;

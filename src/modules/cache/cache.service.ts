@@ -15,6 +15,11 @@ export class CacheService {
     private cacheManager: Cache,
   ) {}
 
+  async flushall() {
+    const keys = await this.cacheManager.keys();
+    await this.cacheManager.del(keys);
+  }
+
   async set(key: string, data: any, deleteRelative?: boolean) {
     const controller = key.split('_')[0];
 

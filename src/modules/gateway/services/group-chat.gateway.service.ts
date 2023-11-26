@@ -99,16 +99,23 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
 
   async getGroupChatDou(memberIds: string[], gateway: AppGateway) {
     try {
-      const groupChat = await this.groupChatRepo
-        .createQueryBuilder('group_chat')
-        .select('group_chat.id')
-        .leftJoin('group_chat.members', 'user')
-        .where('group_chat.type = :type', { type: EGroupChatType.DOU })
-        .addGroupBy('group_chat.id')
-        .having(`array_agg(user.id) @> :userIds::uuid[]`, {
-          userIds: memberIds,
-        })
-        .getOne();
+      const cacheKey = `GroupDou_${JSON.stringify(memberIds)}`;
+      let groupChat = await this.cacheService.get(cacheKey);
+
+      if (!groupChat) {
+        groupChat = await this.groupChatRepo
+          .createQueryBuilder('group_chat')
+          .select('group_chat.id')
+          .leftJoin('group_chat.members', 'user')
+          .where('group_chat.type = :type', { type: EGroupChatType.DOU })
+          .addGroupBy('group_chat.id')
+          .having(`array_agg(user.id) @> :userIds::uuid[]`, {
+            userIds: memberIds,
+          })
+          .getOne();
+
+        await this.cacheService.set(cacheKey, groupChat);
+      }
 
       if (!groupChat) {
         const members = await this.userService.findMany({
@@ -148,16 +155,24 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
           };
         }
       } else {
-        const foundGroupChat = await this.findOneWithSettings({
-          id: groupChat.id,
-        });
+        const cacheKey = `GroupChat_${JSON.stringify(groupChat.id)}`;
+        let foundGroupChat = await this.cacheService.get(cacheKey);
 
-        if (foundGroupChat.members.some((x) => !x.isActive)) {
-          throw {
-            message:
-              'Không thể nhắn tin với tài khoản đã bị xóa hoặc không tồn tại.',
-          };
+        if (!foundGroupChat) {
+          foundGroupChat = await this.findOneWithSettings({
+            id: groupChat.id,
+          });
+
+          if (foundGroupChat.members.some((x) => !x.isActive)) {
+            throw {
+              message:
+                'Không thể nhắn tin với tài khoản đã bị xóa hoặc không tồn tại.',
+            };
+          }
+
+          await this.cacheService.set(cacheKey, foundGroupChat);
         }
+
         return foundGroupChat;
       }
     } catch (e: any) {

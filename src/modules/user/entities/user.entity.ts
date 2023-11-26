@@ -20,6 +20,7 @@ import { GroupChatSetting } from '../../group-chat/entities/group-chat-setting.e
 import { GroupChat } from '../../group-chat/entities/group-chat.entity';
 import { Friendship } from '../../friend/entities/friendship.entity';
 import { FriendRequest } from '../../friend/entities/friend-request.entity';
+import { AllChatMessage } from '../../chat-message/entities/all-chat-message.entity';
 
 @Entity()
 export class User extends BaseEntity {
@@ -54,10 +55,6 @@ export class User extends BaseEntity {
   @JoinColumn()
   profile: Profile;
 
-  @OneToMany(() => ChatMessage, (chatMessage) => chatMessage.sender)
-  @JoinTable()
-  chatMessages: ChatMessage[];
-
   @OneToMany(() => UploadFile, (uploadFiles) => uploadFiles.owner)
   uploadFiles: UploadFile[];
 
@@ -84,6 +81,20 @@ export class User extends BaseEntity {
   @OneToMany(() => GroupChat, (ownGroup) => ownGroup.owner)
   ownGroups: GroupChat[];
 
+  @OneToMany(
+    () => FriendRequest,
+    (requestFromUsers) => requestFromUsers.fromUser,
+  )
+  requestFromUsers: FriendRequest[];
+
+  @OneToMany(() => FriendRequest, (requestToUsers) => requestToUsers.toUser)
+  requestToUsers: FriendRequest[];
+
+  // Chat message
+  @OneToMany(() => ChatMessage, (chatMessage) => chatMessage.sender)
+  @JoinTable()
+  chatMessages: ChatMessage[];
+
   @OneToMany(() => ChatMessage, (deletedMessages) => deletedMessages.deletedBy)
   deletedMessages: ChatMessage[];
 
@@ -96,12 +107,32 @@ export class User extends BaseEntity {
   @OneToMany(() => ChatMessage, (nameCardMessages) => nameCardMessages.nameCard)
   nameCardMessages: ChatMessage[];
 
-  @OneToMany(
-    () => FriendRequest,
-    (requestFromUsers) => requestFromUsers.fromUser,
-  )
-  requestFromUsers: FriendRequest[];
+  // All chat message
+  @OneToMany(() => AllChatMessage, (allChatMessages) => allChatMessages.sender)
+  @JoinTable()
+  allChatMessages: AllChatMessage[];
 
-  @OneToMany(() => FriendRequest, (requestToUsers) => requestToUsers.toUser)
-  requestToUsers: FriendRequest[];
+  @OneToMany(
+    () => AllChatMessage,
+    (allDeletedMessages) => allDeletedMessages.deletedBy,
+  )
+  allDeletedMessages: AllChatMessage[];
+
+  @OneToMany(
+    () => AllChatMessage,
+    (allUnsentMessages) => allUnsentMessages.unsentBy,
+  )
+  allUnsentMessages: AllChatMessage[];
+
+  @OneToMany(
+    () => AllChatMessage,
+    (allPinnedMessages) => allPinnedMessages.pinnedBy,
+  )
+  allPinnedMessages: AllChatMessage[];
+
+  @OneToMany(
+    () => AllChatMessage,
+    (allNameCardMessages) => allNameCardMessages.nameCard,
+  )
+  allNameCardMessages: AllChatMessage[];
 }

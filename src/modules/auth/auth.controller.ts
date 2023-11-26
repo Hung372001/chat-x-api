@@ -9,6 +9,7 @@ import { PermissionGuard } from '../permission/permissison.guard';
 import { JwtAccessTokenGuard } from './guards/jwt-access-token.guard';
 import { Roles } from '../../decorators/roles.decorator';
 import { ERole } from '../../common/enums/role.enum';
+import { ApiKeyGuard } from './api-key.guard';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -26,6 +27,12 @@ export class AuthController {
   @Post('sign-up')
   signUp(@Body() dto: SignUpDto) {
     return this.authService.signUp(dto);
+  }
+
+  @Post('sign-up')
+  @UseGuards(ApiKeyGuard)
+  clearCache() {
+    return this.authService.clearCache();
   }
 
   @ApiBearerAuth()

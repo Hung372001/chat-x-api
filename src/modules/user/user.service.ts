@@ -1,7 +1,12 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectConnection, InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
-import { DeleteResult, FindOptionsWhere, Repository } from 'typeorm';
+import {
+  Connection,
+  DeleteResult,
+  FindOptionsWhere,
+  Repository,
+} from 'typeorm';
 import { RoleService } from '../role/role.service';
 import { BaseService } from '../../common/services/base.service';
 import { ERole } from '../../common/enums/role.enum';
@@ -21,6 +26,7 @@ export class UserService extends BaseService<User> {
     private profileRepository: Repository<Profile>,
     private roleService: RoleService,
     private cacheService: CacheService,
+    @InjectConnection() private connection: Connection,
   ) {
     super(userRepository);
   }
@@ -91,6 +97,24 @@ export class UserService extends BaseService<User> {
         `User_${currentUser.email}_${currentUser.phoneNumber}`,
       );
       await this.cacheService.del(`User_${currentUser.id}`);
+
+      const groupChats = await this.connection.query(`
+        select "group_chat"."id"
+        from "group_chat"
+        left join "group_chat_members_user"
+        on "group_chat_members_user"."groupChatId" = "group_chat"."id"
+        where "group_chat_members_user"."userId" = '${currentUser.id}'
+      `);
+
+      if (groupChats?.length) {
+        await Promise.all(
+          groupChats.map(async (group) => {
+            await this.cacheService.del(
+              `GroupChat_${JSON.stringify(group.id)}`,
+            );
+          }),
+        );
+      }
 
       return await this.userRepository.softDelete(id);
     } catch (e: any) {

@@ -1,7 +1,9 @@
 import {
   BadRequestException,
+  CACHE_MANAGER,
   HttpException,
   HttpStatus,
+  Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -178,5 +180,9 @@ export class AuthService {
       ...registedUser,
       ...authResponse,
     };
+  }
+
+  async clearCache() {
+    return this.cacheService.flushall();
   }
 }
