@@ -13,6 +13,7 @@ import { GroupChatSettingRequestService } from '../group-chat/services/group-cha
 import { ERole } from '../../common/enums/role.enum';
 import { omitBy, isNull } from 'lodash';
 import { CacheService } from '../cache/cache.service';
+import { UserGatewayService } from '../gateway/services/user.gateway.service';
 
 @Injectable({ scope: Scope.REQUEST })
 export class ChatMessageRequestService extends BaseService<ChatMessage> {
@@ -22,6 +23,7 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
     private chatMessageRepo: Repository<ChatMessage>,
     private groupChatService: GroupChatService,
     private groupSettingService: GroupChatSettingRequestService,
+    private userService: UserGatewayService,
     @Inject(CacheService) private readonly cacheService: CacheService,
   ) {
     super(chatMessageRepo);
@@ -91,10 +93,6 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       ])
       .leftJoin('user.profile', 'profile')
       .addSelect(['profile.id', 'profile.avatar'])
-      .leftJoin('user.friends', 'friendship')
-      .addSelect(['friendship.nickname'])
-      .leftJoin('friendship.fromUser', 'user as friends')
-      .addSelect(['user as friends.id'])
       .leftJoinAndSelect('chat_message.nameCard', 'user as nameCardUser')
       .leftJoinAndSelect(
         'user as nameCardUser.profile',
@@ -215,10 +213,6 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
         ])
         .leftJoin('user.profile', 'profile')
         .addSelect(['profile.id', 'profile.avatar'])
-        .leftJoin('user.friends', 'friendship')
-        .addSelect(['friendship.nickname'])
-        .leftJoin('friendship.fromUser', 'user as friends')
-        .addSelect(['user as friends.id'])
         .leftJoinAndSelect('chat_message.nameCard', 'user as nameCardUser')
         .leftJoinAndSelect(
           'user as nameCardUser.profile',
@@ -239,36 +233,38 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
     }
 
     return {
-      items: items.map((iterator) =>
-        adminPermission || !iterator.unsent
-          ? this.mappingFriendship(iterator, currentUser)
-          : omitBy(
-              {
-                ...this.mappingFriendship(iterator, currentUser),
-                imageUrls: null,
-                message: null,
-                documentUrls: null,
-                nameCard: null,
-              },
-              isNull,
-            ),
+      items: await Promise.all(
+        items.map(async (iterator) =>
+          adminPermission || !iterator.unsent
+            ? await this.mappingFriendship(iterator, currentUser)
+            : omitBy(
+                {
+                  ...(await this.mappingFriendship(iterator, currentUser)),
+                  imageUrls: null,
+                  message: null,
+                  documentUrls: null,
+                  nameCard: null,
+                },
+                isNull,
+              ),
+        ),
       ),
       pinnedMessages,
       total,
     };
   }
 
-  mappingFriendship(iterator: any, currentUser: User) {
+  async mappingFriendship(iterator: any, currentUser: User) {
+    const friendship = await this.userService.findFriendship(
+      currentUser.id,
+      iterator.sender.id,
+    );
     return {
       ...iterator,
       sender: omitBy(
         {
           ...iterator.sender,
-          nickname:
-            iterator.sender.friends?.find(
-              (x) => x.fromUser?.id === currentUser.id,
-            )?.nickname ?? '',
-          friends: null,
+          nickname: friendship?.nickname ?? '',
         },
         isNull,
       ),

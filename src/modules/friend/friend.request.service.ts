@@ -5,8 +5,8 @@ import {
   Injectable,
   Scope,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { InjectConnection, InjectRepository } from '@nestjs/typeorm';
+import { Connection, In, Repository } from 'typeorm';
 import { AddFriendsDto } from './dto/add-friends.dto';
 import { Request } from 'express';
 import { differenceBy, intersectionBy } from 'lodash';
@@ -31,6 +31,7 @@ export class FriendRequestService {
     private friendshipRepository: Repository<Friendship>,
     @Inject(AppGateway) private readonly gateway: AppGateway,
     @Inject(CacheService) private cacheService: CacheService,
+    @InjectConnection() private readonly connection: Connection,
   ) {}
 
   async findOneWithFriends() {
@@ -83,6 +84,24 @@ export class FriendRequestService {
         });
 
         await this.cacheService.del(`Friendship_${currentUser.id}_${friendId}`);
+
+        const groupChats = await this.connection.query(`
+        select "group_chat"."id"
+        from "group_chat"
+        left join "group_chat_members_user"
+        on "group_chat_members_user"."groupChatId" = "group_chat"."id"
+        where "group_chat_members_user"."userId" = '${currentUser.id}'
+      `);
+
+        if (groupChats?.length) {
+          await Promise.all(
+            groupChats.map(async (group) => {
+              await this.cacheService.del(
+                `PinnedMessage_${JSON.stringify(group.id)}`,
+              );
+            }),
+          );
+        }
       }
 
       return friendship;
