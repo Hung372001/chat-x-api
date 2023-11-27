@@ -24,7 +24,7 @@ import { TelegramLoggerService } from '../modules/logger/telegram.logger-service
         synchronize: true,
         logging: true,
         logger: new DBLogger(telegramLogger),
-        maxQueryExecutionTime: 5000,
+        maxQueryExecutionTime: 2000,
         keepConnectionAlive: true,
         autoLoadEntities: true,
       }),

@@ -155,6 +155,14 @@ export class AppGateway
     }
   }
 
+  @SubscribeMessage('allConnection')
+  async allConnection(
+    @MessageBody() userId: string,
+    @ConnectedSocket() client: AuthSocket,
+  ) {
+    client.emit('allConnection', this.socketSessions.getSession().size);
+  }
+
   @SubscribeMessage('isOnline')
   async checkOnlineStatus(
     @MessageBody() userId: string,

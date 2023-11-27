@@ -14,6 +14,7 @@ import { EGroupChatType } from '../../group-chat/dto/group-chat.enum';
 import { UserGatewayService } from './user.gateway.service';
 import { ClientProxy } from '@nestjs/microservices';
 import { CacheService } from '../../cache/cache.service';
+import { TelegramLoggerService } from '../../logger/telegram.logger-service';
 
 @Injectable()
 export class ChatMessageGatewayService {
@@ -30,10 +31,14 @@ export class ChatMessageGatewayService {
     private readonly insideGroupSessions: GatewaySessionManager<string>,
     @Inject('CHAT-MESSAGE_SERVICE') private rmqClient: ClientProxy,
     @Inject(CacheService) private cacheService: CacheService,
+    @Inject(TelegramLoggerService)
+    private telegramLogger: TelegramLoggerService,
   ) {}
 
   async sendMessage(dto: SendMessageDto, sender: User, groupChat?: GroupChat) {
     try {
+      const id = moment.utc().toISOString();
+      this.telegramLogger.log(`${id} - Begin get group chat`);
       if (!groupChat) {
         groupChat = await this.groupChatService.findOneWithMemberIds(
           dto.groupId,
@@ -95,6 +100,7 @@ export class ChatMessageGatewayService {
         );
       }
 
+      this.telegramLogger.log(`${id} - Begin save chat message`);
       const newMessage = await this.chatMessageRepo.create({
         message: dto.message,
         imageUrls: dto.imageUrls,
@@ -106,12 +112,14 @@ export class ChatMessageGatewayService {
       } as ChatMessage);
       await this.chatMessageRepo.save(newMessage);
 
+      this.telegramLogger.log('Begin update group');
       // Save latest message for group
       groupChat.latestMessage = newMessage;
       await this.groupChatService.update(groupChat.id, {
         latestMessage: groupChat.latestMessage,
       });
 
+      this.telegramLogger.log(`${id} - Begin send queue`);
       // Publish queue message
       this.rmqClient.emit('saveMsgAndSendNoti', {
         newMessage,
@@ -120,6 +128,7 @@ export class ChatMessageGatewayService {
         groupChat,
       });
 
+      this.telegramLogger.log(`${id} - Return`);
       return { ...newMessage, isNewMember };
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
