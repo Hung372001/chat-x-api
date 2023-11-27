@@ -5,7 +5,6 @@ import { UpdateProfileDto } from './dto/update.dto';
 import { PermissionGuard } from '../permission/permissison.guard';
 import { JwtAccessTokenGuard } from '../auth/guards/jwt-access-token.guard';
 import { UpdateAvatarDto } from './dto/update-avatar.dto';
-import { UpdateNicknameDto } from '../friend/dto/update-nickname.dto';
 
 @ApiTags('profile')
 @Controller('profile')

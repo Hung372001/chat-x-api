@@ -14,7 +14,6 @@ import { BaseService } from '../../common/services/base.service';
 import { UpdateProfileDto } from './dto/update.dto';
 import { User } from '../user/entities/user.entity';
 import { UpdateAvatarDto } from './dto/update-avatar.dto';
-import { UpdateNicknameDto } from '../friend/dto/update-nickname.dto';
 import { CacheService } from '../cache/cache.service';
 
 @Injectable({ scope: Scope.REQUEST })

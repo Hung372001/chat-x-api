@@ -17,6 +17,7 @@ import { AppGateway } from '../gateway/app.gateway';
 import { User } from '../user/entities/user.entity';
 import { UpdateNicknameDto } from './dto/update-nickname.dto';
 import { Friendship } from './entities/friendship.entity';
+import { CacheService } from '../cache/cache.service';
 
 @Injectable({ scope: Scope.REQUEST })
 export class FriendRequestService {
@@ -29,6 +30,7 @@ export class FriendRequestService {
     @InjectRepository(Friendship)
     private friendshipRepository: Repository<Friendship>,
     @Inject(AppGateway) private readonly gateway: AppGateway,
+    @Inject(CacheService) private cacheService: CacheService,
   ) {}
 
   async findOneWithFriends() {
@@ -45,11 +47,20 @@ export class FriendRequestService {
   }
 
   async findFriendship(fromUserId: string, toUserId: string) {
-    return this.friendshipRepository
-      .createQueryBuilder('friendship')
-      .where('friendship.fromUserId = :fromUserId', { fromUserId })
-      .andWhere('friendship.toUserId = :toUserId', { toUserId })
-      .getOne();
+    const cacheKey = `Friendship_${fromUserId}_${toUserId}`;
+    let cacheData = await this.cacheService.get(cacheKey);
+
+    if (!cacheData) {
+      cacheData = await this.friendshipRepository
+        .createQueryBuilder('friendship')
+        .where('friendship.fromUserId = :fromUserId', { fromUserId })
+        .andWhere('friendship.toUserId = :toUserId', { toUserId })
+        .getOne();
+
+      await this.cacheService.set(cacheKey, cacheData);
+    }
+
+    return cacheData;
   }
 
   async updateFriendNickname(friendId: string, dto: UpdateNicknameDto) {
@@ -69,6 +80,8 @@ export class FriendRequestService {
       await this.friendshipRepository.update(friendship.id, {
         nickname: friendship.nickname,
       });
+
+      await this.cacheService.del(`Friendship_${currentUser.id}_${friendId}`);
 
       return friendship;
     } catch (e: any) {

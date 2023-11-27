@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { BaseService } from '../../../common/services/base.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, Repository } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { Friendship } from '../../friend/entities/friendship.entity';
+import { CacheService } from '../../cache/cache.service';
 
 @Injectable()
 export class UserGatewayService extends BaseService<User> {
@@ -12,6 +13,7 @@ export class UserGatewayService extends BaseService<User> {
     private userRepository: Repository<User>,
     @InjectRepository(Friendship)
     private friendshipRepository: Repository<Friendship>,
+    @Inject(CacheService) private cacheService: CacheService,
   ) {
     super(userRepository);
   }
@@ -26,10 +28,19 @@ export class UserGatewayService extends BaseService<User> {
   }
 
   async findFriendship(fromUserId: string, toUserId: string) {
-    return this.friendshipRepository
-      .createQueryBuilder('friendship')
-      .where('friendship.fromUserId = :fromUserId', { fromUserId })
-      .andWhere('friendship.toUserId = :toUserId', { toUserId })
-      .getOne();
+    const cacheKey = `Friendship_${fromUserId}_${toUserId}`;
+    let cacheData = await this.cacheService.get(cacheKey);
+
+    if (!cacheData) {
+      cacheData = await this.friendshipRepository
+        .createQueryBuilder('friendship')
+        .where('friendship.fromUserId = :fromUserId', { fromUserId })
+        .andWhere('friendship.toUserId = :toUserId', { toUserId })
+        .getOne();
+
+      await this.cacheService.set(cacheKey, cacheData);
+    }
+
+    return cacheData;
   }
 }
