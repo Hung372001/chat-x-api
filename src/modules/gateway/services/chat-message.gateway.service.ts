@@ -37,11 +37,19 @@ export class ChatMessageGatewayService {
 
   async sendMessage(dto: SendMessageDto, sender: User, groupChat?: GroupChat) {
     try {
+      const beginTime = moment.utc();
+      const id = `${dto.groupId} - ${dto.tmpId} - ${dto.message?.slice(0, 10)}`;
+      const logs = [
+        `${moment.utc().toISOString()} - ${id} - Begin get group chat`,
+      ];
+
       if (!groupChat) {
         groupChat = await this.groupChatService.findOneWithMemberIds(
           dto.groupId,
         );
       }
+
+      logs.push(`${moment.utc().toISOString()} - ${id} - End get group chat`);
 
       if (
         groupChat.type === EGroupChatType.DOU &&
@@ -85,6 +93,9 @@ export class ChatMessageGatewayService {
         isNewMember = true;
       }
 
+      logs.push(
+        `${moment.utc().toISOString()} - ${id} - Begin get member inside group`,
+      );
       const groupSession = this.insideGroupSessions.getUserSession(
         groupChat.id,
       );
@@ -98,6 +109,9 @@ export class ChatMessageGatewayService {
         );
       }
 
+      logs.push(
+        `${moment.utc().toISOString()} - ${id} - Begin save chat message`,
+      );
       const newMessage = await this.chatMessageRepo.create({
         message: dto.message,
         imageUrls: dto.imageUrls,
@@ -109,12 +123,14 @@ export class ChatMessageGatewayService {
       } as ChatMessage);
       await this.chatMessageRepo.save(newMessage);
 
+      logs.push(`${moment.utc().toISOString()} - ${id} - Begin update group`);
       // Save latest message for group
       groupChat.latestMessage = newMessage;
       await this.groupChatService.update(groupChat.id, {
         latestMessage: groupChat.latestMessage,
       });
 
+      logs.push(`${moment.utc().toISOString()} - ${id} - Begin send queue`);
       // Publish queue message
       this.rmqClient.emit('saveMsgAndSendNoti', {
         newMessage,
@@ -123,6 +139,11 @@ export class ChatMessageGatewayService {
         groupChat,
       });
 
+      logs.push(`${moment.utc().toISOString()} - ${id} - Return`);
+
+      if (moment.utc().add(2, 's').isAfter(beginTime)) {
+        await this.telegramLogger.error(logs);
+      }
       return { ...newMessage, isNewMember };
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
