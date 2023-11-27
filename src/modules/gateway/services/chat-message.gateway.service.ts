@@ -37,20 +37,11 @@ export class ChatMessageGatewayService {
 
   async sendMessage(dto: SendMessageDto, sender: User, groupChat?: GroupChat) {
     try {
-      const id =
-        moment.utc().toISOString() +
-        '-' +
-        dto.tmpId +
-        '-' +
-        dto.message?.slice(0, 10);
-      this.telegramLogger.log(`${id} - Begin get group chat`);
       if (!groupChat) {
         groupChat = await this.groupChatService.findOneWithMemberIds(
           dto.groupId,
         );
       }
-
-      this.telegramLogger.log(`${id} - End get group chat`);
 
       if (
         groupChat.type === EGroupChatType.DOU &&
@@ -94,7 +85,6 @@ export class ChatMessageGatewayService {
         isNewMember = true;
       }
 
-      this.telegramLogger.log(`${id} - Begin get member inside group`);
       const groupSession = this.insideGroupSessions.getUserSession(
         groupChat.id,
       );
@@ -108,7 +98,6 @@ export class ChatMessageGatewayService {
         );
       }
 
-      this.telegramLogger.log(`${id} - Begin save chat message`);
       const newMessage = await this.chatMessageRepo.create({
         message: dto.message,
         imageUrls: dto.imageUrls,
@@ -120,14 +109,12 @@ export class ChatMessageGatewayService {
       } as ChatMessage);
       await this.chatMessageRepo.save(newMessage);
 
-      this.telegramLogger.log(`${id} - Begin update group`);
       // Save latest message for group
       groupChat.latestMessage = newMessage;
       await this.groupChatService.update(groupChat.id, {
         latestMessage: groupChat.latestMessage,
       });
 
-      this.telegramLogger.log(`${id} - Begin send queue`);
       // Publish queue message
       this.rmqClient.emit('saveMsgAndSendNoti', {
         newMessage,
@@ -136,7 +123,6 @@ export class ChatMessageGatewayService {
         groupChat,
       });
 
-      this.telegramLogger.log(`${id} - Return`);
       return { ...newMessage, isNewMember };
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);

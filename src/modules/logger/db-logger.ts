@@ -9,25 +9,25 @@ export class DBLogger implements Logger {
     this._telegramLogger = telegramLogger;
   }
 
-  logQueryError(
+  async logQueryError(
     error: string,
     query: string,
     parameters?: any[],
     queryRunner?: QueryRunner,
   ) {
-    this._telegramLogger.error({
+    await this._telegramLogger.error({
       message: `${query} - ${JSON.stringify(parameters)}`,
       error: JSON.stringify(error),
     });
   }
 
-  logQuerySlow(
+  async logQuerySlow(
     time: number,
     query: string,
     parameters?: any[],
     queryRunner?: QueryRunner,
   ) {
-    this._telegramLogger.error({
+    await this._telegramLogger.error({
       time,
       message: `${query} - ${JSON.stringify(parameters)}`,
     });
