@@ -37,13 +37,20 @@ export class ChatMessageGatewayService {
 
   async sendMessage(dto: SendMessageDto, sender: User, groupChat?: GroupChat) {
     try {
-      const id = moment.utc().toISOString();
+      const id =
+        moment.utc().toISOString() +
+        '-' +
+        dto.tmpId +
+        '-' +
+        dto.message?.slice(0, 10);
       this.telegramLogger.log(`${id} - Begin get group chat`);
       if (!groupChat) {
         groupChat = await this.groupChatService.findOneWithMemberIds(
           dto.groupId,
         );
       }
+
+      this.telegramLogger.log(`${id} - End get group chat`);
 
       if (
         groupChat.type === EGroupChatType.DOU &&
@@ -87,6 +94,7 @@ export class ChatMessageGatewayService {
         isNewMember = true;
       }
 
+      this.telegramLogger.log(`${id} - Begin get member inside group`);
       const groupSession = this.insideGroupSessions.getUserSession(
         groupChat.id,
       );
@@ -112,7 +120,7 @@ export class ChatMessageGatewayService {
       } as ChatMessage);
       await this.chatMessageRepo.save(newMessage);
 
-      this.telegramLogger.log('Begin update group');
+      this.telegramLogger.log(`${id} - Begin update group`);
       // Save latest message for group
       groupChat.latestMessage = newMessage;
       await this.groupChatService.update(groupChat.id, {
