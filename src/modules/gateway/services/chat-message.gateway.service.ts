@@ -112,7 +112,8 @@ export class ChatMessageGatewayService {
       logs.push(
         `${moment.utc().toISOString()} - ${id} - Begin save chat message`,
       );
-      const newMessage = await this.chatMessageRepo.create({
+
+      const newMessage = {
         message: dto.message,
         imageUrls: dto.imageUrls,
         documentUrls: dto.documentUrls,
@@ -120,13 +121,20 @@ export class ChatMessageGatewayService {
           id: sender.id,
         },
         group: { id: groupChat.id },
-        nameCard,
+        nameCard: nameCard ? { id: nameCard.id } : null,
         isFriendRequest: dto.isFriendRequest,
-      } as ChatMessage);
-      await this.chatMessageRepo.save(newMessage);
+      } as ChatMessage;
+
+      await this.chatMessageRepo
+        .createQueryBuilder()
+        .insert()
+        .into(ChatMessage)
+        .values(newMessage)
+        .execute();
 
       newMessage.sender = sender;
       newMessage.group = groupChat;
+      newMessage.nameCard = nameCard;
 
       logs.push(`${moment.utc().toISOString()} - ${id} - Begin send queue`);
       // Publish queue message
