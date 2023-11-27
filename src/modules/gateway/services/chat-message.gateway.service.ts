@@ -90,7 +90,7 @@ export class ChatMessageGatewayService {
 
       let insideGroupMembers = [sender];
       if (groupSession?.length) {
-        insideGroupMembers = intersectionBy(
+        insideGroupMembers = await intersectionBy(
           groupChat.members,
           groupSession.map((x) => ({ id: x })),
           'id',

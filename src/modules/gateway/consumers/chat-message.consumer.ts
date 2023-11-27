@@ -123,38 +123,40 @@ export class ChatMessageConsumer {
 
         await Promise.all(
           data.groupChat.members.map(async (member) => {
-            const setting = await this.groupChatService.findSetting(
-              member.id,
-              data.groupChat.id,
-            );
+            if (member.id !== data.newMessage.sender.id) {
+              const setting = await this.groupChatService.findSetting(
+                member.id,
+                data.groupChat.id,
+              );
 
-            if (setting) {
-              if (
-                !data.insideGroupMembers.some((x) => x.id === setting.user.id)
-              ) {
+              if (setting) {
                 if (
-                  !this.onlineSessions.getUserSession(setting.user.id) &&
-                  !setting.muteNotification
+                  !data.insideGroupMembers.some((x) => x.id === setting.user.id)
                 ) {
-                  // get friendship
-                  const friendship = await this.userService.findFriendship(
-                    setting.user.id,
-                    data.sender.id,
-                  );
+                  if (
+                    !this.onlineSessions.getUserSession(setting.user.id) &&
+                    !setting.muteNotification
+                  ) {
+                    // get friendship
+                    const friendship = await this.userService.findFriendship(
+                      setting.user.id,
+                      data.sender.id,
+                    );
 
-                  // send notification
-                  this.sendMessageNotification(
-                    data.groupChat,
-                    data.sender,
-                    setting.user,
-                    friendship,
-                    data.newMessage,
-                  );
+                    // send notification
+                    this.sendMessageNotification(
+                      data.groupChat,
+                      data.sender,
+                      setting.user,
+                      friendship,
+                      data.newMessage,
+                    );
+                  }
+
+                  await this.groupSettingRepo.update(setting.id, {
+                    unReadMessages: setting.unReadMessages + 1,
+                  });
                 }
-
-                await this.groupSettingRepo.update(setting.id, {
-                  unReadMessages: setting.unReadMessages + 1,
-                });
               }
             }
           }),
