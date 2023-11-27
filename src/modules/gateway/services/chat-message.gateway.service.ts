@@ -116,8 +116,10 @@ export class ChatMessageGatewayService {
         message: dto.message,
         imageUrls: dto.imageUrls,
         documentUrls: dto.documentUrls,
-        sender,
-        group: groupChat,
+        sender: {
+          id: sender.id,
+        },
+        group: { id: groupChat.id },
         nameCard,
         isFriendRequest: dto.isFriendRequest,
       } as ChatMessage);
