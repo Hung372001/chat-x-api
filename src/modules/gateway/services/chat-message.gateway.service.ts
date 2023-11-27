@@ -15,6 +15,7 @@ import { UserGatewayService } from './user.gateway.service';
 import { ClientProxy } from '@nestjs/microservices';
 import { CacheService } from '../../cache/cache.service';
 import { TelegramLoggerService } from '../../logger/telegram.logger-service';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class ChatMessageGatewayService {
@@ -114,6 +115,7 @@ export class ChatMessageGatewayService {
       );
 
       const newMessage = {
+        id: uuidv4(),
         message: dto.message,
         imageUrls: dto.imageUrls,
         documentUrls: dto.documentUrls,
@@ -125,25 +127,19 @@ export class ChatMessageGatewayService {
         isFriendRequest: dto.isFriendRequest,
       } as ChatMessage;
 
-      await this.chatMessageRepo
-        .createQueryBuilder()
-        .insert()
-        .into(ChatMessage)
-        .values(newMessage)
-        .execute();
-
-      newMessage.sender = sender;
-      newMessage.group = groupChat;
-      newMessage.nameCard = nameCard;
-
       logs.push(`${moment.utc().toISOString()} - ${id} - Begin send queue`);
+
       // Publish queue message
-      this.rmqClient.emit('saveMsgAndSendNoti', {
+      await this.rmqClient.emit('saveMsgAndSendNoti', {
         newMessage,
         sender,
         insideGroupMembers,
         groupChat,
       });
+
+      newMessage.sender = sender;
+      newMessage.group = groupChat;
+      newMessage.nameCard = nameCard;
 
       logs.push(`${moment.utc().toISOString()} - ${id} - Return`);
 

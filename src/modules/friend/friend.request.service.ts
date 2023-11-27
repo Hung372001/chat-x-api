@@ -76,12 +76,14 @@ export class FriendRequestService {
         throw { message: 'Bạn chưa là bạn bè với người dùng này.' };
       }
 
-      friendship.nickname = dto.nickname;
-      await this.friendshipRepository.update(friendship.id, {
-        nickname: friendship.nickname,
-      });
+      if (friendship.nickname !== dto.nickname) {
+        friendship.nickname = dto.nickname;
+        await this.friendshipRepository.update(friendship.id, {
+          nickname: friendship.nickname,
+        });
 
-      await this.cacheService.del(`Friendship_${currentUser.id}_${friendId}`);
+        await this.cacheService.del(`Friendship_${currentUser.id}_${friendId}`);
+      }
 
       return friendship;
     } catch (e: any) {

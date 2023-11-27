@@ -79,6 +79,16 @@ export class ChatMessageConsumer {
   async saveMsgAndSendNoti(@Payload() data: any, @Ctx() context: RmqContext) {
     try {
       if (data) {
+        await this.chatMessageRepo
+          .createQueryBuilder()
+          .insert()
+          .into(ChatMessage)
+          .values(data.newMessage)
+          .execute();
+
+        data.newMessage.sender = data.sender;
+        data.newMessage.group = data.groupChat;
+
         // Save latest message for group
         await this.connection.query(`
           update "group_chat"
