@@ -26,7 +26,7 @@ export class TelegramLoggerService {
             .format(
               'YYYY-MM-DD HH:mm:ss',
             )} ---------------------------------------
-          ${JSON.stringify(message)}`,
+          ${JSON.stringify(message, null, '\t')}`,
         );
       }
     } catch (e) {
@@ -44,7 +44,7 @@ export class TelegramLoggerService {
             .format(
               'YYYY-MM-DD HH:mm:ss',
             )} ---------------------------------------
-          ${JSON.stringify(message)}`,
+          ${JSON.stringify(message, null, '\t')}`,
         );
       }
     } catch (e) {
