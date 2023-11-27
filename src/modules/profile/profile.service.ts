@@ -53,6 +53,8 @@ export class ProfileService extends BaseService<Profile> {
       await this.cacheService.del(
         `User_${currentUser.email}_${currentUser.phoneNumber}`,
       );
+      await this.cacheService.del(`User_${currentUser.email}_undefined`);
+      await this.cacheService.del(`User_undefined_${currentUser.phoneNumber}`);
       await this.cacheService.del(`User_${currentUser.id}`);
 
       if (currentUser.phoneNumber !== dto.phoneNumber) {
@@ -97,6 +99,8 @@ export class ProfileService extends BaseService<Profile> {
     await this.cacheService.del(
       `User_${currentUser.email}_${currentUser.phoneNumber}`,
     );
+    await this.cacheService.del(`User_${currentUser.email}_undefined`);
+    await this.cacheService.del(`User_undefined_${currentUser.phoneNumber}`);
     await this.cacheService.del(`User_${currentUser.id}`);
 
     return currentUser;
