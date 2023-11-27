@@ -14,6 +14,8 @@ import { GroupChatGatewayService } from '../services/group-chat.gateway.service'
 import { OnlinesSessionManager } from '../sessions/onlines.session';
 import { NotificationService } from '../../notification/notification.service';
 import { UserGatewayService } from '../services/user.gateway.service';
+import moment from 'moment';
+import { TelegramLoggerService } from '../../logger/telegram.logger-service';
 
 @Controller()
 export class ChatMessageConsumer {
@@ -34,6 +36,8 @@ export class ChatMessageConsumer {
     @Inject(UserGatewayService)
     private userService: UserGatewayService,
     @InjectConnection() private readonly connection: Connection,
+    @Inject(TelegramLoggerService)
+    private telegramLogger: TelegramLoggerService,
   ) {}
 
   @EventPattern('updateUnReadSettings')
@@ -79,6 +83,15 @@ export class ChatMessageConsumer {
   async saveMsgAndSendNoti(@Payload() data: any, @Ctx() context: RmqContext) {
     try {
       if (data) {
+        const beginTime = moment.utc();
+        const id = `${data.group.id} - ${data.newMessage.message?.slice(
+          0,
+          10,
+        )}`;
+        const logs = [
+          `${moment.utc().toISOString()} - ${id} - Begin save message`,
+        ];
+
         await this.chatMessageRepo
           .createQueryBuilder()
           .insert()
@@ -89,22 +102,23 @@ export class ChatMessageConsumer {
         data.newMessage.sender = data.sender;
         data.newMessage.group = data.groupChat;
 
+        logs.push(
+          `${moment.utc().toISOString()} - ${id} - Begin save group chat`,
+        );
+
         // Save latest message for group
         await this.connection.query(`
           update "group_chat"
-          set "latestMessageId" = '${data.newMessage.id}'
+          set "latestMessageId" = '${data.newMessage.id}', "updated_at" = '${
+          moment.utc().toISOString
+        }'
           where "id" = '${data.groupChat.id}'
         `);
 
-        // Change updated at
-        await this.groupChatService.updatedAt(data.groupChat.id);
+        logs.push(`${moment.utc().toISOString()} - ${id} - End send message`);
 
-        if (data.newMessage.group.latestMessage) {
-          delete data.newMessage.group.latestMessage;
-        }
-
-        if (data.newMessage.group.settings?.length) {
-          data.newMessage.group.settings.forEach((x) => delete x.groupChat);
+        if (moment.utc().add(-3, 's').isAfter(beginTime)) {
+          await this.telegramLogger.error(logs);
         }
 
         await Promise.all(
