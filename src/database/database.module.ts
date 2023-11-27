@@ -1,13 +1,19 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { DBLogger } from '../modules/logger/db-logger';
+import { LoggerModule } from '../modules/logger/logger.module';
+import { TelegramLoggerService } from '../modules/logger/telegram.logger-service';
 
 @Module({
   imports: [
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
+      imports: [ConfigModule, LoggerModule],
+      inject: [ConfigService, TelegramLoggerService],
+      useFactory: (
+        configService: ConfigService,
+        telegramLogger: TelegramLoggerService,
+      ) => ({
         type: 'postgres',
         host: configService.get('DB_HOST'),
         port: +configService.get('DB_PORT'),
@@ -17,8 +23,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
         entities: [__dirname + '/../**/*.entity.js'],
         synchronize: true,
         logging: true,
-        logger: 'file',
-        maxQueryExecutionTime: 1000,
+        logger: new DBLogger(telegramLogger),
+        maxQueryExecutionTime: 5000,
         keepConnectionAlive: true,
         autoLoadEntities: true,
       }),

@@ -26,6 +26,7 @@ import { SchedulerModule } from './modules/scheduler/scheduler.module';
 import { ProfileModule } from './modules/profile/profile.module';
 import { FriendModule } from './modules/friend/friend.module';
 import { SearchModule } from './modules/search/search.module';
+import { LoggerModule } from './modules/logger/logger.module';
 
 const apiV1Modules = [
   UserModule,
@@ -59,6 +60,7 @@ const apiV1Modules = [
       url: `${process.env.REDIS_URI}`,
       ttl: 0,
     }),
+    LoggerModule.forRoot(),
     ScheduleModule.forRoot(),
     SchedulerModule,
     DatabaseModule,

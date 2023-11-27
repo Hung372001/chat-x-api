@@ -1,4 +1,5 @@
 import { DataSource, DataSourceOptions } from 'typeorm';
+import { DBLogger } from '../modules/logger/db-logger';
 
 const dataSource = new DataSource({
   type: 'postgres',
@@ -17,9 +18,6 @@ const dataSource = new DataSource({
   cli: {
     migrationsDir: 'src/database/migrations',
   },
-  logging: true,
-  logger: 'file',
-  maxQueryExecutionTime: 1000,
 } as DataSourceOptions);
 
 export default dataSource;
