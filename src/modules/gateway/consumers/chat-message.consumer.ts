@@ -84,7 +84,7 @@ export class ChatMessageConsumer {
     try {
       if (data) {
         const beginTime = moment.utc();
-        const id = `${data.group.id} - ${data.newMessage.message?.slice(
+        const id = `${data.groupChat.id} - ${data.newMessage.message?.slice(
           0,
           10,
         )}`;
@@ -109,9 +109,9 @@ export class ChatMessageConsumer {
         // Save latest message for group
         await this.connection.query(`
           update "group_chat"
-          set "latestMessageId" = '${data.newMessage.id}', "updated_at" = '${
-          moment.utc().toISOString
-        }'
+          set "latestMessageId" = '${
+            data.newMessage.id
+          }', "updated_at" = '${moment.utc().toISOString()}'
           where "id" = '${data.groupChat.id}'
         `);
 

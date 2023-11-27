@@ -30,6 +30,8 @@ import { Friendship } from '../../friend/entities/friendship.entity';
 import { pick } from 'lodash';
 import { CacheService } from '../../cache/cache.service';
 import { GroupChatService } from './group-chat.service';
+import { SendMessageDto } from '../../chat-message/dto/send-message.dto';
+import { AuthSocket } from '../../gateway/interfaces/auth.interface';
 
 @Injectable({ scope: Scope.REQUEST })
 export class GroupChatRequestService extends BaseService<GroupChat> {
@@ -881,5 +883,12 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     const currentUser = this.request.user as User;
     await this.gateway.offline(currentUser);
     return true;
+  }
+
+  async sendMessage(createMessageDto: SendMessageDto) {
+    const currentUser = this.request.user as User;
+    this.gateway.onSendMessage(createMessageDto, {
+      user: currentUser,
+    } as AuthSocket);
   }
 }

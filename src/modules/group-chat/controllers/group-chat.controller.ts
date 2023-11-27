@@ -19,6 +19,7 @@ import { PermissionGuard } from '../../permission/permissison.guard';
 import { GroupChatRequestService } from '../services/group-chat.request.service';
 import { AddAdminDto } from '../dto/add-admin.dto';
 import { RemoveAdminDto } from '../dto/remove-admin.dto';
+import { SendMessageDto } from '../../chat-message/dto/send-message.dto';
 
 @Controller('group-chat')
 @ApiTags('group-chat')
@@ -81,5 +82,10 @@ export class GroupChatController {
   @Patch('offline')
   offline() {
     return this.requestService.offline();
+  }
+
+  @Post('send-message')
+  sendMessage(@Body() createMessageDto: SendMessageDto) {
+    return this.requestService.sendMessage(createMessageDto);
   }
 }
