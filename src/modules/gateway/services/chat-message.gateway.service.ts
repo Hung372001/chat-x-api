@@ -123,13 +123,6 @@ export class ChatMessageGatewayService {
       } as ChatMessage);
       await this.chatMessageRepo.save(newMessage);
 
-      logs.push(`${moment.utc().toISOString()} - ${id} - Begin update group`);
-      // Save latest message for group
-      groupChat.latestMessage = newMessage;
-      await this.groupChatService.update(groupChat.id, {
-        latestMessage: groupChat.latestMessage,
-      });
-
       logs.push(`${moment.utc().toISOString()} - ${id} - Begin send queue`);
       // Publish queue message
       this.rmqClient.emit('saveMsgAndSendNoti', {

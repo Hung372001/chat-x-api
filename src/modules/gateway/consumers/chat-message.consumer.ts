@@ -1,9 +1,9 @@
 import { Controller, Inject, Logger } from '@nestjs/common';
 import { Ctx, EventPattern, Payload, RmqContext } from '@nestjs/microservices';
 import { RmqService } from '../../rmq/rmq.service';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectConnection, InjectRepository } from '@nestjs/typeorm';
 import { ChatMessage } from '../../chat-message/entities/chat-message.entity';
-import { Repository } from 'typeorm';
+import { Connection, Repository } from 'typeorm';
 import { GroupChatSetting } from '../../group-chat/entities/group-chat-setting.entity';
 import { Friendship } from '../../friend/entities/friendship.entity';
 import { EGroupChatType } from '../../group-chat/dto/group-chat.enum';
@@ -33,6 +33,7 @@ export class ChatMessageConsumer {
     private rmqService: RmqService,
     @Inject(UserGatewayService)
     private userService: UserGatewayService,
+    @InjectConnection() private readonly connection: Connection,
   ) {}
 
   @EventPattern('updateUnReadSettings')
@@ -78,6 +79,13 @@ export class ChatMessageConsumer {
   async saveMsgAndSendNoti(@Payload() data: any, @Ctx() context: RmqContext) {
     try {
       if (data) {
+        // Save latest message for group
+        await this.connection.query(`
+          update "group_chat"
+          set "latestMessageId" = '${data.newMessage.id}'
+          where "id" = '${data.groupChat.id}'
+        `);
+
         // Change updated at
         await this.groupChatService.updatedAt(data.groupChat.id);
 
