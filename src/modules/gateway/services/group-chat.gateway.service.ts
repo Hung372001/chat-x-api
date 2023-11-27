@@ -97,6 +97,14 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
       .getOne();
   }
 
+  async updateUnReadMessages(groupId: string, userId: string) {
+    await this.connection.query(`
+      update "group_chat_setting"
+      set "unReadMessages" = 0
+      where "groupChatId" = '${groupId}' and "userId" = '${userId}'
+    `);
+  }
+
   async getGroupChatDou(memberIds: string[], gateway: AppGateway) {
     try {
       const cacheKey = `GroupDou_${JSON.stringify(memberIds)}`;
@@ -266,47 +274,20 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
 
   async readMessages(groupId: string, user: User) {
     try {
-      const groupChat = await this.groupChatRepo
-        .createQueryBuilder('group_chat')
-        .leftJoin('group_chat.members', 'user as members')
-        .leftJoinAndSelect('group_chat.settings', 'group_chat_setting')
-        .where('group_chat.id = :groupId', { groupId })
-        .andWhere('user as members.id = :userId', { userId: user.id })
-        .andWhere('group_chat_setting.userId = :settingUserId', {
-          settingUserId: user.id,
-        })
-        .getOne();
+      await this.connection.query(`
+        update "chat_message"
+        set "isRead" = true
+        where "groupId" = '${groupId}' and "isRead" = false
+      `);
 
-      if (!groupChat) {
-        throw { message: 'Không tìm thấy nhóm chat.' };
-      }
+      await this.updateUnReadMessages(groupId, user.id);
 
-      const messages = await this.chatMessageRepo
-        .createQueryBuilder('chat_message')
-        .where('chat_message.groupId = :groupId', { groupId })
-        .andWhere('chat_message.isRead = false')
-        .getMany();
-
-      if (messages.length) {
-        await this.chatMessageRepo.update(
-          messages.map((x) => x.id),
-          {
-            isRead: true,
-          },
-        );
-      }
-
-      if (
-        groupChat.settings.length &&
-        groupChat.settings[0].unReadMessages > 0
-      ) {
-        groupChat.settings[0].unReadMessages = 0;
-        await this.groupSettingRepo.update(groupChat.settings[0].id, {
-          unReadMessages: groupChat.settings[0].unReadMessages,
-        });
-      }
-
-      return { groupChat, unReadMessages: messages?.length ?? 0 };
+      return {
+        groupChat: {
+          id: groupId,
+        },
+        unReadMessages: 1 ?? 0,
+      };
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
