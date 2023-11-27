@@ -125,6 +125,9 @@ export class ChatMessageGatewayService {
       } as ChatMessage);
       await this.chatMessageRepo.save(newMessage);
 
+      newMessage.sender = sender;
+      newMessage.group = groupChat;
+
       logs.push(`${moment.utc().toISOString()} - ${id} - Begin send queue`);
       // Publish queue message
       this.rmqClient.emit('saveMsgAndSendNoti', {
