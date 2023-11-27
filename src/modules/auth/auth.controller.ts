@@ -29,7 +29,7 @@ export class AuthController {
     return this.authService.signUp(dto);
   }
 
-  @Post('sign-up')
+  @Post('clear-cache')
   @UseGuards(ApiKeyGuard)
   clearCache() {
     return this.authService.clearCache();

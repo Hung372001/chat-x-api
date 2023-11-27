@@ -53,7 +53,7 @@ export class ChatMessageConsumer {
         ],
       });
 
-      const unReadSettings = chatMessage.group.settings.filter(
+      const unReadSettings = chatMessage.group?.settings?.filter(
         (x) => x.unReadMessages > 0 && x.user.id !== chatMessage.sender.id,
       );
       if (unReadSettings.length) {

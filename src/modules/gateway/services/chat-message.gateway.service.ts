@@ -242,13 +242,7 @@ export class ChatMessageGatewayService {
         where: {
           id: chatMessageId,
         },
-        relations: [
-          'sender',
-          'sender.profile',
-          'group',
-          'group.admins',
-          'group.latestMessage',
-        ],
+        relations: ['sender', 'sender.profile', 'group', 'group.latestMessage'],
       });
 
       if (!chatMessage) {
@@ -259,10 +253,12 @@ export class ChatMessageGatewayService {
         throw { message: 'Bỏ ghim để xóa tin nhắn.' };
       }
 
-      if (
-        !chatMessage.group.admins.some((x) => x.id === deletedBy.id) &&
-        chatMessage.sender.id !== deletedBy.id
-      ) {
+      const isAdmin = await this.groupChatService.isGroupAdmin(
+        chatMessage.group.id,
+        deletedBy.id,
+      );
+
+      if (!isAdmin && chatMessage.sender.id !== deletedBy.id) {
         throw {
           message: 'Bạn không có quyền xóa tin nhắn.',
         };
@@ -291,7 +287,7 @@ export class ChatMessageGatewayService {
         }
       }
 
-      await this.rmqClient.emit('updateUnReadSettings', { chatMessageId });
+      // await this.rmqClient.emit('updateUnReadSettings', { chatMessageId });
 
       return chatMessage;
     } catch (e: any) {
