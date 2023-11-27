@@ -190,11 +190,20 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
 
   async getJoinedGroups(userId: string) {
     try {
-      return this.groupChatRepo
-        .createQueryBuilder('group_chat')
-        .leftJoinAndSelect('group_chat.members', 'user')
-        .where('user.id = :userId', { userId })
-        .getMany();
+      const cacheKey = `GroupChatIds_${userId}`;
+      let groupChatIds = await this.cacheService.get(cacheKey);
+
+      if (!groupChatIds?.length) {
+        groupChatIds = await this.connection.query(`
+        select distinct "groupChatId"
+        from "group_chat_members_user"
+        where "userId" = '${userId}'
+        `);
+        groupChatIds = groupChatIds.map((x) => x.groupChatId);
+        this.cacheService.set(cacheKey, groupChatIds);
+      }
+
+      return groupChatIds;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
@@ -206,21 +215,20 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     member: User,
     joinGroup = true,
   ) {
-    const groupChats = await this.getJoinedGroups(member.id);
+    const groupChatIds = await this.getJoinedGroups(member.id);
 
     // Join socket to all group
-    if (groupChats?.length > 0) {
+    if (groupChatIds?.length > 0) {
       Promise.all(
-        groupChats.map(async (group: GroupChat) => {
+        groupChatIds.map(async (groupId) => {
           if (joinGroup) {
-            await client.join(group.id);
+            await client.join(groupId);
           }
-          const insideMembers = this.insideGroupSessions.getUserSession(
-            group.id,
-          );
+          const insideMembers =
+            this.insideGroupSessions.getUserSession(groupId);
           if (insideMembers?.length) {
-            client.to(group.id).emit('someoneOnline', {
-              groupChat: group,
+            client.to(groupId).emit('someoneOnline', {
+              groupChat: { id: groupId },
               member,
             });
           }
@@ -235,21 +243,20 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     member: User,
     leaveGroup = true,
   ) {
-    const groupChats = await this.getJoinedGroups(member.id);
+    const groupChatIds = await this.getJoinedGroups(member.id);
 
     // Leave all joined group
-    if (groupChats?.length > 0) {
+    if (groupChatIds?.length > 0) {
       Promise.all(
-        groupChats.map(async (group: GroupChat) => {
+        groupChatIds.map(async (groupId) => {
           if (leaveGroup) {
-            await client.leave(group.id);
+            await client.leave(groupId);
           }
-          const insideMembers = this.insideGroupSessions.getUserSession(
-            group.id,
-          );
+          const insideMembers =
+            this.insideGroupSessions.getUserSession(groupId);
           if (insideMembers?.length) {
-            client.to(group.id).emit('someoneOffline', {
-              groupChat: group,
+            client.to(groupId).emit('someoneOffline', {
+              groupChat: { id: groupId },
               member,
             });
           }
