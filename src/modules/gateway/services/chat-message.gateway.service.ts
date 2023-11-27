@@ -141,7 +141,7 @@ export class ChatMessageGatewayService {
 
       logs.push(`${moment.utc().toISOString()} - ${id} - Return`);
 
-      if (moment.utc().add(2, 's').isAfter(beginTime)) {
+      if (moment.utc().add(-3, 's').isAfter(beginTime)) {
         await this.telegramLogger.error(logs);
       }
       return { ...newMessage, isNewMember };
