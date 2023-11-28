@@ -16,6 +16,7 @@ import { NotificationService } from '../../notification/notification.service';
 import { UserGatewayService } from '../services/user.gateway.service';
 import moment from 'moment';
 import { TelegramLoggerService } from '../../logger/telegram.logger-service';
+import { CacheService } from '../../cache/cache.service';
 
 @Controller()
 export class ChatMessageConsumer {
@@ -38,6 +39,7 @@ export class ChatMessageConsumer {
     @InjectConnection() private readonly connection: Connection,
     @Inject(TelegramLoggerService)
     private telegramLogger: TelegramLoggerService,
+    @Inject(CacheService) private cacheService: CacheService,
   ) {}
 
   @EventPattern('updateUnReadSettings')
@@ -180,12 +182,9 @@ export class ChatMessageConsumer {
 
         await this.updateUnReadMessages(data.groupId, data.user.id);
 
-        return {
-          groupChat: {
-            id: data.groupId,
-          },
-          unReadMessages: 1,
-        };
+        await this.cacheService.del(
+          `ReadMessages_${data.groupId}_${data.user.id}`,
+        );
       }
     } catch (e: any) {
       this.logger.debug(e);

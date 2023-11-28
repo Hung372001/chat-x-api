@@ -275,25 +275,31 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
 
   async readMessages(groupId: string, user: User) {
     try {
-      const countUnReadMessages = await this.connection.query(`
-      select count(*)
-      from "chat_message"
-      where "groupId" = '${groupId}' and "isRead" = false
-    `);
+      const cacheKey = `ReadMessages_${groupId}_${user.id}`;
+      const requestReadMessages = await this.cacheService.get(cacheKey);
 
-      if (countUnReadMessages && countUnReadMessages[0].count) {
-        // Publish queue message
-        await this.rmqClient.emit('readMessages', {
-          groupId,
-          user,
-        });
+      if (!requestReadMessages) {
+        await this.cacheService.set(cacheKey, true);
+        const countUnReadMessages = await this.connection.query(`
+          select count(*)
+          from "chat_message"
+          where "groupId" = '${groupId}' and "isRead" = false
+        `);
 
-        return {
-          groupChat: {
-            id: groupId,
-          },
-          unReadMessages: countUnReadMessages[0].count,
-        };
+        if (countUnReadMessages && countUnReadMessages[0].count) {
+          // Publish queue message
+          await this.rmqClient.emit('readMessages', {
+            groupId,
+            user,
+          });
+
+          return {
+            groupChat: {
+              id: groupId,
+            },
+            unReadMessages: countUnReadMessages[0].count,
+          };
+        }
       }
 
       return {

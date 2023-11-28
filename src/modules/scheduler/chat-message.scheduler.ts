@@ -5,6 +5,7 @@ import moment from 'moment';
 import { InjectConnection, InjectRepository } from '@nestjs/typeorm';
 import { ChatMessage } from '../chat-message/entities/chat-message.entity';
 
+const remainNumbers = +process.env.REMAIN_CHAT_MESSAGE_NUMBER ?? 250;
 @Injectable()
 export class ChatMessageScheduler {
   constructor(
@@ -29,7 +30,7 @@ export class ChatMessageScheduler {
           where "chat_message"."id" not in (select distinct "latestMessageId" from "group_chat")
           or "chat_message"."pinned" != true
           group by "groupId"
-          having count("chat_message"."id") > 50
+          having count("chat_message"."id") > ${remainNumbers}
       `);
 
       if (groupChatIds?.length) {
@@ -43,7 +44,7 @@ export class ChatMessageScheduler {
             or "chat_message"."pinned" != true)
             and "groupId" = '${group.groupId}'
             order by "created_at" DESC
-            offset 50
+            offset ${remainNumbers}
             returning "id";
         `);
 
