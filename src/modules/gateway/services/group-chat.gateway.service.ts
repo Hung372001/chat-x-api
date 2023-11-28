@@ -13,6 +13,7 @@ import { GatewaySessionManager } from '../sessions/gateway.session';
 import { UserGatewayService } from './user.gateway.service';
 import { intersectionBy } from 'lodash';
 import { CacheService } from '../../cache/cache.service';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
 export class GroupChatGatewayService extends BaseService<GroupChat> {
@@ -26,6 +27,7 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     @Inject(GatewaySessionManager)
     private readonly insideGroupSessions: GatewaySessionManager<string>,
     @Inject(CacheService) private cacheService: CacheService,
+    @Inject('CHAT-MESSAGE_SERVICE') private rmqClient: ClientProxy,
     @InjectConnection() private readonly connection: Connection,
   ) {
     super(groupChatRepo);
@@ -95,14 +97,6 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
       .where('group_chat_setting.userId = :userId', { userId })
       .andWhere('group_chat_setting.groupChatId = :groupId', { groupId })
       .getOne();
-  }
-
-  async updateUnReadMessages(groupId: string, userId: string) {
-    await this.connection.query(`
-      update "group_chat_setting"
-      set "unReadMessages" = 0
-      where "groupChatId" = '${groupId}' and "userId" = '${userId}'
-    `);
   }
 
   async getGroupChatDou(memberIds: string[], gateway: AppGateway) {
@@ -281,19 +275,31 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
 
   async readMessages(groupId: string, user: User) {
     try {
-      await this.connection.query(`
-        update "chat_message"
-        set "isRead" = true
-        where "groupId" = '${groupId}' and "isRead" = false
-      `);
+      const countUnReadMessages = await this.connection.query(`
+      select count(*)
+      from "chat_message"
+      where "groupId" = '${groupId}' and "isRead" = false
+    `);
 
-      await this.updateUnReadMessages(groupId, user.id);
+      if (countUnReadMessages && countUnReadMessages[0].count) {
+        // Publish queue message
+        await this.rmqClient.emit('readMessages', {
+          groupId,
+          user,
+        });
+
+        return {
+          groupChat: {
+            id: groupId,
+          },
+          unReadMessages: countUnReadMessages[0].count,
+        };
+      }
 
       return {
         groupChat: {
           id: groupId,
         },
-        unReadMessages: 1 ?? 0,
       };
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);

@@ -168,6 +168,39 @@ export class ChatMessageConsumer {
     this.rmqService.ack(context);
   }
 
+  @EventPattern('readMessages')
+  async readMessages(@Payload() data: any, @Ctx() context: RmqContext) {
+    try {
+      if (data) {
+        await this.connection.query(`
+          update "chat_message"
+          set "isRead" = true
+          where "groupId" = '${data.groupId}' and "isRead" = false
+        `);
+
+        await this.updateUnReadMessages(data.groupId, data.user.id);
+
+        return {
+          groupChat: {
+            id: data.groupId,
+          },
+          unReadMessages: 1,
+        };
+      }
+    } catch (e: any) {
+      this.logger.debug(e);
+    }
+    this.rmqService.ack(context);
+  }
+
+  async updateUnReadMessages(groupId: string, userId: string) {
+    await this.connection.query(`
+      update "group_chat_setting"
+      set "unReadMessages" = 0
+      where "groupChatId" = '${groupId}' and "userId" = '${userId}'
+    `);
+  }
+
   sendMessageNotification(
     group: GroupChat,
     sender: User,
