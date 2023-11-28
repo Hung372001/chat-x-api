@@ -593,7 +593,7 @@ export class AppGateway
           );
 
         if (groupChat && unReadMessages) {
-          this.server.to(groupChat.id).emit('messagesRead', {
+          client.emit('messagesRead', {
             groupChat,
           });
         }
