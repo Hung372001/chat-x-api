@@ -14,6 +14,7 @@ import { UserGatewayService } from './user.gateway.service';
 import { intersectionBy } from 'lodash';
 import { CacheService } from '../../cache/cache.service';
 import { ClientProxy } from '@nestjs/microservices';
+import { AuthSocket } from '../interfaces/auth.interface';
 
 @Injectable()
 export class GroupChatGatewayService extends BaseService<GroupChat> {
@@ -21,9 +22,9 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     @InjectRepository(GroupChat) private groupChatRepo: Repository<GroupChat>,
     @InjectRepository(GroupChatSetting)
     private groupSettingRepo: Repository<GroupChatSetting>,
-    @InjectRepository(ChatMessage)
-    private chatMessageRepo: Repository<ChatMessage>,
     @Inject(UserGatewayService) private userService: UserGatewayService,
+    @Inject(GatewaySessionManager)
+    private readonly socketSessions: GatewaySessionManager<AuthSocket>,
     @Inject(GatewaySessionManager)
     private readonly insideGroupSessions: GatewaySessionManager<string>,
     @Inject(CacheService) private cacheService: CacheService,
@@ -221,10 +222,19 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
           const insideMembers =
             this.insideGroupSessions.getUserSession(groupId);
           if (insideMembers?.length) {
-            client.to(groupId).emit('someoneOnline', {
-              groupChat: { id: groupId },
-              member,
-            });
+            await Promise.all(
+              insideMembers.map(async (memberId) => {
+                const clients = await this.socketSessions.getUserSession(
+                  memberId,
+                );
+                clients.forEach((client) => {
+                  client.emit('someoneOnline', {
+                    groupChat: { id: groupId },
+                    member,
+                  });
+                });
+              }),
+            );
           }
         }),
       );
@@ -249,10 +259,19 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
           const insideMembers =
             this.insideGroupSessions.getUserSession(groupId);
           if (insideMembers?.length) {
-            client.to(groupId).emit('someoneOffline', {
-              groupChat: { id: groupId },
-              member,
-            });
+            await Promise.all(
+              insideMembers.map(async (memberId) => {
+                const clients = await this.socketSessions.getUserSession(
+                  memberId,
+                );
+                clients.forEach((client) => {
+                  client.emit('someoneOffline', {
+                    groupChat: { id: groupId },
+                    member,
+                  });
+                });
+              }),
+            );
           }
         }),
       );

@@ -211,18 +211,12 @@ export class AppGateway
     @MessageBody() groupId: string,
     @ConnectedSocket() client: AuthSocket,
   ) {
-    const isMember = await this.groupChatService.isGroupMember(
-      groupId,
-      client.user.id,
-    );
-    if (isMember) {
-      client.broadcast.to(groupId).emit('someoneIsTyping', {
-        typingMember: client.user,
-        groupChat: {
-          id: groupId,
-        },
-      });
-    }
+    client.broadcast.to(groupId).emit('someoneIsTyping', {
+      typingMember: client.user,
+      groupChat: {
+        id: groupId,
+      },
+    });
   }
 
   @SubscribeMessage('onTypingStop')
@@ -230,18 +224,12 @@ export class AppGateway
     @MessageBody() groupId: string,
     @ConnectedSocket() client: AuthSocket,
   ) {
-    const isMember = await this.groupChatService.isGroupMember(
-      groupId,
-      client.user.id,
-    );
-    if (isMember) {
-      client.broadcast.to(groupId).emit('someoneStopTyping', {
-        typingMember: client.user,
-        groupChat: {
-          id: groupId,
-        },
-      });
-    }
+    client.broadcast.to(groupId).emit('someoneStopTyping', {
+      typingMember: client.user,
+      groupChat: {
+        id: groupId,
+      },
+    });
   }
 
   joinGroup(groupChatId: string, groupMembers: User[]) {
@@ -556,7 +544,7 @@ export class AppGateway
         await this.groupChatService.readMessages(groupId, client.user);
 
       if (groupChat && unReadMessages) {
-        this.server.to(groupChat.id).emit('messagesRead', {
+        client.emit('messagesRead', {
           groupChat,
         });
       }
