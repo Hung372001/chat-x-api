@@ -82,15 +82,44 @@ export class ChatMessageConsumer {
   @EventPattern('saveMsgAndSendNoti')
   async saveMsgAndSendNoti(@Payload() data: any, @Ctx() context: RmqContext) {
     try {
-      if (data) 
+      if (data) {
+        const beginTime = moment.utc();
+        const id = `${data.groupChat.id} - ${data.newMessage.message?.slice(
+          0,
+          10,
+        )}`;
+        const logs = [
+          `${moment.utc().toISOString()} - ${id} - Begin save message`,
+        ];
+
+        await this.chatMessageRepo
+          .createQueryBuilder()
+          .insert()
+          .into(ChatMessage)
+          .values(data.newMessage)
+          .execute();
+
+        data.newMessage.sender = data.sender;
+        data.newMessage.group = data.groupChat;
+
+        logs.push(
+          `${moment.utc().toISOString()} - ${id} - Begin save group chat`,
+        );
+
         // Save latest message for group
         await this.connection.query(`
-          update "group_chat"
-          set "latestMessageId" = '${
-            data.newMessage.id
-          }', "updated_at" = '${moment.utc().toISOString()}'
-          where "id" = '${data.groupChat.id}'
-        `);
+            update "group_chat"
+            set "latestMessageId" = '${
+              data.newMessage.id
+            }', "updated_at" = '${moment.utc().toISOString()}'
+            where "id" = '${data.groupChat.id}'
+          `);
+
+        logs.push(`${moment.utc().toISOString()} - ${id} - End send message`);
+
+        if (moment.utc().add(-3, 's').isAfter(beginTime)) {
+          await this.telegramLogger.error(logs);
+        }
 
         await Promise.all(
           data.groupChat.members.map(async (member) => {

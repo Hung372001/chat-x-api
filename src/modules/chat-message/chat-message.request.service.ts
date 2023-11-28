@@ -224,8 +224,11 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
         .getMany();
 
       if (pinnedMessages?.length) {
-        pinnedMessages = pinnedMessages.map((iterator) =>
-          this.mappingFriendship(iterator, currentUser),
+        pinnedMessages = await Promise.all(
+          pinnedMessages.map(
+            async (iterator) =>
+              await this.mappingFriendship(iterator, currentUser),
+          ),
         );
       }
 
