@@ -15,7 +15,6 @@ import { UserGatewayService } from './user.gateway.service';
 import { ClientProxy } from '@nestjs/microservices';
 import { CacheService } from '../../cache/cache.service';
 import { TelegramLoggerService } from '../../logger/telegram.logger-service';
-import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class ChatMessageGatewayService {
@@ -32,15 +31,25 @@ export class ChatMessageGatewayService {
     private readonly insideGroupSessions: GatewaySessionManager<string>,
     @Inject('CHAT-MESSAGE_SERVICE') private rmqClient: ClientProxy,
     @Inject(CacheService) private cacheService: CacheService,
+    @Inject(TelegramLoggerService)
+    private telegramLogger: TelegramLoggerService,
   ) {}
 
   async sendMessage(dto: SendMessageDto, sender: User, groupChat?: GroupChat) {
     try {
+      const beginTime = moment.utc();
+      const id = `${dto.groupId} - ${dto.tmpId} - ${dto.message?.slice(0, 10)}`;
+      const logs = [
+        `${moment.utc().toISOString()} - ${id} - Begin get group chat`,
+      ];
+
       if (!groupChat) {
         groupChat = await this.groupChatService.findOneWithMemberIds(
           dto.groupId,
         );
       }
+
+      logs.push(`${moment.utc().toISOString()} - ${id} - End get group chat`);
 
       if (
         groupChat.type === EGroupChatType.DOU &&
@@ -84,22 +93,27 @@ export class ChatMessageGatewayService {
         isNewMember = true;
       }
 
+      logs.push(
+        `${moment.utc().toISOString()} - ${id} - Begin get member inside group`,
+      );
       const groupSession = this.insideGroupSessions.getUserSession(
         groupChat.id,
       );
 
       let insideGroupMembers = [sender];
       if (groupSession?.length) {
-        insideGroupMembers = await intersectionBy(
+        insideGroupMembers = intersectionBy(
           groupChat.members,
           groupSession.map((x) => ({ id: x })),
           'id',
         );
       }
 
-      const now = moment.utc().toDate();
+      logs.push(
+        `${moment.utc().toISOString()} - ${id} - Begin save chat message`,
+      );
+
       const newMessage = {
-        id: uuidv4(),
         message: dto.message,
         imageUrls: dto.imageUrls,
         documentUrls: dto.documentUrls,
@@ -109,22 +123,33 @@ export class ChatMessageGatewayService {
         group: { id: groupChat.id },
         nameCard: nameCard ? { id: nameCard.id } : null,
         isFriendRequest: dto.isFriendRequest,
-        createdAt: now,
-        updatedAt: now,
       } as ChatMessage;
 
+      await this.chatMessageRepo
+        .createQueryBuilder()
+        .insert()
+        .into(ChatMessage)
+        .values(newMessage)
+        .execute();
+
+      newMessage.sender = sender;
+      newMessage.group = groupChat;
+      newMessage.nameCard = nameCard;
+
+      logs.push(`${moment.utc().toISOString()} - ${id} - Begin send queue`);
       // Publish queue message
-      await this.rmqClient.emit('saveMsgAndSendNoti', {
+      this.rmqClient.emit('saveMsgAndSendNoti', {
         newMessage,
         sender,
         insideGroupMembers,
         groupChat,
       });
 
-      newMessage.sender = sender;
-      newMessage.group = groupChat;
-      newMessage.nameCard = nameCard;
+      logs.push(`${moment.utc().toISOString()} - ${id} - Return`);
 
+      if (moment.utc().add(-3, 's').isAfter(beginTime)) {
+        await this.telegramLogger.error(logs);
+      }
       return { ...newMessage, isNewMember };
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
