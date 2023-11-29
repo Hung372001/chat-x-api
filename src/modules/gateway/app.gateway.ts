@@ -400,7 +400,7 @@ export class AppGateway
       try {
         await this.cacheService.del(`GroupChat_${groupChat.id}`);
         await Promise.all(
-          groupChat.members.map(async (x) => {
+          newMembers.map(async (x) => {
             const cacheKey = `GroupChatIds_${x.id}`;
             await this.cacheService.del(cacheKey);
           }),
@@ -420,6 +420,7 @@ export class AppGateway
   async removeGroupMember(groupChat: GroupChat, removeMembers: User[]) {
     if (groupChat && removeMembers?.length > 0) {
       try {
+        await this.cacheService.del(`GroupChatAdmins_${groupChat.id}`);
         await this.cacheService.del(`GroupChat_${groupChat.id}`);
         await Promise.all(
           removeMembers.map(async (x) => {
@@ -464,6 +465,7 @@ export class AppGateway
   // Call socket after rename group chat successfully
   async pinChatMessage(groupChat: GroupChat, pinnedMessage: ChatMessage) {
     if (groupChat) {
+      await this.cacheService.del(`GroupChat_${JSON.stringify(groupChat.id)}`);
       this.server.to(groupChat.id).emit('messagePinned', {
         groupChat,
         pinnedMessage,

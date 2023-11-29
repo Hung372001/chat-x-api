@@ -776,6 +776,9 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         );
       }
 
+      const admins = differenceBy(foundGroupChat.admins, [currentUser], 'id');
+      foundGroupChat.admins = admins;
+
       foundGroupChat.members = aRMembers;
       const res = await this.groupChatRepo.save(foundGroupChat);
 
@@ -840,6 +843,9 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
           }),
         );
         await this.groupSettingRepo.delete(memberSettings);
+
+        const admins = differenceBy(foundGroupChat.admins, members, 'id');
+        foundGroupChat.admins = admins;
       }
 
       foundGroupChat.members = aRMembers;
