@@ -18,6 +18,7 @@ import { User } from '../user/entities/user.entity';
 import { UpdateNicknameDto } from './dto/update-nickname.dto';
 import { Friendship } from './entities/friendship.entity';
 import { CacheService } from '../cache/cache.service';
+import { callSocket } from '../../common/helpers/http-request.helper';
 
 @Injectable({ scope: Scope.REQUEST })
 export class FriendRequestService {
@@ -218,7 +219,7 @@ export class FriendRequestService {
             });
 
             // Call socket to create group chat dou for new friend
-            await this.gateway.createNewFriendGroup(friend, currentUser);
+            await callSocket('create-friend-group', { friend, currentUser });
           }),
         );
       }
@@ -294,7 +295,7 @@ export class FriendRequestService {
         await this.friendshipRepository.save(friendship);
 
         // emit socket event accept friend request
-        await this.gateway.acceptFriendRequest(friend, currentUser);
+        await callSocket('accept-friend-request', { friend, currentUser });
       }
 
       return friendRequest;

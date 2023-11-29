@@ -27,6 +27,7 @@ import { ProfileModule } from './modules/profile/profile.module';
 import { FriendModule } from './modules/friend/friend.module';
 import { SearchModule } from './modules/search/search.module';
 import { LoggerModule } from './modules/logger/logger.module';
+import { SocketModule } from './modules/socket/socket.module';
 
 const apiV1Modules = [
   UserModule,
@@ -68,6 +69,7 @@ const apiV1Modules = [
     CustomeCacheModule,
     GatewayModule,
     RmqModule,
+    SocketModule,
     ...apiV1Modules,
   ],
   controllers: [AppController],

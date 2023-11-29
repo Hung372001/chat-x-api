@@ -32,6 +32,7 @@ import { CacheService } from '../../cache/cache.service';
 import { GroupChatService } from './group-chat.service';
 import { SendMessageDto } from '../../chat-message/dto/send-message.dto';
 import { AuthSocket } from '../../gateway/interfaces/auth.interface';
+import { callSocket } from '../../../common/helpers/http-request.helper';
 
 @Injectable({ scope: Scope.REQUEST })
 export class GroupChatRequestService extends BaseService<GroupChat> {
@@ -549,7 +550,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       await this.groupSettingRepo.save(memberSettings);
 
       // Call socket to create group chat
-      await this.gateway.createGroupChat(newGroupChat);
+      await callSocket('create-group-chat', { newGroupChat });
 
       return newGroupChat;
     } catch (e: any) {
@@ -619,7 +620,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       await this.groupSettingRepo.save(memberSettings);
 
       // Call socket
-      await this.gateway.addNewGroupMember(foundGroupChat, members);
+      await callSocket('add-new-member', { foundGroupChat, members });
 
       return res;
     } catch (e: any) {
@@ -679,7 +680,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       await this.cacheService.del(`GroupChatAdmins_${foundGroupChat.id}`);
 
       // Call socket to add new admin
-      await this.gateway.modifyGroupAdmin(foundGroupChat, admins);
+      await callSocket('modify-admin', { foundGroupChat, admins });
 
       return res;
     } catch (e: any) {
@@ -710,7 +711,10 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       });
 
       // Call socket to create group chat
-      await this.gateway.renameGroupChat(foundGroupChat, dto.newName);
+      await callSocket('rename-group', {
+        foundGroupChat,
+        newName: dto.newName,
+      });
 
       return foundGroupChat;
     } catch (e: any) {
@@ -769,7 +773,10 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       const res = await this.groupChatRepo.save(foundGroupChat);
 
       // Call socket
-      await this.gateway.removeGroupMember(foundGroupChat, [currentUser]);
+      await callSocket('remove-member', {
+        foundGroupChat,
+        members: [currentUser],
+      });
 
       // Remove group if user is owner
       if (foundGroupChat.owner.id === currentUser.id) {
@@ -837,7 +844,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       const res = await this.groupChatRepo.save(foundGroupChat);
 
       // Call socket
-      await this.gateway.removeGroupMember(foundGroupChat, members);
+      await callSocket('remove-member', { foundGroupChat, members });
 
       return res;
     } catch (e: any) {
@@ -871,7 +878,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       foundGroupChat.deletedAt = moment.utc().toDate();
 
       // Call socket
-      await this.gateway.removeGroupChat(foundGroupChat);
+      await callSocket('remove-group-chat', { foundGroupChat });
 
       return foundGroupChat;
     } catch (e: any) {
@@ -881,7 +888,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
 
   async offline() {
     const currentUser = this.request.user as User;
-    await this.gateway.offline(currentUser);
+    await callSocket('offline', { currentUser });
     return true;
   }
 

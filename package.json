@@ -51,6 +51,7 @@
     "amqp-connection-manager": "^4.1.14",
     "amqplib": "^0.10.3",
     "aws-sdk": "^2.724.0",
+    "axios": "^1.6.2",
     "bcryptjs": "^2.4.3",
     "cache-manager": "^3.6.0",
     "cache-manager-redis-store": "^2.0.0",
