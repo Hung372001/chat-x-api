@@ -112,6 +112,9 @@ export class UserService extends BaseService<User> {
             await this.cacheService.del(
               `GroupChat_${JSON.stringify(group.id)}`,
             );
+            await this.cacheService.del(
+              `GroupChatAdmins_${JSON.stringify(group.id)}`,
+            );
           }),
         );
       }
