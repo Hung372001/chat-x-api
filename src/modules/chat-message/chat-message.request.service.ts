@@ -258,19 +258,21 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
   }
 
   async mappingFriendship(iterator: any, currentUser: User) {
-    const friendship = await this.userService.findFriendship(
-      currentUser.id,
-      iterator.sender.id,
-    );
-    return {
-      ...iterator,
-      sender: omitBy(
-        {
-          ...iterator.sender,
-          nickname: friendship?.nickname ?? '',
-        },
-        isNull,
-      ),
-    };
+    if (iterator?.sender?.id) {
+      const friendship = await this.userService.findFriendship(
+        currentUser.id,
+        iterator.sender.id,
+      );
+      return {
+        ...iterator,
+        sender: omitBy(
+          {
+            ...iterator.sender,
+            nickname: friendship?.nickname ?? '',
+          },
+          isNull,
+        ),
+      };
+    }
   }
 }
