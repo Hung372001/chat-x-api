@@ -726,9 +726,16 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     const currentUser = this.request.user as User;
 
     try {
+      const owner = await this.groupChatService.getGroupOwner(id);
+
+      // Remove group if user is owner
+      if (owner?.id === currentUser.id) {
+        return await this.removeGroup(id);
+      }
+
       const foundGroupChat = await this.groupChatRepo.findOne({
         where: { id, type: EGroupChatType.GROUP },
-        relations: ['admins', 'members', 'members.profile', 'owner'],
+        relations: ['admins', 'members', 'members.profile'],
       });
 
       if (!foundGroupChat) {
@@ -777,11 +784,6 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         foundGroupChat,
         members: [currentUser],
       });
-
-      // Remove group if user is owner
-      if (foundGroupChat.owner.id === currentUser.id) {
-        await this.removeGroup(foundGroupChat.id);
-      }
 
       return res;
     } catch (e: any) {

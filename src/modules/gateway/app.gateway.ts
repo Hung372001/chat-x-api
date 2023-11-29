@@ -422,7 +422,7 @@ export class AppGateway
       try {
         await this.cacheService.del(`GroupChat_${groupChat.id}`);
         await Promise.all(
-          groupChat.members.map(async (x) => {
+          removeMembers.map(async (x) => {
             const cacheKey = `GroupChatIds_${x.id}`;
             await this.cacheService.del(cacheKey);
           }),
