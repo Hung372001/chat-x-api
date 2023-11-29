@@ -11,7 +11,7 @@ import { GroupChatService } from '../group-chat/services/group-chat.service';
 import { AppGateway } from '../gateway/app.gateway';
 import { GroupChatSettingRequestService } from '../group-chat/services/group-chat-setting.request.service';
 import { ERole } from '../../common/enums/role.enum';
-import { omitBy, isNull } from 'lodash';
+import { compact, omitBy, isNull } from 'lodash';
 import { CacheService } from '../cache/cache.service';
 import { UserGatewayService } from '../gateway/services/user.gateway.service';
 
@@ -236,20 +236,24 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
     }
 
     return {
-      items: await Promise.all(
-        items.map(async (iterator) =>
-          adminPermission || !iterator.unsent
-            ? await this.mappingFriendship(iterator, currentUser)
-            : omitBy(
-                {
-                  ...(await this.mappingFriendship(iterator, currentUser)),
-                  imageUrls: null,
-                  message: null,
-                  documentUrls: null,
-                  nameCard: null,
-                },
-                isNull,
-              ),
+      items: compact(
+        await Promise.all(
+          items.map(async (iterator) =>
+            iterator?.sender
+              ? adminPermission || !iterator.unsent
+                ? await this.mappingFriendship(iterator, currentUser)
+                : omitBy(
+                    {
+                      ...(await this.mappingFriendship(iterator, currentUser)),
+                      imageUrls: null,
+                      message: null,
+                      documentUrls: null,
+                      nameCard: null,
+                    },
+                    isNull,
+                  )
+              : null,
+          ),
         ),
       ),
       pinnedMessages,
