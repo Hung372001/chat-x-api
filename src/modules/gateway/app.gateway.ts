@@ -257,12 +257,15 @@ export class AppGateway
   // Call socket after group chat created successfully
   async createGroupChat(groupChat: GroupChat) {
     if (groupChat && groupChat.members?.length > 0) {
-      await Promise.all(
-        groupChat.members.map(async (x) => {
-          const cacheKey = `GroupChatIds_${x.id}`;
-          await this.cacheService.del(cacheKey);
-        }),
-      );
+      try {
+        await this.cacheService.del(`GroupChat_${groupChat.id}`);
+        await Promise.all(
+          groupChat.members.map(async (x) => {
+            const cacheKey = `GroupChatIds_${x.id}`;
+            await this.cacheService.del(cacheKey);
+          }),
+        );
+      } catch (e) {}
 
       await this.joinGroup(groupChat.id, groupChat.members);
 
@@ -275,13 +278,15 @@ export class AppGateway
   // Call socket after group chat soft deleted successfully
   async removeGroupChat(groupChat: GroupChat) {
     if (groupChat && groupChat.members?.length > 0) {
-      await this.cacheService.del(`GroupChat_${groupChat.id}`);
-      await Promise.all(
-        groupChat.members.map(async (x) => {
-          const cacheKey = `GroupChatIds_${x.id}`;
-          await this.cacheService.del(cacheKey);
-        }),
-      );
+      try {
+        await this.cacheService.del(`GroupChat_${groupChat.id}`);
+        await Promise.all(
+          groupChat.members.map(async (x) => {
+            const cacheKey = `GroupChatIds_${x.id}`;
+            await this.cacheService.del(cacheKey);
+          }),
+        );
+      } catch (e) {}
 
       this.server.to(groupChat.id).emit('groupChatRemoved', {
         groupChat,
@@ -392,13 +397,15 @@ export class AppGateway
   // Call socket after add user into group chat successfully
   async addNewGroupMember(groupChat: GroupChat, newMembers: User[]) {
     if (groupChat && newMembers?.length > 0) {
-      await this.cacheService.del(`GroupChat_${groupChat.id}`);
-      await Promise.all(
-        groupChat.members.map(async (x) => {
-          const cacheKey = `GroupChatIds_${x.id}`;
-          await this.cacheService.del(cacheKey);
-        }),
-      );
+      try {
+        await this.cacheService.del(`GroupChat_${groupChat.id}`);
+        await Promise.all(
+          groupChat.members.map(async (x) => {
+            const cacheKey = `GroupChatIds_${x.id}`;
+            await this.cacheService.del(cacheKey);
+          }),
+        );
+      } catch (e) {}
 
       await this.joinGroup(groupChat.id, newMembers);
 
@@ -412,13 +419,15 @@ export class AppGateway
   // Call socket after remove user from group chat successfully
   async removeGroupMember(groupChat: GroupChat, removeMembers: User[]) {
     if (groupChat && removeMembers?.length > 0) {
-      await this.cacheService.del(`GroupChat_${groupChat.id}`);
-      await Promise.all(
-        groupChat.members.map(async (x) => {
-          const cacheKey = `GroupChatIds_${x.id}`;
-          await this.cacheService.del(cacheKey);
-        }),
-      );
+      try {
+        await this.cacheService.del(`GroupChat_${groupChat.id}`);
+        await Promise.all(
+          groupChat.members.map(async (x) => {
+            const cacheKey = `GroupChatIds_${x.id}`;
+            await this.cacheService.del(cacheKey);
+          }),
+        );
+      } catch (e) {}
 
       this.server.to(groupChat.id).emit('groupMembersRemoved', {
         groupChat,
