@@ -258,6 +258,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
             LEFT JOIN "user" ON "user"."id" = "group_chat_members_user"."userId"
             LEFT JOIN "profile" ON "profile"."id" = "user"."profileId"
             WHERE "group_chat_members_user"."groupChatId" = '${id}'
+            AND "user"."deleted_at" IS NULL
             ORDER BY "user"."username" ASC
             ${isGetAll ? '' : `LIMIT ${limit}`}
             ${isGetAll ? '' : `OFFSET ${(page - 1) * limit}`}
@@ -622,7 +623,6 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       );
       await this.groupSettingRepo.save(memberSettings);
 
-      foundGroupChat.members = null;
       // Call socket
       await callSocket('add-new-member', {
         foundGroupChat: omitBy(
@@ -756,6 +756,42 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     }
   }
 
+  async deleteGroupSettings(groupChatId: string, members: any[]) {
+    if (members?.length) {
+      await this.groupSettingRepo
+        .createQueryBuilder('group_chat_setting')
+        .delete()
+        .where('groupChatId = :groupChatId', { groupChatId })
+        .andWhere('userId IN (:...userIds)', {
+          userIds: members.map((x) => x.id),
+        })
+        .execute();
+    }
+  }
+
+  async removeGroupMemberData(foundGroupChat, members) {
+    // Delete group settings
+    await this.deleteGroupSettings(foundGroupChat.id, members);
+
+    // Delete group admins
+    await this.connection.query(`
+     delete from "group_chat_admins_user" where "groupChatId" = '${
+       foundGroupChat.id
+     }' and "userId" IN (${members.map((member, id) =>
+      id > 0 ? `,'${member.id}'` : `'${member.id}'`,
+    )})
+   `);
+
+    // Delete group members
+    await this.connection.query(`
+       delete from "group_chat_members_user" where "groupChatId" = '${
+         foundGroupChat.id
+       }' and "userId" IN (${members.map((member, id) =>
+      id > 0 ? `,'${member.id}'` : `'${member.id}'`,
+    )})
+     `);
+  }
+
   async leaveGroup(id: string) {
     const currentUser = this.request.user as User;
 
@@ -787,34 +823,12 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         'id',
       );
 
-      if (aRMembers.length > 0) {
-        // Delete member setting
-        const memberSettings = [];
-        await Promise.all(
-          aRMembers.map((member) => {
-            memberSettings.push({
-              groupChat: foundGroupChat,
-              user: member,
-            });
-          }),
-        );
-        await this.groupSettingRepo.delete(memberSettings);
-      }
+      await this.deleteGroupSettings(foundGroupChat.id, [currentUser]);
 
-      // Admin group leaved
-      if (foundGroupChat.admins.some((x) => x.id === currentUser.id)) {
-        foundGroupChat.admins = differenceBy(
-          foundGroupChat.admins,
-          [currentUser],
-          'id',
-        );
-      }
-
-      const admins = differenceBy(foundGroupChat.admins, [currentUser], 'id');
-      foundGroupChat.admins = admins;
+      // Remove members data
+      await this.removeGroupMemberData(foundGroupChat, [currentUser]);
 
       foundGroupChat.members = aRMembers;
-      const res = await this.groupChatRepo.save(foundGroupChat);
 
       // Call socket
       await callSocket('remove-member', {
@@ -829,7 +843,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         members: [currentUser],
       });
 
-      return res;
+      return foundGroupChat;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
@@ -875,28 +889,10 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       // After remove members list
       const aRMembers = differenceBy(foundGroupChat.members, members, 'id');
 
-      if (aRMembers.length > 0) {
-        // Delete member setting
-        const memberSettings = [];
-        await Promise.all(
-          aRMembers.map((member) => {
-            memberSettings.push({
-              groupChat: foundGroupChat,
-              user: member,
-            });
-          }),
-        );
-        await this.groupSettingRepo.delete(memberSettings);
-
-        foundGroupChat.admins = await this.groupChatService.getGroupAdmins(id);
-        if (foundGroupChat?.admins) {
-          const admins = differenceBy(foundGroupChat.admins, members, 'id');
-          foundGroupChat.admins = admins;
-        }
-      }
+      // Remove members data
+      await this.removeGroupMemberData(foundGroupChat, members);
 
       foundGroupChat.members = aRMembers;
-      const res = await this.groupChatRepo.save(foundGroupChat);
 
       // Call socket
       await callSocket('remove-member', {
@@ -911,7 +907,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         members,
       });
 
-      return res;
+      return foundGroupChat;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
@@ -942,8 +938,22 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       await this.groupChatRepo.softDelete(id);
       foundGroupChat.deletedAt = moment.utc().toDate();
 
+      await this.deleteGroupSettings(foundGroupChat.id, foundGroupChat.members);
+
+      // Remove members data
+      await this.removeGroupMemberData(foundGroupChat, foundGroupChat.members);
+
       // Call socket
-      await callSocket('remove-group-chat', { foundGroupChat });
+      await callSocket('remove-group-chat', {
+        foundGroupChat: omitBy(
+          {
+            ...foundGroupChat,
+            admins: null,
+            members: null,
+          },
+          isNull,
+        ),
+      });
 
       return foundGroupChat;
     } catch (e: any) {

@@ -1,5 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import { IsArray, IsNotEmpty } from 'class-validator';
+import { uniq } from 'lodash';
 
 export class AddMemberDto {
   @ApiProperty({
@@ -11,5 +13,6 @@ export class AddMemberDto {
   })
   @IsNotEmpty()
   @IsArray()
+  @Transform(({ value }) => uniq(value))
   members: string[];
 }
