@@ -773,22 +773,15 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     // Delete group settings
     await this.deleteGroupSettings(foundGroupChat.id, members);
 
+    const arrMemberIds = members.map((x) => x.id).join("','");
     // Delete group admins
     await this.connection.query(`
-     delete from "group_chat_admins_user" where "groupChatId" = '${
-       foundGroupChat.id
-     }' and "userId" IN (${members.map((member, id) =>
-      id > 0 ? `,'${member.id}'` : `'${member.id}'`,
-    )})
+     delete from "group_chat_admins_user" where "groupChatId" = '${foundGroupChat.id}' and "userId" IN ('${arrMemberIds}')
    `);
 
     // Delete group members
     await this.connection.query(`
-       delete from "group_chat_members_user" where "groupChatId" = '${
-         foundGroupChat.id
-       }' and "userId" IN (${members.map((member, id) =>
-      id > 0 ? `,'${member.id}'` : `'${member.id}'`,
-    )})
+       delete from "group_chat_members_user" where "groupChatId" = '${foundGroupChat.id}' and "userId" IN ('${arrMemberIds}')
      `);
   }
 
