@@ -18,7 +18,6 @@ import { JwtAccessTokenGuard } from '../../auth/guards/jwt-access-token.guard';
 import { PermissionGuard } from '../../permission/permissison.guard';
 import { GroupChatRequestService } from '../services/group-chat.request.service';
 import { AddAdminDto } from '../dto/add-admin.dto';
-import { RemoveAdminDto } from '../dto/remove-admin.dto';
 import { SendMessageDto } from '../../chat-message/dto/send-message.dto';
 
 @Controller('group-chat')

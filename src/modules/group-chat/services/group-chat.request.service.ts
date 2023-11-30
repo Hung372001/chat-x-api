@@ -13,7 +13,7 @@ import { Brackets, Connection, In, Repository } from 'typeorm';
 import { UserService } from '../../user/user.service';
 import { GroupChat } from '../entities/group-chat.entity';
 import { RemoveMemberDto } from '../dto/remove-member.dto';
-import { differenceBy, intersectionBy, omitBy, isNull } from 'lodash';
+import { differenceBy, intersectionBy, omitBy, isNull, pick } from 'lodash';
 import { User } from '../../user/entities/user.entity';
 import { EGroupChatType } from '../dto/group-chat.enum';
 import { FilterDto } from '../../../common/dto/filter.dto';
@@ -27,7 +27,6 @@ import moment from 'moment';
 import { AddAdminDto } from '../dto/add-admin.dto';
 import slugify from 'slugify';
 import { Friendship } from '../../friend/entities/friendship.entity';
-import { pick } from 'lodash';
 import { CacheService } from '../../cache/cache.service';
 import { GroupChatService } from './group-chat.service';
 import { SendMessageDto } from '../../chat-message/dto/send-message.dto';
@@ -562,10 +561,10 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     try {
       const currentUser = this.request.user as User;
 
-      const foundGroupChat = await this.groupChatRepo.findOne({
-        where: { id },
-        relations: ['admins', 'members', 'members.profile'],
-      });
+      const foundGroupChat = await this.groupChatService.findOneWithMemberIds(
+        id,
+      );
+
       if (!foundGroupChat) {
         throw { message: 'Không tìm thấy nhóm chat.' };
       }
@@ -578,7 +577,11 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         throw { message: 'Vui lòng tạo nhóm chat để thêm thành viên.' };
       }
 
-      if (!foundGroupChat.admins.some((x) => x.id === currentUser.id)) {
+      const isAdmin = await this.groupChatService.isGroupAdmin(
+        id,
+        currentUser.id,
+      );
+      if (!isAdmin) {
         throw { message: 'Bạn không có quyền thêm thành viên nhóm.' };
       }
 
@@ -591,8 +594,8 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       }
 
       const existedMembers = intersectionBy(
-        foundGroupChat.members,
         members,
+        foundGroupChat.members,
         'id',
       );
 
@@ -619,8 +622,19 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       );
       await this.groupSettingRepo.save(memberSettings);
 
+      foundGroupChat.members = null;
       // Call socket
-      await callSocket('add-new-member', { foundGroupChat, members });
+      await callSocket('add-new-member', {
+        foundGroupChat: omitBy(
+          {
+            ...foundGroupChat,
+            admins: null,
+            members: null,
+          },
+          isNull,
+        ),
+        members,
+      });
 
       return res;
     } catch (e: any) {
@@ -632,18 +646,22 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     try {
       const currentUser = this.request.user as User;
 
-      const foundGroupChat = await this.groupChatRepo.findOne({
-        where: { id, type: EGroupChatType.GROUP },
-        relations: ['admins', 'members', 'owner'],
-      });
+      const foundGroupChat = await this.groupChatService.findOneWithMemberIds(
+        id,
+      );
 
-      if (!foundGroupChat) {
+      if (!foundGroupChat && foundGroupChat.type === EGroupChatType.GROUP) {
         throw { message: 'Không tìm thấy nhóm chat.' };
       }
 
-      if (foundGroupChat.owner?.id !== currentUser.id) {
+      const owner = await this.groupChatService.getGroupOwner(id);
+
+      // Remove group if user is owner
+      if (owner?.id !== currentUser.id) {
         throw { message: 'Chủ nhóm mới có quyền thêm quản trị viên.' };
       }
+
+      foundGroupChat.admins = await this.groupChatService.getGroupAdmins(id);
 
       const admins = await this.userService.findMany({
         where: { id: In(dto.admins) },
@@ -680,7 +698,17 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       await this.cacheService.del(`GroupChatAdmins_${foundGroupChat.id}`);
 
       // Call socket to add new admin
-      await callSocket('modify-admin', { foundGroupChat, admins });
+      await callSocket('modify-admin', {
+        foundGroupChat: omitBy(
+          {
+            ...foundGroupChat,
+            admins: null,
+            members: null,
+          },
+          isNull,
+        ),
+        admins,
+      });
 
       return res;
     } catch (e: any) {
@@ -712,7 +740,13 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
 
       // Call socket to create group chat
       await callSocket('rename-group', {
-        foundGroupChat,
+        foundGroupChat: omitBy(
+          {
+            ...foundGroupChat,
+            admins: null,
+          },
+          isNull,
+        ),
         newName: dto.newName,
       });
 
@@ -735,7 +769,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
 
       const foundGroupChat = await this.groupChatRepo.findOne({
         where: { id, type: EGroupChatType.GROUP },
-        relations: ['admins', 'members', 'members.profile'],
+        relations: ['admins', 'members'],
       });
 
       if (!foundGroupChat) {
@@ -784,7 +818,14 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
 
       // Call socket
       await callSocket('remove-member', {
-        foundGroupChat,
+        foundGroupChat: omitBy(
+          {
+            ...foundGroupChat,
+            admins: null,
+            members: null,
+          },
+          isNull,
+        ),
         members: [currentUser],
       });
 
@@ -798,16 +839,19 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     try {
       const currentUser = this.request.user as User;
 
-      const foundGroupChat = await this.groupChatRepo.findOne({
-        where: { id, type: EGroupChatType.GROUP },
-        relations: ['admins', 'members', 'members.profile'],
-      });
+      const foundGroupChat = await this.groupChatService.findOneWithMemberIds(
+        id,
+      );
 
-      if (!foundGroupChat) {
+      if (!foundGroupChat && foundGroupChat.type === EGroupChatType.GROUP) {
         throw { message: 'Không tìm thấy nhóm chat.' };
       }
 
-      if (!foundGroupChat.admins.some((x) => x.id === currentUser.id)) {
+      const isAdmin = await this.groupChatService.isGroupAdmin(
+        id,
+        currentUser.id,
+      );
+      if (!isAdmin) {
         throw { message: 'Bạn không có quyền xóa thành viên nhóm.' };
       }
 
@@ -844,15 +888,28 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         );
         await this.groupSettingRepo.delete(memberSettings);
 
-        const admins = differenceBy(foundGroupChat.admins, members, 'id');
-        foundGroupChat.admins = admins;
+        foundGroupChat.admins = await this.groupChatService.getGroupAdmins(id);
+        if (foundGroupChat?.admins) {
+          const admins = differenceBy(foundGroupChat.admins, members, 'id');
+          foundGroupChat.admins = admins;
+        }
       }
 
       foundGroupChat.members = aRMembers;
       const res = await this.groupChatRepo.save(foundGroupChat);
 
       // Call socket
-      await callSocket('remove-member', { foundGroupChat, members });
+      await callSocket('remove-member', {
+        foundGroupChat: omitBy(
+          {
+            ...foundGroupChat,
+            admins: null,
+            members: null,
+          },
+          isNull,
+        ),
+        members,
+      });
 
       return res;
     } catch (e: any) {

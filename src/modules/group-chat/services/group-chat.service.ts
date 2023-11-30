@@ -25,6 +25,38 @@ export class GroupChatService extends BaseService<GroupChat> {
     });
   }
 
+  async findOneWithMemberIds(groupId: string) {
+    try {
+      const cacheKey = `GroupChat_${groupId}`;
+      let groupChat = await this.cacheService.get(cacheKey);
+
+      if (!groupChat) {
+        groupChat = await this.groupChatRepo.findOne({
+          where: { id: groupId },
+        });
+
+        if (!groupChat) {
+          throw { message: 'Không tìm thấy nhóm chat.' };
+        }
+
+        groupChat.members = await this.connection.query(
+          `
+          SELECT "userId" as "id"
+          FROM "group_chat_members_user"
+          LEFT JOIN "user" ON "group_chat_members_user"."userId" = "user"."id"
+          WHERE "groupChatId" = '${groupChat.id}' and "user"."deleted_at" IS NULL;
+        `,
+        );
+
+        await this.cacheService.set(cacheKey, groupChat);
+      }
+
+      return groupChat;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
   async getGroupChatDou(memberIds: string[]) {
     const groupChat = await this.groupChatRepo
       .createQueryBuilder('group_chat')
