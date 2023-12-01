@@ -8,7 +8,12 @@ import type { RedisClientOptions } from 'redis';
 import * as redisStore from 'cache-manager-redis-store';
 import { configsValidator } from './configs/configs.validate';
 import { DatabaseModule } from './database/database.module';
-import { APP_GUARD, APP_INTERCEPTOR, RouterModule } from '@nestjs/core';
+import {
+  APP_FILTER,
+  APP_GUARD,
+  APP_INTERCEPTOR,
+  RouterModule,
+} from '@nestjs/core';
 import { RoleModule } from './modules/role/role.module';
 import { UserModule } from './modules/user/user.module';
 import { CustomeCacheModule } from './modules/cache/cache.module';
@@ -28,6 +33,7 @@ import { FriendModule } from './modules/friend/friend.module';
 import { SearchModule } from './modules/search/search.module';
 import { LoggerModule } from './modules/logger/logger.module';
 import { SocketModule } from './modules/socket/socket.module';
+import { AllExceptionsFilter } from './interceptors/all-exception.filter';
 
 const apiV1Modules = [
   UserModule,
@@ -78,6 +84,10 @@ const apiV1Modules = [
     {
       provide: APP_INTERCEPTOR,
       useClass: ClassSerializerInterceptor,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: AllExceptionsFilter,
     },
   ],
 })

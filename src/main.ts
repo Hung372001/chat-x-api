@@ -36,7 +36,6 @@ async function bootstrap() {
   app.useGlobalInterceptors(new LoggingInterceptor());
   app.useGlobalInterceptors(new TransformInterceptor());
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
-  app.useGlobalFilters(new AllExceptionsFilter());
 
   // AWS S3
   AWS.config.update({
