@@ -619,7 +619,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         [...foundGroupChat.members, ...members],
         'id',
       );
-      const res = await this.groupChatRepo.save(foundGroupChat);
+      await this.createGroupChatMembers(foundGroupChat, members);
 
       // Create member setting
       const memberSettings = [];
@@ -646,7 +646,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         members,
       });
 
-      return res;
+      return foundGroupChat;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
@@ -700,6 +700,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         }
       }
 
+      // Modify
       const res = await this.groupChatRepo.save({
         ...foundGroupChat,
         admins,
@@ -793,6 +794,17 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     await this.connection.query(`
        delete from "group_chat_members_user" where "groupChatId" = '${foundGroupChat.id}' and "userId" IN ('${arrMemberIds}')
      `);
+  }
+
+  async createGroupChatMembers(foundGroupChat, members) {
+    if (members?.length) {
+      const insertValues = members
+        .map((member) => `('${foundGroupChat.id}', '${member.id}')`)
+        .join(',');
+      await this.connection.query(`
+       insert into "group_chat_members_user" ("groupChatId", "userId") values ${insertValues} on conflict do nothing;
+     `);
+    }
   }
 
   async leaveGroup(id: string) {

@@ -39,7 +39,9 @@ export class GroupChat extends BaseEntity {
   @JoinColumn()
   latestMessage: ChatMessage;
 
-  @ManyToMany(() => User)
+  @ManyToMany(() => User, {
+    orphanedRowAction: 'delete',
+  })
   @JoinTable()
   admins: User[];
 
