@@ -13,7 +13,14 @@ import { Brackets, Connection, In, Repository } from 'typeorm';
 import { UserService } from '../../user/user.service';
 import { GroupChat } from '../entities/group-chat.entity';
 import { RemoveMemberDto } from '../dto/remove-member.dto';
-import { differenceBy, intersectionBy, omitBy, isNull, pick } from 'lodash';
+import {
+  differenceBy,
+  intersectionBy,
+  omitBy,
+  isNull,
+  pick,
+  uniqBy,
+} from 'lodash';
 import { User } from '../../user/entities/user.entity';
 import { EGroupChatType } from '../dto/group-chat.enum';
 import { FilterDto } from '../../../common/dto/filter.dto';
@@ -608,7 +615,10 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         };
       }
 
-      foundGroupChat.members = [...foundGroupChat.members, ...members];
+      foundGroupChat.members = uniqBy(
+        [...foundGroupChat.members, ...members],
+        'id',
+      );
       const res = await this.groupChatRepo.save(foundGroupChat);
 
       // Create member setting
@@ -616,8 +626,8 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       await Promise.all(
         members.map((member) => {
           memberSettings.push({
-            groupChat: foundGroupChat,
-            user: member,
+            groupChat: { id: foundGroupChat.id },
+            user: { id: member.id },
           });
         }),
       );
