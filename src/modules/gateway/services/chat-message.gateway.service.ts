@@ -111,6 +111,7 @@ export class ChatMessageGatewayService {
         isFriendRequest: dto.isFriendRequest,
         createdAt: now,
         updatedAt: now,
+        isRead: !!(insideGroupMembers?.length > 1),
       } as ChatMessage;
 
       // Publish queue message
