@@ -555,7 +555,7 @@ export class AppGateway
         await this.groupChatService.readMessages(groupId, client.user);
 
       if (groupChat && unReadMessages) {
-        client.broadcast.to(groupId).emit('messagesRead', {
+        client.emit('messagesRead', {
           groupChat,
         });
       }
@@ -592,7 +592,7 @@ export class AppGateway
           );
 
         if (groupChat && unReadMessages) {
-          client.broadcast.to(groupChat.id).emit('messagesRead', {
+          client.emit('messagesRead', {
             groupChat,
           });
         }

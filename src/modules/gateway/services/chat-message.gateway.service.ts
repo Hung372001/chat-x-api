@@ -16,6 +16,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { CacheService } from '../../cache/cache.service';
 import { TelegramLoggerService } from '../../logger/telegram.logger-service';
 import { v4 as uuidv4 } from 'uuid';
+import { OnlinesSessionManager } from '../sessions/onlines.session';
 
 @Injectable()
 export class ChatMessageGatewayService {
@@ -32,6 +33,8 @@ export class ChatMessageGatewayService {
     private readonly insideGroupSessions: GatewaySessionManager<string>,
     @Inject('CHAT-MESSAGE_SERVICE') private rmqClient: ClientProxy,
     @Inject(CacheService) private cacheService: CacheService,
+    @Inject(OnlinesSessionManager)
+    private readonly onlineSessions: OnlinesSessionManager,
   ) {}
 
   async sendMessage(dto: SendMessageDto, sender: User, groupChat?: GroupChat) {
@@ -120,6 +123,7 @@ export class ChatMessageGatewayService {
         sender,
         insideGroupMembers,
         groupChat,
+        onlineUsers: Object.fromEntries(this.onlineSessions.getSession()),
       });
 
       newMessage.sender = sender;

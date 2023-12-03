@@ -136,7 +136,8 @@ export class ChatMessageConsumer {
                   !data.insideGroupMembers.some((x) => x.id === setting.user.id)
                 ) {
                   if (
-                    !this.onlineSessions.getUserSession(setting.user.id) &&
+                    data.onlineUsers &&
+                    !data.onlineUsers[setting.user.id] &&
                     !setting.muteNotification
                   ) {
                     // get friendship
