@@ -76,6 +76,43 @@ services:
         condition: any
     networks:
       - chat-x_net
+  postgres-server-master:
+    image: "bitnami/postgresql"
+    restart: always
+    volumes: 
+      - /home/chat-x-api/bitnami-postgres:/bitnami/postgresql
+      - /home/chat-x-api/bitnami-postgres/db.sql:/docker-entrypoint-initdb.d/db.sql
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRESQL_PGAUDIT_LOG=READ,WRITE
+      - POSTGRESQL_LOG_HOSTNAME=true
+      - POSTGRESQL_REPLICATION_MODE=master
+      - POSTGRESQL_REPLICATION_USER=repl_postgres
+      - POSTGRESQL_REPLICATION_PASSWORD=${POSTGRES_PASSWORD_PROD}
+      - POSTGRESQL_USERNAME=postgres
+      - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD_PROD}
+      - POSTGRESQL_DATABASE=${POSTGRES_DB_PROD}
+    networks:
+      - chat-x_net
+  postgres-server-slave:
+    image: "bitnami/postgresql"
+    restart: always
+    depends_on:
+      - postgres-server-master
+    ports:
+      - "5434:5432"
+    environment:
+      - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD_PROD}
+      - POSTGRESQL_MASTER_HOST=postgres-server-master
+      - POSTGRESQL_PGAUDIT_LOG=READ
+      - POSTGRESQL_LOG_HOSTNAME=true
+      - POSTGRESQL_REPLICATION_MODE=slave
+      - POSTGRESQL_REPLICATION_USER=repl_postgres
+      - POSTGRESQL_REPLICATION_PASSWORD=${POSTGRES_PASSWORD_PROD}
+      - POSTGRESQL_MASTER_PORT_NUMBER=5432
+    networks:
+      - chat-x_net
   redis-server:
     image: 'redis:6.0-alpine'
     volumes:
