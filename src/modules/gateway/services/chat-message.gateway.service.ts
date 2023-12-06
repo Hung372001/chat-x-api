@@ -35,10 +35,20 @@ export class ChatMessageGatewayService {
     @Inject(CacheService) private cacheService: CacheService,
     @Inject(OnlinesSessionManager)
     private readonly onlineSessions: OnlinesSessionManager,
+    @Inject(TelegramLoggerService) private teleLogger: TelegramLoggerService,
   ) {}
 
   async sendMessage(dto: SendMessageDto, sender: User, groupChat?: GroupChat) {
     try {
+      if (
+        !dto.message &&
+        !dto.imageUrls?.length &&
+        !dto.documentUrls?.length &&
+        !dto.nameCardUserId
+      ) {
+        return null;
+      }
+
       if (!groupChat) {
         groupChat = await this.groupChatService.findOneWithMemberIds(
           dto.groupId,
@@ -129,6 +139,19 @@ export class ChatMessageGatewayService {
       newMessage.sender = sender;
       newMessage.group = groupChat;
       newMessage.nameCard = nameCard;
+
+      if (
+        !newMessage.message &&
+        !newMessage.imageUrls &&
+        !newMessage.documentUrls &&
+        !newMessage.nameCard
+      ) {
+        this.teleLogger.error({
+          error: 'Null content',
+          input: dto,
+          output: newMessage,
+        });
+      }
 
       return { ...newMessage, isNewMember };
     } catch (e: any) {
