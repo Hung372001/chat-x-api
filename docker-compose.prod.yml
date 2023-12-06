@@ -93,6 +93,8 @@ services:
       - POSTGRESQL_USERNAME=postgres
       - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD_PROD}
       - POSTGRESQL_DATABASE=${POSTGRES_DB_PROD}
+      - POSTGRESQL_SYNCHRONOUS_COMMIT_MODE=on
+      - POSTGRESQL_NUM_SYNCHRONOUS_REPLICAS=1
     networks:
       - chat-x_net
   postgres-server-slave:
