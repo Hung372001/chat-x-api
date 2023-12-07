@@ -82,7 +82,6 @@ services:
     volumes: 
       - /home/chat-x-api/bitnami-postgres:/bitnami/postgresql
       - /home/chat-x-api/bitnami-postgres/db.sql:/docker-entrypoint-initdb.d/db.sql
-      - /home/chat-x-api/postgresql.conf:/opt/bitnami/postgresql/conf/postgresql.conf
     ports:
       - "5433:5432"
     environment:
