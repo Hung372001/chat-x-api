@@ -220,8 +220,9 @@ export class FriendRequestService {
 
             // Call socket to create group chat dou for new friend
             await callSocket('create-friend-group', {
-              friend: pick(friend, ['email', 'phoneNumber', 'username']),
+              friend: pick(friend, ['id', 'email', 'phoneNumber', 'username']),
               currentUser: pick(currentUser, [
+                'id',
                 'email',
                 'phoneNumber',
                 'username',
@@ -303,7 +304,16 @@ export class FriendRequestService {
         await this.friendshipRepository.save(friendship);
 
         // emit socket event accept friend request
-        await callSocket('accept-friend-request', { friend, currentUser });
+        await callSocket('accept-friend-request', {
+          friend: pick(friend, ['id', 'email', 'phoneNumber', 'username']),
+          currentUser: pick(currentUser, [
+            'id',
+            'email',
+            'phoneNumber',
+            'username',
+            'profile',
+          ]),
+        });
       }
 
       return friendRequest;
