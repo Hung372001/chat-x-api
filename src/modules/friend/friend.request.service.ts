@@ -9,7 +9,7 @@ import { InjectConnection, InjectRepository } from '@nestjs/typeorm';
 import { Connection, In, Repository } from 'typeorm';
 import { AddFriendsDto } from './dto/add-friends.dto';
 import { Request } from 'express';
-import { differenceBy, intersectionBy } from 'lodash';
+import { differenceBy, intersectionBy, pick } from 'lodash';
 import { REQUEST } from '@nestjs/core';
 import { FriendRequest } from './entities/friend-request.entity';
 import { EFriendRequestStatus } from './dto/friend-request.enum';
@@ -214,12 +214,20 @@ export class FriendRequestService {
         await Promise.all(
           newFriends.map(async (friend) => {
             await this.friendRequestRepository.save({
-              fromUser: currentUser,
-              toUser: friend,
+              fromUser: { id: currentUser.id },
+              toUser: { id: friend.id },
             });
 
             // Call socket to create group chat dou for new friend
-            await callSocket('create-friend-group', { friend, currentUser });
+            await callSocket('create-friend-group', {
+              friend: pick(friend, ['email', 'phoneNumber', 'username']),
+              currentUser: pick(currentUser, [
+                'email',
+                'phoneNumber',
+                'username',
+                'profile',
+              ]),
+            });
           }),
         );
       }

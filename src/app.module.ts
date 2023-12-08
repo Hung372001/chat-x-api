@@ -25,7 +25,6 @@ import { GatewayModule } from './modules/gateway/gateway.module';
 import { RmqModule } from './modules/rmq/rmq.module';
 import { FCMTokenModule } from './modules/fcm-token/fcm-token.module';
 import { NotificationModule } from './modules/notification/notification.module';
-import { CacheInterceptor } from './interceptors/cache.interceptor';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SchedulerModule } from './modules/scheduler/scheduler.module';
 import { ProfileModule } from './modules/profile/profile.module';
@@ -66,6 +65,7 @@ const apiV1Modules = [
       store: redisStore,
       url: `${process.env.REDIS_URI}`,
       ttl: 0,
+      pingInterval: 1000,
     }),
     LoggerModule.forRoot(),
     ScheduleModule.forRoot(),
