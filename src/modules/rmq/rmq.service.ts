@@ -12,7 +12,7 @@ export class RmqService {
       options: {
         urls: [this.configService.get('RABBITMQ_URI').toString()],
         queue: queue,
-        prefetchCount: 200,
+        prefetchCount: 20,
         noAck,
         persistent: true,
         queueOptions: {
