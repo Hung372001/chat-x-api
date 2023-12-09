@@ -87,12 +87,19 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     userId: string,
     groupId: string,
   ): Promise<GroupChatSetting | null> {
-    return this.groupSettingRepo
-      .createQueryBuilder('group_chat_setting')
-      .leftJoinAndSelect('group_chat_setting.user', 'user')
-      .where('group_chat_setting.userId = :userId', { userId })
-      .andWhere('group_chat_setting.groupChatId = :groupId', { groupId })
-      .getOne();
+    const cacheKey = `GroupSetting_${userId}_${groupId})}`;
+    let setting = await this.cacheService.get(cacheKey);
+
+    if (!setting) {
+      setting = await this.groupSettingRepo
+        .createQueryBuilder('group_chat_setting')
+        .leftJoinAndSelect('group_chat_setting.user', 'user')
+        .where('group_chat_setting.userId = :userId', { userId })
+        .andWhere('group_chat_setting.groupChatId = :groupId', { groupId })
+        .getOne();
+    }
+
+    return setting;
   }
 
   async getGroupChatDou(memberIds: string[], gateway: AppGateway) {

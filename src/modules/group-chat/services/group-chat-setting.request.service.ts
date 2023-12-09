@@ -16,6 +16,7 @@ import { GroupChatSetting } from '../entities/group-chat-setting.entity';
 import moment from 'moment';
 import { GroupChatService } from './group-chat.service';
 import { UpdateClearMessageDurationDto } from '../dto/update-clear-message-duration.dto';
+import { CacheService } from '../../cache/cache.service';
 
 @Injectable({ scope: Scope.REQUEST })
 export class GroupChatSettingRequestService extends BaseService<GroupChatSetting> {
@@ -25,7 +26,7 @@ export class GroupChatSettingRequestService extends BaseService<GroupChatSetting
     private groupChatService: GroupChatService,
     @InjectRepository(GroupChatSetting)
     private groupSettingRepo: Repository<GroupChatSetting>,
-    @Inject(AppGateway) private readonly gateway: AppGateway,
+    @Inject(CacheService) private readonly cacheService: CacheService,
   ) {
     super(groupSettingRepo);
   }
@@ -70,6 +71,10 @@ export class GroupChatSettingRequestService extends BaseService<GroupChatSetting
         deleteMessageFrom: setting.deleteMessageFrom,
       });
 
+      await this.cacheService.del(
+        `GroupSetting_${currentUser.id}_${groupChatId}`,
+      );
+
       return setting;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
@@ -87,6 +92,10 @@ export class GroupChatSettingRequestService extends BaseService<GroupChatSetting
         pinned: setting.pinned,
       });
 
+      await this.cacheService.del(
+        `GroupSetting_${currentUser.id}_${groupChatId}`,
+      );
+
       return setting;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
@@ -103,6 +112,10 @@ export class GroupChatSettingRequestService extends BaseService<GroupChatSetting
       await this.groupSettingRepo.update(setting.id, {
         muteNotification: setting.muteNotification,
       });
+
+      await this.cacheService.del(
+        `GroupSetting_${currentUser.id}_${groupChatId}`,
+      );
 
       return setting;
     } catch (e: any) {
@@ -255,6 +268,10 @@ export class GroupChatSettingRequestService extends BaseService<GroupChatSetting
       await this.groupSettingRepo.update(setting.id, {
         hiding: setting.hiding,
       });
+
+      await this.cacheService.del(
+        `GroupSetting_${currentUser.id}_${groupChatId}`,
+      );
 
       return setting;
     } catch (e: any) {

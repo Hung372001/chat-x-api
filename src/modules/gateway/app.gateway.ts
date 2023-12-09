@@ -403,6 +403,7 @@ export class AppGateway
           newMembers.map(async (x) => {
             const cacheKey = `GroupChatIds_${x.id}`;
             await this.cacheService.del(cacheKey);
+            await this.cacheService.del(`GroupSetting_${x.id}_${groupChat.id}`);
           }),
         );
       } catch (e) {}
@@ -426,6 +427,7 @@ export class AppGateway
           removeMembers.map(async (x) => {
             const cacheKey = `GroupChatIds_${x.id}`;
             await this.cacheService.del(cacheKey);
+            await this.cacheService.del(`GroupSetting_${x.id}_${groupChat.id}`);
           }),
         );
       } catch (e) {}
