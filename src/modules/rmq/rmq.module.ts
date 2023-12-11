@@ -26,6 +26,7 @@ export class RmqModule {
                 urls: [configService.get('RABBITMQ_URI').toString()],
                 queue: queueName || configService.get('RABBITMQ_QUEUE_NAME'),
                 noAck: false,
+                prefetchCount: 20,
                 queueOptions: {
                   durable: true,
                 },
