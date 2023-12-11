@@ -15,13 +15,26 @@ import { TelegramLoggerService } from '../modules/logger/telegram.logger-service
         telegramLogger: TelegramLoggerService,
       ) => ({
         type: 'postgres',
-        host: configService.get('DB_HOST'),
-        port: +configService.get('DB_PORT'),
-        username: configService.get('DB_USERNAME'),
-        password: configService.get('DB_PASSWORD'),
-        database: configService.get('DB_DATABASE'),
-        entities: [__dirname + '/../**/*.entity.js'],
-        synchronize: true,
+        replication: {
+          master: {
+            host: configService.get('DB_HOST'),
+            port: +configService.get('DB_PORT'),
+            username: configService.get('DB_USERNAME'),
+            password: configService.get('DB_PASSWORD'),
+            database: configService.get('DB_DATABASE'),
+            entities: [__dirname + '/../**/*.entity.js'],
+            synchronize: true,
+          },
+          slaves: [
+            {
+              host: configService.get('DB_REPL_HOST'),
+              port: +configService.get('DB_REPL_PORT'),
+              username: configService.get('DB_REPL_USERNAME'),
+              password: configService.get('DB_PASSWORD'),
+              database: configService.get('DB_DATABASE'),
+            },
+          ],
+        },
         logging: true,
         logger: new DBLogger(telegramLogger),
         maxQueryExecutionTime: 2000,
