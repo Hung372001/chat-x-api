@@ -31,6 +31,10 @@ import { CustomeCacheModule } from '../cache/cache.module';
     RmqModule.register({
       name: 'CHAT-MESSAGE_SERVICE',
     }),
+    RmqModule.register({
+      name: 'NOTI_SERVICE',
+      queueName: 'NOTI_QUEUE_NAME',
+    }),
     CustomeCacheModule,
   ],
   controllers: [ChatMessageConsumer],

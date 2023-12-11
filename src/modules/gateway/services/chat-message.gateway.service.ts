@@ -32,6 +32,7 @@ export class ChatMessageGatewayService {
     @Inject(GatewaySessionManager)
     private readonly insideGroupSessions: GatewaySessionManager<string>,
     @Inject('CHAT-MESSAGE_SERVICE') private rmqClient: ClientProxy,
+    @Inject('NOTI_SERVICE') private notiRmqClient: ClientProxy,
     @Inject(CacheService) private cacheService: CacheService,
     @Inject(OnlinesSessionManager)
     private readonly onlineSessions: OnlinesSessionManager,
@@ -128,7 +129,13 @@ export class ChatMessageGatewayService {
       } as ChatMessage;
 
       // Publish queue message
-      await this.rmqClient.emit('saveMsgAndSendNoti', {
+      await this.rmqClient.emit('saveMsg', {
+        newMessage,
+        sender,
+        groupChat,
+      });
+
+      await this.notiRmqClient.emit('sendMsgNoti', {
         newMessage,
         sender,
         insideGroupMembers,

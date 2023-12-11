@@ -81,8 +81,8 @@ export class ChatMessageConsumer {
     this.rmqService.ack(context);
   }
 
-  @EventPattern('saveMsgAndSendNoti')
-  async saveMsgAndSendNoti(@Payload() data: any, @Ctx() context: RmqContext) {
+  @EventPattern('saveMsg')
+  async saveMsg(@Payload() data: any, @Ctx() context: RmqContext) {
     try {
       if (data) {
         const beginTime = moment.utc();
@@ -100,9 +100,6 @@ export class ChatMessageConsumer {
           .into(ChatMessage)
           .values(data.newMessage)
           .execute();
-
-        data.newMessage.sender = data.sender;
-        data.newMessage.group = data.groupChat;
 
         logs.push(
           `${moment.utc().toISOString()} - ${id} - Begin save group chat`,
@@ -122,6 +119,19 @@ export class ChatMessageConsumer {
         if (moment.utc().add(-3, 's').isAfter(beginTime)) {
           await this.telegramLogger.error(logs);
         }
+      }
+    } catch (e: any) {
+      this.logger.debug(e);
+    }
+    this.rmqService.ack(context);
+  }
+
+  @EventPattern('sendMsgNoti')
+  async sendMsgNoti(@Payload() data: any, @Ctx() context: RmqContext) {
+    try {
+      if (data) {
+        data.newMessage.sender = data.sender;
+        data.newMessage.group = data.groupChat;
 
         await Promise.all(
           data.groupChat.members.map(async (member) => {

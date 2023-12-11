@@ -7,11 +7,8 @@ import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
 import { initSwagger } from './swagger';
 import * as AWS from 'aws-sdk';
-import { AllExceptionsFilter } from './interceptors/all-exception.filter';
 import { RmqService } from './modules/rmq/rmq.service';
 import { MicroserviceOptions } from '@nestjs/microservices';
-const cluster = require('cluster');
-const numCPUs = require('os').cpus().length;
 
 async function bootstrap() {
   const logger = new Logger(bootstrap.name);
@@ -48,6 +45,9 @@ async function bootstrap() {
   const rmqService = app.get<RmqService>(RmqService);
   app.connectMicroservice<MicroserviceOptions>(
     rmqService.getOptions(appConfigs.get('RABBITMQ_QUEUE_NAME')),
+  );
+  app.connectMicroservice<MicroserviceOptions>(
+    rmqService.getOptions(appConfigs.get('NOTI_QUEUE_NAME')),
   );
 
   // Swagger
