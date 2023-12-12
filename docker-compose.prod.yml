@@ -99,7 +99,7 @@ services:
     image: "bitnami/postgresql"
     restart: always
     volumes:
-      - /home/chat-x-api/postgresql.conf:/opt/bitnami/postgresql/conf/postgresql.conf
+      - /home/chat-x-api/slave-postgresql.conf:/opt/bitnami/postgresql/conf/postgresql.conf
     depends_on:
       - postgres-server-master
     ports:
