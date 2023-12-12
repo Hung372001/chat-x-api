@@ -66,6 +66,7 @@ services:
       - PGDATA=/data/postgres
       - POSTGRES_DB=${POSTGRES_DB_PROD}
     command: [ "postgres", "-c", "wal_level=logical" ]
+    deploy:
       placement:
           constraints: [node.role == manager]
       update_config:
@@ -98,10 +99,10 @@ services:
   postgres-server-slave:
     image: "bitnami/postgresql"
     restart: always
-    volumes:
-      - /home/chat-x-api/slave-postgresql.conf:/opt/bitnami/postgresql/conf/postgresql.conf
     depends_on:
       - postgres-server-master
+    volumes:
+      - /home/chat-x-api/slave-postgresql.conf:/opt/bitnami/postgresql/conf/postgresql.conf
     ports:
       - "5434:5432"
     environment:
