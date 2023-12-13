@@ -51,7 +51,7 @@ async function bootstrap() {
     rmqService.getOptions(appConfigs.get('NOTI_QUEUE_NAME')),
   );
 
-  if (appConfigs.get('SERVICE_TYPE') === EServiceType.SOCKET_GATEWAY) {
+  if (appConfigs.get('SERVICE_TYPE') == EServiceType.SOCKET_GATEWAY) {
     app.connectMicroservice<MicroserviceOptions>(
       rmqService.getOptions(appConfigs.get('CHAT_GATEWAY_QUEUE_NAME')),
     );
