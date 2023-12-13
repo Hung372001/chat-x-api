@@ -84,15 +84,18 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
 
     let totalItems = [],
       finalTotal = 0;
-    if (page - 1 * limit <= this.cacheMessageParallel) {
-      const fullTimeoutMsgCK = `Fullmessage_${groupChatId}`;
-      const fullTimeoutMsg = await this.cacheService.get(fullTimeoutMsgCK);
 
-      finalTotal = limit + 1;
-      if (fullTimeoutMsg?.length > 0) {
-        limit = limit - fullTimeoutMsg?.length;
-        totalItems = fullTimeoutMsg.reverse();
-      }
+    const fullTimeoutMsgCK = `Fullmessage_${groupChatId}`;
+    const fullTimeoutMsg = await this.cacheService.get(fullTimeoutMsgCK);
+    if (fullTimeoutMsg?.length && page - 1 * limit <= fullTimeoutMsg?.length) {
+      finalTotal = fullTimeoutMsg?.length + 1;
+      limit = limit * page - fullTimeoutMsg?.length;
+      totalItems = fullTimeoutMsg
+        .reverse()
+        .slice(
+          (page - 1) * limit,
+          limit > 0 ? limit * page - limit : page * limit,
+        );
     }
 
     if (limit > 0) {
