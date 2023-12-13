@@ -21,6 +21,7 @@ import { CacheService } from '../../cache/cache.service';
 @Controller()
 export class ChatMessageConsumer {
   private readonly logger = new Logger(ChatMessageConsumer.name);
+  cacheMessageParallel = +process.env.CAHE_MESSAGE_PARALLEL ?? 10;
 
   constructor(
     @InjectRepository(ChatMessage)
@@ -94,25 +95,83 @@ export class ChatMessageConsumer {
           `${moment.utc().toISOString()} - ${id} - Begin save message`,
         ];
 
-        await this.chatMessageRepo
-          .createQueryBuilder()
-          .insert()
-          .into(ChatMessage)
-          .values(data.newMessage)
-          .execute();
+        const timeoutMsgCK = `TimeoutMsg_${data.groupChat.id}`;
+        const fullTimeoutMsgCK = `Fullmessage_${data.groupChat.id}`;
+        let timeoutMsg = await this.cacheService.get(timeoutMsgCK);
+        let fullTimeoutMsg = await this.cacheService.get(fullTimeoutMsgCK);
+        const latestMessageCK = `LatestMsg_${data.groupChat.id}`;
 
-        logs.push(
-          `${moment.utc().toISOString()} - ${id} - Begin save group chat`,
-        );
+        if (timeoutMsg?.length && fullTimeoutMsg?.length) {
+          timeoutMsg.push({
+            ...data.newMessage,
+            sender: {
+              id: data.sender.id,
+            },
+            group: { id: data.groupChat.id },
+            nameCard: data.nameCard ? { id: data.nameCard.id } : null,
+          });
 
-        // Save latest message for group
-        await this.connection.query(`
-            update "group_chat"
-            set "latestMessageId" = '${
-              data.newMessage.id
-            }', "updated_at" = '${moment.utc().toISOString()}'
-            where "id" = '${data.groupChat.id}'
-          `);
+          fullTimeoutMsg.push({
+            ...data.newMessage,
+            sender: data.sender,
+            group: { id: data.groupChat.id },
+            nameCard: data.nameCard,
+          });
+        } else {
+          timeoutMsg = [
+            {
+              ...data.newMessage,
+              sender: {
+                id: data.sender.id,
+              },
+              group: { id: data.groupChat.id },
+              nameCard: data.nameCard ? { id: data.nameCard.id } : null,
+            },
+          ];
+
+          fullTimeoutMsg = [
+            {
+              ...data.newMessage,
+              sender: data.sender,
+              group: { id: data.groupChat.id },
+              nameCard: data.nameCard,
+            },
+          ];
+        }
+
+        if (timeoutMsg.length > this.cacheMessageParallel) {
+          await this.chatMessageRepo
+            .createQueryBuilder()
+            .insert()
+            .into(ChatMessage)
+            .values(timeoutMsg)
+            .onConflict('do nothing')
+            .execute();
+
+          logs.push(
+            `${moment.utc().toISOString()} - ${id} - Begin save group chat`,
+          );
+
+          // Save latest message for group
+          await this.connection.query(`
+                update "group_chat"
+                set "latestMessageId" = '${
+                  data.newMessage.id
+                }', "updated_at" = '${moment.utc().toISOString()}'
+                where "id" = '${data.groupChat.id}'
+              `);
+
+          await this.cacheService.set(timeoutMsgCK, []);
+          await this.cacheService.set(fullTimeoutMsgCK, []);
+        } else {
+          await this.cacheService.set(timeoutMsgCK, timeoutMsg);
+          await this.cacheService.set(fullTimeoutMsgCK, fullTimeoutMsg);
+        }
+
+        await this.cacheService.set(latestMessageCK, {
+          ...data.newMessage,
+          nameCard: data.nameCard,
+        });
 
         logs.push(`${moment.utc().toISOString()} - ${id} - End send message`);
 

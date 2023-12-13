@@ -115,14 +115,6 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
 
     const queryBuilder = this.groupChatRepo
       .createQueryBuilder('group_chat')
-      .leftJoinAndSelect(
-        'group_chat.latestMessage',
-        'chat_message as latestMessages',
-      )
-      .leftJoinAndSelect(
-        'chat_message as latestMessages.nameCard',
-        'user as nameCards',
-      )
       .leftJoinAndSelect('group_chat.settings', 'group_chat_setting')
       .andWhere('group_chat_setting.groupChatId = group_chat.id')
       .orderBy('group_chat_setting.pinned', 'DESC');
@@ -410,6 +402,9 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     if (groupChat.type === EGroupChatType.GROUP) {
       const owner = await this.groupChatService.getGroupOwner(groupChat.id);
       const admins = await this.groupChatService.getGroupAdmins(groupChat.id);
+      groupChat.latestMessage = await this.groupChatService.getLatestMessage(
+        groupChat.id,
+      );
       return omitBy(
         {
           ...groupChat,

@@ -6,11 +6,14 @@ import { UserService } from '../../user/user.service';
 import { GroupChat } from '../entities/group-chat.entity';
 import { EGroupChatType } from '../dto/group-chat.enum';
 import { CacheService } from '../../cache/cache.service';
+import { ChatMessage } from '../../chat-message/entities/chat-message.entity';
 
 @Injectable()
 export class GroupChatService extends BaseService<GroupChat> {
   constructor(
     @InjectRepository(GroupChat) private groupChatRepo: Repository<GroupChat>,
+    @InjectRepository(ChatMessage)
+    private chatMessageRepo: Repository<ChatMessage>,
     @InjectConnection() private readonly connection: Connection,
     @Inject(CacheService) private readonly cacheService: CacheService,
   ) {
@@ -149,6 +152,31 @@ export class GroupChatService extends BaseService<GroupChat> {
       await this.cacheService.set(cacheKey, groupChat.admins);
 
       return groupChat.admins;
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async getLatestMessage(groupChatId: string) {
+    try {
+      const cacheKey = `LatestMsg_${groupChatId}`;
+      const cacheData = await this.cacheService.get(cacheKey);
+
+      if (cacheData) {
+        return cacheData;
+      }
+
+      const latestMessage = await this.chatMessageRepo
+        .createQueryBuilder('chat_message')
+        .where('chat_message.groupId = :groupId', {
+          groupId: groupChatId,
+        })
+        .orderBy('chat_message.createdAt', 'DESC')
+        .getOne();
+
+      await this.cacheService.set(cacheKey, latestMessage);
+
+      return latestMessage;
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }

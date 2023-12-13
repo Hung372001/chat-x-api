@@ -133,6 +133,7 @@ export class ChatMessageGatewayService {
         newMessage,
         sender,
         groupChat,
+        nameCard,
       });
 
       await this.notiRmqClient.emit('sendMsgNoti', {
@@ -324,6 +325,9 @@ export class ChatMessageGatewayService {
           await this.groupChatService.update(chatMessage.group.id, {
             latestMessage,
           });
+
+          const cacheKey = `LatestMsg_${chatMessage.group.id}`;
+          await this.cacheService.set(cacheKey, latestMessage);
         }
       }
 
