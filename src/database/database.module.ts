@@ -40,6 +40,10 @@ import { TelegramLoggerService } from '../modules/logger/telegram.logger-service
         maxQueryExecutionTime: 2000,
         keepConnectionAlive: true,
         autoLoadEntities: true,
+        extra: {
+          idleTimeoutMillis: 2000,
+          poolSize: 100,
+        },
       }),
     }),
   ],

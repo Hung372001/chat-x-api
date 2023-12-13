@@ -31,7 +31,7 @@ const dataSource = new DataSource({
   migrationsRun: false,
   extra: {
     idleTimeoutMillis: 2000,
-    poolSize: 20,
+    poolSize: 100,
   },
   cli: {
     migrationsDir: 'src/database/migrations',
