@@ -399,12 +399,13 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       page: 1,
     } as FilterDto);
 
+    groupChat.latestMessage = await this.groupChatService.getLatestMessage(
+      groupChat.id,
+    );
+
     if (groupChat.type === EGroupChatType.GROUP) {
       const owner = await this.groupChatService.getGroupOwner(groupChat.id);
       const admins = await this.groupChatService.getGroupAdmins(groupChat.id);
-      groupChat.latestMessage = await this.groupChatService.getLatestMessage(
-        groupChat.id,
-      );
       return omitBy(
         {
           ...groupChat,

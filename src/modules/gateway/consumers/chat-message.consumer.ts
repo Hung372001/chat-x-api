@@ -164,6 +164,12 @@ export class ChatMessageConsumer {
           await this.cacheService.set(timeoutMsgCK, []);
           await this.cacheService.set(fullTimeoutMsgCK, []);
         } else {
+          // Save latest message for group
+          await this.connection.query(`
+            update "group_chat"
+            set "updated_at" = '${moment.utc().toISOString()}'
+            where "id" = '${data.groupChat.id}'
+          `);
           await this.cacheService.set(timeoutMsgCK, timeoutMsg);
           await this.cacheService.set(fullTimeoutMsgCK, fullTimeoutMsg);
         }
@@ -171,6 +177,7 @@ export class ChatMessageConsumer {
         await this.cacheService.set(latestMessageCK, {
           ...data.newMessage,
           nameCard: data.nameCard,
+          group: { id: data.groupChat.id },
         });
 
         logs.push(`${moment.utc().toISOString()} - ${id} - End send message`);
