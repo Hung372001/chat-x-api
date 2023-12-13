@@ -939,18 +939,19 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     try {
       const currentUser = this.request.user as User;
 
-      const foundGroupChat = await this.groupChatRepo.findOne({
-        where: { id },
-        relations: ['admins', 'members', 'members.profile', 'owner'],
-      });
+      const foundGroupChat = await this.groupChatService.findOneWithMemberIds(
+        id,
+      );
 
       if (!foundGroupChat) {
         throw { message: 'Không tìm thấy nhóm chat.' };
       }
 
+      const owner = await this.groupChatService.getGroupOwner(id);
+
       if (
         (foundGroupChat.type === EGroupChatType.GROUP &&
-          foundGroupChat.owner.id !== currentUser.id) ||
+          owner.id !== currentUser.id) ||
         (foundGroupChat.type === EGroupChatType.DOU &&
           !foundGroupChat.members.some((x) => x.id === currentUser.id))
       ) {
@@ -971,7 +972,6 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
           {
             ...foundGroupChat,
             admins: null,
-            members: null,
           },
           isNull,
         ),
