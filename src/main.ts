@@ -9,6 +9,7 @@ import { initSwagger } from './swagger';
 import * as AWS from 'aws-sdk';
 import { RmqService } from './modules/rmq/rmq.service';
 import { MicroserviceOptions } from '@nestjs/microservices';
+import { EServiceType } from './common/enums/service-type.enum';
 
 async function bootstrap() {
   const logger = new Logger(bootstrap.name);
@@ -49,6 +50,12 @@ async function bootstrap() {
   app.connectMicroservice<MicroserviceOptions>(
     rmqService.getOptions(appConfigs.get('NOTI_QUEUE_NAME')),
   );
+
+  if (appConfigs.get('SERVICE_TYPE') === EServiceType.SOCKET_GATEWAY) {
+    app.connectMicroservice<MicroserviceOptions>(
+      rmqService.getOptions(appConfigs.get('CHAT_GATEWAY_QUEUE_NAME')),
+    );
+  }
 
   // Swagger
   initSwagger(app);

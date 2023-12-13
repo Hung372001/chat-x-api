@@ -13,6 +13,7 @@ import { GroupChatRequestService } from './services/group-chat.request.service';
 import { Friendship } from '../friend/entities/friendship.entity';
 import { CustomeCacheModule } from '../cache/cache.module';
 import { ChatMessage } from '../chat-message/entities/chat-message.entity';
+import { RmqModule } from '../rmq/rmq.module';
 
 @Module({
   imports: [
@@ -25,6 +26,10 @@ import { ChatMessage } from '../chat-message/entities/chat-message.entity';
     UserModule,
     GatewayModule,
     CustomeCacheModule,
+    RmqModule.register({
+      name: 'CHAT_GATEWAY',
+      queueName: 'CHAT_GATEWAY_QUEUE_NAME',
+    }),
   ],
   controllers: [GroupChatController, GroupChatSettingController],
   providers: [

@@ -7,12 +7,17 @@ import { GatewayModule } from '../gateway/gateway.module';
 import { User } from '../user/entities/user.entity';
 import { Friendship } from './entities/friendship.entity';
 import { CustomeCacheModule } from '../cache/cache.module';
+import { RmqModule } from '../rmq/rmq.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, FriendRequest, Friendship]),
     GatewayModule,
     CustomeCacheModule,
+    RmqModule.register({
+      name: 'CHAT_GATEWAY',
+      queueName: 'CHAT_GATEWAY_QUEUE_NAME',
+    }),
   ],
   controllers: [FriendController],
   providers: [FriendRequestService],

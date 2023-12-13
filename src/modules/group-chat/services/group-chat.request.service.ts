@@ -38,7 +38,7 @@ import { CacheService } from '../../cache/cache.service';
 import { GroupChatService } from './group-chat.service';
 import { SendMessageDto } from '../../chat-message/dto/send-message.dto';
 import { AuthSocket } from '../../gateway/interfaces/auth.interface';
-import { callSocket } from '../../../common/helpers/http-request.helper';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable({ scope: Scope.REQUEST })
 export class GroupChatRequestService extends BaseService<GroupChat> {
@@ -55,6 +55,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     private readonly groupChatService: GroupChatService,
     @Inject(CacheService) private readonly cacheService: CacheService,
     @InjectConnection() private readonly connection: Connection,
+    @Inject('CHAT_GATEWAY') private rmqClient: ClientProxy,
   ) {
     super(groupChatRepo);
   }
@@ -563,7 +564,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       await this.groupSettingRepo.save(memberSettings);
 
       // Call socket to create group chat
-      await callSocket('create-group-chat', { newGroupChat });
+      await this.rmqClient.emit('createGroupChat', { newGroupChat });
 
       return newGroupChat;
     } catch (e: any) {
@@ -640,7 +641,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       await this.groupSettingRepo.save(memberSettings);
 
       // Call socket
-      await callSocket('add-new-member', {
+      await this.rmqClient.emit('addNewMember', {
         foundGroupChat: omitBy(
           {
             ...foundGroupChat,
@@ -715,7 +716,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       await this.cacheService.del(`GroupChatAdmins_${foundGroupChat.id}`);
 
       // Call socket to add new admin
-      await callSocket('modify-admin', {
+      await this.rmqClient.emit('modifyAdmin', {
         foundGroupChat: omitBy(
           {
             ...foundGroupChat,
@@ -756,7 +757,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       });
 
       // Call socket to create group chat
-      await callSocket('rename-group', {
+      await this.rmqClient.emit('renameGroup', {
         foundGroupChat: omitBy(
           {
             ...foundGroupChat,
@@ -852,7 +853,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       foundGroupChat.members = aRMembers;
 
       // Call socket
-      await callSocket('remove-member', {
+      await this.rmqClient.emit('removeMember', {
         foundGroupChat: omitBy(
           {
             ...foundGroupChat,
@@ -916,7 +917,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       foundGroupChat.members = aRMembers;
 
       // Call socket
-      await callSocket('remove-member', {
+      await this.rmqClient.emit('removeMember', {
         foundGroupChat: omitBy(
           {
             ...foundGroupChat,
@@ -965,7 +966,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       await this.removeGroupMemberData(foundGroupChat, foundGroupChat.members);
 
       // Call socket
-      await callSocket('remove-group-chat', {
+      await this.rmqClient.emit('removeGroupChat', {
         foundGroupChat: omitBy(
           {
             ...foundGroupChat,
@@ -984,7 +985,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
 
   async offline() {
     const currentUser = this.request.user as User;
-    await callSocket('offline', { currentUser });
+    await this.rmqClient.emit('offline', { currentUser });
     return true;
   }
 

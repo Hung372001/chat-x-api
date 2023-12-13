@@ -18,7 +18,7 @@ import { User } from '../user/entities/user.entity';
 import { UpdateNicknameDto } from './dto/update-nickname.dto';
 import { Friendship } from './entities/friendship.entity';
 import { CacheService } from '../cache/cache.service';
-import { callSocket } from '../../common/helpers/http-request.helper';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable({ scope: Scope.REQUEST })
 export class FriendRequestService {
@@ -33,6 +33,7 @@ export class FriendRequestService {
     @Inject(AppGateway) private readonly gateway: AppGateway,
     @Inject(CacheService) private cacheService: CacheService,
     @InjectConnection() private readonly connection: Connection,
+    @Inject('CHAT_GATEWAY') private rmqClient: ClientProxy,
   ) {}
 
   async findOneWithFriends() {
@@ -219,7 +220,7 @@ export class FriendRequestService {
             });
 
             // Call socket to create group chat dou for new friend
-            await callSocket('create-friend-group', {
+            await this.rmqClient.emit('createFriendGroup', {
               friend: pick(friend, ['id', 'email', 'phoneNumber', 'username']),
               currentUser: pick(currentUser, [
                 'id',
@@ -304,7 +305,7 @@ export class FriendRequestService {
         await this.friendshipRepository.save(friendship);
 
         // emit socket event accept friend request
-        await callSocket('accept-friend-request', {
+        await this.rmqClient.emit('acceptFriendRequest', {
           friend: pick(friend, ['id', 'email', 'phoneNumber', 'username']),
           currentUser: pick(currentUser, [
             'id',
