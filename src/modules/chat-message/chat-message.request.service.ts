@@ -17,6 +17,8 @@ import { UserGatewayService } from '../gateway/services/user.gateway.service';
 
 @Injectable({ scope: Scope.REQUEST })
 export class ChatMessageRequestService extends BaseService<ChatMessage> {
+  cacheMessageParallel = +process.env.CAHE_MESSAGE_PARALLEL ?? 10;
+
   constructor(
     @Inject(REQUEST) private request: Request,
     @InjectRepository(ChatMessage)
@@ -80,14 +82,17 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       );
     }
 
-    const fullTimeoutMsgCK = `Fullmessage_${groupChatId}`;
-    const fullTimeoutMsg = await this.cacheService.get(fullTimeoutMsgCK);
-
     let totalItems = [],
+      finalTotal = 0;
+    if (page - 1 * limit <= this.cacheMessageParallel) {
+      const fullTimeoutMsgCK = `Fullmessage_${groupChatId}`;
+      const fullTimeoutMsg = await this.cacheService.get(fullTimeoutMsgCK);
+
       finalTotal = limit + 1;
-    if (fullTimeoutMsg?.length > 0) {
-      limit = limit - fullTimeoutMsg?.length;
-      totalItems = fullTimeoutMsg.reverse();
+      if (fullTimeoutMsg?.length > 0) {
+        limit = limit - fullTimeoutMsg?.length;
+        totalItems = fullTimeoutMsg.reverse();
+      }
     }
 
     if (limit > 0) {

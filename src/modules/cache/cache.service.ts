@@ -88,10 +88,10 @@ export class CacheService {
     const progressingCK = `Progressing_${cacheKey}`;
     const progressing = await this.get(progressingCK);
     let cacheData = await this.get(cacheKey);
-    if (!cacheData && !progressing) {
+    if (!progressing) {
       await this.set(progressingCK, true);
       cacheData = await callback();
-      this.set(cacheKey, cacheData);
+      await this.set(cacheKey, cacheData);
       await this.set(progressingCK, false);
     }
 
