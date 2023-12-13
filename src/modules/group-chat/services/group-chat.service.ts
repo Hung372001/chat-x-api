@@ -61,22 +61,29 @@ export class GroupChatService extends BaseService<GroupChat> {
   }
 
   async getGroupChatDou(memberIds: string[]) {
-    const groupChat = await this.groupChatRepo
-      .createQueryBuilder('group_chat')
-      .select('group_chat.id')
-      .leftJoin('group_chat.members', 'user')
-      .where('group_chat.type = :type', { type: EGroupChatType.DOU })
-      .addGroupBy('group_chat.id')
-      .having(`array_agg(user.id) @> :userIds::uuid[]`, {
-        userIds: memberIds,
-      })
-      .getOne();
+    const cacheKey = `GroupDou_${JSON.stringify(memberIds.sort())}`;
+    let groupChat = await this.cacheService.get(cacheKey);
 
     if (!groupChat) {
-      throw new HttpException(
-        'Không tìm thấy cuộc hội thoại',
-        HttpStatus.BAD_REQUEST,
-      );
+      groupChat = await this.groupChatRepo
+        .createQueryBuilder('group_chat')
+        .select('group_chat.id')
+        .leftJoin('group_chat.members', 'user')
+        .where('group_chat.type = :type', { type: EGroupChatType.DOU })
+        .addGroupBy('group_chat.id')
+        .having(`array_agg(user.id) @> :userIds::uuid[]`, {
+          userIds: memberIds,
+        })
+        .getOne();
+
+      if (!groupChat) {
+        throw new HttpException(
+          'Không tìm thấy cuộc hội thoại',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      await this.cacheService.set(cacheKey, groupChat);
     }
 
     return this.findOne({ id: groupChat.id });

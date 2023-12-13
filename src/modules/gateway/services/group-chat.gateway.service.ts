@@ -104,7 +104,7 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
 
   async getGroupChatDou(memberIds: string[], gateway: AppGateway) {
     try {
-      const cacheKey = `GroupDou_${JSON.stringify(memberIds)}`;
+      const cacheKey = `GroupDou_${JSON.stringify(memberIds.sort())}`;
       let groupChat = await this.cacheService.get(cacheKey);
 
       if (!groupChat) {

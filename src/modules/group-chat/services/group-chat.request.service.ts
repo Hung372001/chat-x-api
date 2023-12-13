@@ -76,174 +76,184 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       isGetAll = false,
     } = query;
 
-    let { sortBy = 'createdAt' } = query;
+    return this.cacheService.cacheServiceFunc(
+      `GetAllGroupChat_${currentUser.id}_${JSON.stringify(query)}`,
+      async () => {
+        let { sortBy = 'createdAt' } = query;
 
-    let groupChatIds = [];
-    const searchNameIndex = searchBy?.indexOf('name') ?? -1;
-    const andSearchNameIndex = searchAndBy?.indexOf('name') ?? -1;
+        let groupChatIds = [];
+        const searchNameIndex = searchBy?.indexOf('name') ?? -1;
+        const andSearchNameIndex = searchAndBy?.indexOf('name') ?? -1;
 
-    if (!isRootAdmin) {
-      const cacheKey = `GroupChatIds_${currentUser.id}`;
-      groupChatIds = await this.cacheService.get(cacheKey);
+        if (!isRootAdmin) {
+          const cacheKey = `GroupChatIds_${currentUser.id}`;
+          groupChatIds = await this.cacheService.get(cacheKey);
 
-      if (!groupChatIds?.length) {
-        groupChatIds = await this.connection.query(`
-        select distinct "groupChatId"
-        from "group_chat_members_user"
-        where "userId" = '${currentUser.id}'
-      `);
+          if (!groupChatIds?.length) {
+            groupChatIds = await this.connection.query(`
+          select distinct "groupChatId"
+          from "group_chat_members_user"
+          where "userId" = '${currentUser.id}'
+        `);
 
-        if (
-          !groupChatIds?.length &&
-          ((!keyword && !andKeyword) ||
-            (searchNameIndex === -1 && andSearchNameIndex === -1))
-        ) {
-          return {
-            items: [],
-            total: 0,
-          };
-        } else {
-          groupChatIds = groupChatIds.map((x) => x.groupChatId);
-          this.cacheService.set(cacheKey, groupChatIds);
+            if (
+              !groupChatIds?.length &&
+              ((!keyword && !andKeyword) ||
+                (searchNameIndex === -1 && andSearchNameIndex === -1))
+            ) {
+              return {
+                items: [],
+                total: 0,
+              };
+            } else {
+              groupChatIds = groupChatIds.map((x) => x.groupChatId);
+              this.cacheService.set(cacheKey, groupChatIds);
+            }
+          }
         }
-      }
-    }
 
-    if (sortBy === 'chat_message as latestMessages.createdAt') {
-      sortBy = 'updatedAt';
-    }
+        if (sortBy === 'chat_message as latestMessages.createdAt') {
+          sortBy = 'updatedAt';
+        }
 
-    const queryBuilder = this.groupChatRepo
-      .createQueryBuilder('group_chat')
-      .leftJoinAndSelect('group_chat.settings', 'group_chat_setting')
-      .andWhere('group_chat_setting.groupChatId = group_chat.id')
-      .orderBy('group_chat_setting.pinned', 'DESC');
+        const queryBuilder = this.groupChatRepo
+          .createQueryBuilder('group_chat')
+          .leftJoinAndSelect('group_chat.settings', 'group_chat_setting')
+          .andWhere('group_chat_setting.groupChatId = group_chat.id')
+          .orderBy('group_chat_setting.pinned', 'DESC');
 
-    if (!isRootAdmin) {
-      queryBuilder.andWhere(
-        new Brackets((subQuery) => {
-          if (groupChatIds?.length) {
-            subQuery.where(
-              new Brackets((andSubQuery) => {
-                andSubQuery.where('group_chat.id In(:...groupChatIds)', {
-                  groupChatIds,
-                });
-                andSubQuery.andWhere('group_chat_setting.userId = :userId', {
-                  userId: currentUser.id,
-                });
-              }),
-            );
-          }
-
-          if (
-            (searchNameIndex !== -1 || andSearchNameIndex !== -1) &&
-            (keyword ||
-              andKeyword ||
-              keyword[searchNameIndex] ||
-              andKeyword[andSearchNameIndex])
-          ) {
-            subQuery.orWhere('group_chat.isPublic = true');
-          }
-        }),
-      );
-    } else {
-      queryBuilder.withDeleted();
-    }
-
-    if (keyword) {
-      if (searchAndBy) {
-        searchAndBy.forEach((item, index) => {
-          const whereParams = {};
-          whereParams[`keyword_${index}`] = !Array.isArray(keyword)
-            ? `%${keyword}%`
-            : `%${keyword[index]}%`;
-
+        if (!isRootAdmin) {
           queryBuilder.andWhere(
-            `cast(${
-              !item.includes('.') ? `group_chat.${item}` : item
-            } as text) ilike :keyword_${index} `,
-            whereParams,
-          );
-        });
-      }
+            new Brackets((subQuery) => {
+              if (groupChatIds?.length) {
+                subQuery.where(
+                  new Brackets((andSubQuery) => {
+                    andSubQuery.where('group_chat.id In(:...groupChatIds)', {
+                      groupChatIds,
+                    });
+                    andSubQuery.andWhere(
+                      'group_chat_setting.userId = :userId',
+                      {
+                        userId: currentUser.id,
+                      },
+                    );
+                  }),
+                );
+              }
 
-      if (searchBy) {
-        queryBuilder.andWhere(
-          new Brackets((subQuery) => {
-            searchBy.forEach((item, index) => {
+              if (
+                (searchNameIndex !== -1 || andSearchNameIndex !== -1) &&
+                (keyword ||
+                  andKeyword ||
+                  keyword[searchNameIndex] ||
+                  andKeyword[andSearchNameIndex])
+              ) {
+                subQuery.orWhere('group_chat.isPublic = true');
+              }
+            }),
+          );
+        } else {
+          queryBuilder.withDeleted();
+        }
+
+        if (keyword) {
+          if (searchAndBy) {
+            searchAndBy.forEach((item, index) => {
               const whereParams = {};
               whereParams[`keyword_${index}`] = !Array.isArray(keyword)
                 ? `%${keyword}%`
                 : `%${keyword[index]}%`;
 
-              subQuery.orWhere(
+              queryBuilder.andWhere(
                 `cast(${
                   !item.includes('.') ? `group_chat.${item}` : item
                 } as text) ilike :keyword_${index} `,
                 whereParams,
               );
             });
-          }),
-        );
-      }
-    }
+          }
 
-    // search ilike
-    if (andKeyword) {
-      if (searchAndBy) {
-        searchAndBy.forEach((item, index) => {
-          const whereParams = {};
-          whereParams[`andKeyword_${index}`] = !Array.isArray(andKeyword)
-            ? `${andKeyword}`
-            : `${andKeyword[index]}`;
+          if (searchBy) {
+            queryBuilder.andWhere(
+              new Brackets((subQuery) => {
+                searchBy.forEach((item, index) => {
+                  const whereParams = {};
+                  whereParams[`keyword_${index}`] = !Array.isArray(keyword)
+                    ? `%${keyword}%`
+                    : `%${keyword[index]}%`;
 
-          queryBuilder.andWhere(
-            `cast(${
-              !item.includes('.') ? `group_chat.${item}` : item
-            } as text) ilike :andKeyword_${index} `,
-            whereParams,
-          );
-        });
-      }
+                  subQuery.orWhere(
+                    `cast(${
+                      !item.includes('.') ? `group_chat.${item}` : item
+                    } as text) ilike :keyword_${index} `,
+                    whereParams,
+                  );
+                });
+              }),
+            );
+          }
+        }
 
-      if (searchBy) {
-        queryBuilder.andWhere(
-          new Brackets((subQuery) => {
-            searchBy.forEach((item, index) => {
+        // search ilike
+        if (andKeyword) {
+          if (searchAndBy) {
+            searchAndBy.forEach((item, index) => {
               const whereParams = {};
               whereParams[`andKeyword_${index}`] = !Array.isArray(andKeyword)
                 ? `${andKeyword}`
                 : `${andKeyword[index]}`;
 
-              subQuery.orWhere(
+              queryBuilder.andWhere(
                 `cast(${
                   !item.includes('.') ? `group_chat.${item}` : item
                 } as text) ilike :andKeyword_${index} `,
                 whereParams,
               );
             });
-          }),
-        );
-      }
-    }
+          }
 
-    const [items, total] = await queryBuilder
-      .addOrderBy(
-        sortBy.includes('.') ? sortBy : `group_chat.${sortBy}`,
-        sortOrder,
-      )
-      .take(isGetAll ? null : limit)
-      .skip(isGetAll ? null : (page - 1) * limit)
-      .getManyAndCount();
+          if (searchBy) {
+            queryBuilder.andWhere(
+              new Brackets((subQuery) => {
+                searchBy.forEach((item, index) => {
+                  const whereParams = {};
+                  whereParams[`andKeyword_${index}`] = !Array.isArray(
+                    andKeyword,
+                  )
+                    ? `${andKeyword}`
+                    : `${andKeyword[index]}`;
 
-    return {
-      items: await Promise.all(
-        items.map(async (iterator) => {
-          return await this.mappingGroup(iterator, currentUser);
-        }),
-      ),
-      total,
-    };
+                  subQuery.orWhere(
+                    `cast(${
+                      !item.includes('.') ? `group_chat.${item}` : item
+                    } as text) ilike :andKeyword_${index} `,
+                    whereParams,
+                  );
+                });
+              }),
+            );
+          }
+        }
+
+        const [items, total] = await queryBuilder
+          .addOrderBy(
+            sortBy.includes('.') ? sortBy : `group_chat.${sortBy}`,
+            sortOrder,
+          )
+          .take(isGetAll ? null : limit)
+          .skip(isGetAll ? null : (page - 1) * limit)
+          .getManyAndCount();
+
+        return {
+          items: await Promise.all(
+            items.map(async (iterator) => {
+              return await this.mappingGroup(iterator, currentUser);
+            }),
+          ),
+          total,
+        };
+      },
+    );
   }
 
   async getAllMember(id: string, query: FilterDto) {
