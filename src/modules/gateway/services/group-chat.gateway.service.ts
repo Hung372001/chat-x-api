@@ -278,21 +278,27 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
 
   async readMessages(groupId: string, user: User) {
     try {
+      const cacheKey = `ReadMessagesss_${groupId}_${user.id}`;
+      const requestReadMessages = await this.cacheService.get(cacheKey);
       let unReadMessages = 0;
 
-      const fullTimeoutMsgCK = `Fullmessage_${groupId}`;
-      const fullTimeoutMsg = await this.cacheService.get(fullTimeoutMsgCK);
-      if (fullTimeoutMsg?.length && fullTimeoutMsg?.some((x) => !x.isRead)) {
-        await fullTimeoutMsg.forEach((el) => (el.isRead = true));
-        this.cacheService.set(fullTimeoutMsgCK, fullTimeoutMsg);
+      if (!requestReadMessages) {
+        await this.cacheService.set(cacheKey, true);
 
-        // Publish queue message
-        await this.rmqClient.emit('readMessages', {
-          groupId,
-          user,
-        });
+        const fullTimeoutMsgCK = `Fullmessage_${groupId}`;
+        const fullTimeoutMsg = await this.cacheService.get(fullTimeoutMsgCK);
+        if (fullTimeoutMsg?.length && fullTimeoutMsg?.some((x) => !x.isRead)) {
+          await fullTimeoutMsg.forEach((el) => (el.isRead = true));
+          this.cacheService.set(fullTimeoutMsgCK, fullTimeoutMsg);
 
-        unReadMessages = fullTimeoutMsg.count;
+          // Publish queue message
+          await this.rmqClient.emit('readMessages', {
+            groupId,
+            user,
+          });
+
+          unReadMessages = fullTimeoutMsg.count;
+        }
       }
 
       return {

@@ -251,6 +251,10 @@ export class ChatMessageConsumer {
                   await this.groupSettingRepo.update(setting.id, {
                     unReadMessages: setting.unReadMessages + 1,
                   });
+
+                  await this.cacheService.del(
+                    `ReadMessagesss_${data.groupChat.id}_${data.sender.id}`,
+                  );
                 }
               }
             }
