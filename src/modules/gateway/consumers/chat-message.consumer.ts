@@ -253,7 +253,7 @@ export class ChatMessageConsumer {
                   });
 
                   await this.cacheService.del(
-                    `ReadMessagesss_${data.groupChat.id}_${data.sender.id}`,
+                    `ReadMessagesss_${data.groupChat.id}_${setting.user.id}`,
                   );
                 }
               }
