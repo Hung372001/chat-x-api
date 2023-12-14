@@ -225,6 +225,8 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
     let pinnedMessages = await this.cacheService.get(cacheKey);
 
     if (!pinnedMessages) {
+      const pinnedMsgFromCache = fullTimeoutMsg.filter((x) => !!x.pinned);
+
       pinnedMessages = await this.chatMessageRepo
         .createQueryBuilder('chat_message')
         .leftJoin('chat_message.group', 'group_chat')
@@ -249,6 +251,10 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
         .orderBy(`chat_message.updated_at`, 'DESC')
         .getMany();
 
+      pinnedMessages = [
+        ...(pinnedMsgFromCache?.length ? pinnedMsgFromCache.reverse() : []),
+        ...(pinnedMessages?.length ? pinnedMessages : []),
+      ];
       if (pinnedMessages?.length) {
         pinnedMessages = await Promise.all(
           pinnedMessages.map(

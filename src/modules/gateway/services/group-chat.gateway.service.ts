@@ -278,37 +278,36 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
 
   async readMessages(groupId: string, user: User) {
     try {
-      const cacheKey = `ReadMessages_${groupId}_${user.id}`;
+      const cacheKey = `ReadMessagesss_${groupId}_${user.id}`;
       const requestReadMessages = await this.cacheService.get(cacheKey);
+      let unReadMessages = 0;
 
       if (!requestReadMessages) {
         await this.cacheService.set(cacheKey, true);
-        const countUnReadMessages = await this.connection.query(`
-          select count(*)
-          from "chat_message"
-          where "groupId" = '${groupId}' and "isRead" = false
-        `);
 
-        if (countUnReadMessages && countUnReadMessages[0].count) {
+        const fullTimeoutMsgCK = `Fullmessage_${groupId}`;
+        const fullTimeoutMsg = await this.cacheService.get(fullTimeoutMsgCK);
+        if (fullTimeoutMsg?.length && fullTimeoutMsg?.some((x) => !x.isRead)) {
+          await fullTimeoutMsg.forEach((el) => (el.isRead = true));
+          this.cacheService.set(fullTimeoutMsgCK, fullTimeoutMsg);
+
           // Publish queue message
           await this.rmqClient.emit('readMessages', {
             groupId,
             user,
           });
 
-          return {
-            groupChat: {
-              id: groupId,
-            },
-            unReadMessages: countUnReadMessages[0].count,
-          };
+          unReadMessages = fullTimeoutMsg.count;
         }
+
+        await this.cacheService.del(cacheKey);
       }
 
       return {
         groupChat: {
           id: groupId,
         },
+        unReadMessages,
       };
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);

@@ -169,17 +169,38 @@ export class ChatMessageGatewayService {
 
   async togglePinMessage(id: string, user: User, pinMessage: boolean) {
     try {
-      const message = await this.chatMessageRepo.findOne({
-        where: { id },
-        relations: [
-          'group',
-          'group.admins',
-          'sender',
-          'sender.profile',
-          'nameCard',
-          'nameCard.profile',
-        ],
-      });
+      let message = null;
+      let fromCache = true;
+      let fullTimeoutMsgCK = null;
+      let fullTimeoutMsg = null;
+
+      const allMsg = await this.cacheService.get(`AllMessage`);
+      if (allMsg?.length) {
+        const msg = allMsg.find((x) => x.chatMessageId === id);
+        if (msg) {
+          fullTimeoutMsgCK = `Fullmessage_${msg.groupChatId}`;
+          fullTimeoutMsg = await this.cacheService.get(fullTimeoutMsgCK);
+
+          if (fullTimeoutMsg) {
+            message = fullTimeoutMsg.find((x) => x.id === id);
+          }
+        }
+      }
+
+      if (!message) {
+        message = await this.chatMessageRepo.findOne({
+          where: { id },
+          relations: [
+            'group',
+            'group.admins',
+            'sender',
+            'sender.profile',
+            'nameCard',
+            'nameCard.profile',
+          ],
+        });
+        fromCache = false;
+      }
 
       if (!message) {
         throw { message: 'Không tìm thấy tin nhắn.' };
@@ -204,7 +225,11 @@ export class ChatMessageGatewayService {
       }
 
       message.pinned = pinMessage;
-      await this.chatMessageRepo.update(id, { pinned: pinMessage });
+      if (fromCache) {
+        this.cacheService.set(fullTimeoutMsgCK, fullTimeoutMsg);
+      } else {
+        await this.chatMessageRepo.update(id, { pinned: pinMessage });
+      }
 
       const cacheKey = `PinnedMessage_${message.group.id}`;
       await this.cacheService.del(cacheKey);
@@ -217,19 +242,39 @@ export class ChatMessageGatewayService {
 
   async unsendMessage(chatMessageId: string, unsender: User) {
     try {
-      const chatMessage = await this.chatMessageRepo.findOne({
-        where: {
-          id: chatMessageId,
-        },
-        relations: [
-          'sender',
-          'sender.profile',
-          'group',
-          'group.admins',
-          'group.settings',
-          'group.settings.user',
-        ],
-      });
+      let chatMessage = null;
+      let fromCache = true;
+      let fullTimeoutMsgCK = null;
+      let fullTimeoutMsg = null;
+      const allMsg = await this.cacheService.get(`AllMessage`);
+      if (allMsg?.length) {
+        const msg = allMsg.find((x) => x.chatMessageId === chatMessageId);
+        if (msg) {
+          fullTimeoutMsgCK = `Fullmessage_${msg.groupChatId}`;
+          fullTimeoutMsg = await this.cacheService.get(fullTimeoutMsgCK);
+
+          if (fullTimeoutMsg) {
+            chatMessage = fullTimeoutMsg.find((x) => x.id === chatMessageId);
+          }
+        }
+      }
+
+      if (!chatMessage) {
+        chatMessage = await this.chatMessageRepo.findOne({
+          where: {
+            id: chatMessageId,
+          },
+          relations: [
+            'sender',
+            'sender.profile',
+            'group',
+            'group.admins',
+            'group.settings',
+            'group.settings.user',
+          ],
+        });
+        fromCache = false;
+      }
 
       if (!chatMessage) {
         throw { message: 'Không tìm thấy tin nhắn.' };
@@ -255,7 +300,11 @@ export class ChatMessageGatewayService {
 
       chatMessage.unsent = true;
       chatMessage.unsentBy = unsender;
-      this.chatMessageRepo.save(chatMessage);
+      if (fromCache) {
+        this.cacheService.set(fullTimeoutMsgCK, fullTimeoutMsg);
+      } else {
+        this.chatMessageRepo.save(chatMessage);
+      }
 
       const unReadSettings = chatMessage.group.settings.filter(
         (x) => x.unReadMessages > 0 && x.user.id !== chatMessage.sender.id,
@@ -279,12 +328,37 @@ export class ChatMessageGatewayService {
 
   async remove(chatMessageId: string, deletedBy: User) {
     try {
-      const chatMessage = await this.chatMessageRepo.findOne({
-        where: {
-          id: chatMessageId,
-        },
-        relations: ['sender', 'sender.profile', 'group', 'group.latestMessage'],
-      });
+      let chatMessage = null;
+      let fromCache = true;
+      let fullTimeoutMsgCK = null;
+      let fullTimeoutMsg = null;
+      const allMsg = await this.cacheService.get(`AllMessage`);
+      if (allMsg?.length) {
+        const msg = allMsg.find((x) => x.chatMessageId === chatMessageId);
+        if (msg) {
+          fullTimeoutMsgCK = `Fullmessage_${msg.groupChatId}`;
+          fullTimeoutMsg = await this.cacheService.get(fullTimeoutMsgCK);
+
+          if (fullTimeoutMsg) {
+            chatMessage = fullTimeoutMsg.find((x) => x.id === chatMessageId);
+          }
+        }
+      }
+
+      if (!chatMessage) {
+        chatMessage = await this.chatMessageRepo.findOne({
+          where: {
+            id: chatMessageId,
+          },
+          relations: [
+            'sender',
+            'sender.profile',
+            'group',
+            'group.latestMessage',
+          ],
+        });
+        fromCache = false;
+      }
 
       if (!chatMessage) {
         throw { message: 'Không tìm thấy tin nhắn.' };
@@ -306,28 +380,32 @@ export class ChatMessageGatewayService {
       }
 
       chatMessage.deletedAt = moment.utc().toDate();
-      await this.chatMessageRepo.update(chatMessage.id, { deletedBy });
-      await this.chatMessageRepo.softDelete(chatMessage.id);
+      if (fromCache) {
+        this.cacheService.set(fullTimeoutMsgCK, fullTimeoutMsg);
+      } else {
+        await this.chatMessageRepo.softDelete(chatMessage.id);
+      }
 
-      if (
-        chatMessage?.group?.id &&
-        chatMessage?.group?.latestMessage?.id === chatMessage?.id
-      ) {
-        const latestMessage = await this.chatMessageRepo
-          .createQueryBuilder('chat_message')
-          .where('chat_message.groupId = :groupId', {
-            groupId: chatMessage.group.id,
-          })
-          .orderBy('chat_message.createdAt', 'DESC')
-          .getOne();
+      if (chatMessage?.group?.id) {
+        const cacheKey = `LatestMsg_${chatMessage.group.id}`;
+        chatMessage.group.latestMessage = await this.cacheService.get(cacheKey);
 
-        if (latestMessage) {
-          await this.groupChatService.update(chatMessage.group.id, {
-            latestMessage,
-          });
+        if (chatMessage?.group?.latestMessage?.id === chatMessage?.id) {
+          const latestMessage = await this.chatMessageRepo
+            .createQueryBuilder('chat_message')
+            .where('chat_message.groupId = :groupId', {
+              groupId: chatMessage.group.id,
+            })
+            .orderBy('chat_message.createdAt', 'DESC')
+            .getOne();
 
-          const cacheKey = `LatestMsg_${chatMessage.group.id}`;
-          await this.cacheService.set(cacheKey, latestMessage);
+          if (latestMessage) {
+            await this.groupChatService.update(chatMessage.group.id, {
+              latestMessage,
+            });
+
+            await this.cacheService.set(cacheKey, latestMessage);
+          }
         }
       }
 

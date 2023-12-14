@@ -96,12 +96,14 @@ export class ChatMessageConsumer {
         ];
 
         const timeoutMsgCK = `TimeoutMsg_${data.groupChat.id}`;
-        const fullTimeoutMsgCK = `Fullmessage_${data.groupChat.id}`;
         let timeoutMsg = await this.cacheService.get(timeoutMsgCK);
+        const fullTimeoutMsgCK = `Fullmessage_${data.groupChat.id}`;
         let fullTimeoutMsg = await this.cacheService.get(fullTimeoutMsgCK);
         const latestMessageCK = `LatestMsg_${data.groupChat.id}`;
+        const allMsgCK = `AllMessage`;
+        let allMsg = await this.cacheService.get(allMsgCK);
 
-        if (timeoutMsg?.length && fullTimeoutMsg?.length) {
+        if (timeoutMsg?.length && fullTimeoutMsg?.length && allMsg?.length) {
           timeoutMsg.push({
             ...data.newMessage,
             sender: {
@@ -116,6 +118,11 @@ export class ChatMessageConsumer {
             sender: data.sender,
             group: { id: data.groupChat.id },
             nameCard: data.nameCard,
+          });
+
+          allMsg.push({
+            groupChatId: data.groupChat.id,
+            chatMessageId: data.newMessage.id,
           });
         } else {
           timeoutMsg = [
@@ -135,6 +142,13 @@ export class ChatMessageConsumer {
               sender: data.sender,
               group: { id: data.groupChat.id },
               nameCard: data.nameCard,
+            },
+          ];
+
+          allMsg = [
+            {
+              groupChatId: data.groupChat.id,
+              chatMessageId: data.newMessage.id,
             },
           ];
         }
@@ -163,6 +177,7 @@ export class ChatMessageConsumer {
 
           await this.cacheService.set(timeoutMsgCK, []);
           await this.cacheService.set(fullTimeoutMsgCK, []);
+          await this.cacheService.set(allMsgCK, []);
         } else {
           // Save latest message for group
           await this.connection.query(`
@@ -172,6 +187,7 @@ export class ChatMessageConsumer {
           `);
           await this.cacheService.set(timeoutMsgCK, timeoutMsg);
           await this.cacheService.set(fullTimeoutMsgCK, fullTimeoutMsg);
+          await this.cacheService.set(allMsgCK, allMsg);
         }
 
         await this.cacheService.set(latestMessageCK, {
@@ -258,10 +274,6 @@ export class ChatMessageConsumer {
         `);
 
         await this.updateUnReadMessages(data.groupId, data.user.id);
-
-        await this.cacheService.del(
-          `ReadMessages_${data.groupId}_${data.user.id}`,
-        );
       }
     } catch (e: any) {
       this.logger.debug(e);
