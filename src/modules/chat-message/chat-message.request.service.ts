@@ -94,7 +94,7 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
         .reverse()
         .slice(
           (page - 1) * limit,
-          limit > 0 ? limit * page - limit : page * limit,
+          limit > 0 ? fullTimeoutMsg?.length : page * limit,
         );
     }
 
