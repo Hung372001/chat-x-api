@@ -291,14 +291,14 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
           await fullTimeoutMsg.forEach((el) => (el.isRead = true));
           this.cacheService.set(fullTimeoutMsgCK, fullTimeoutMsg);
 
-          // Publish queue message
-          await this.rmqClient.emit('readMessages', {
-            groupId,
-            user,
-          });
-
           unReadMessages = fullTimeoutMsg.count;
         }
+
+        // Publish queue message
+        await this.rmqClient.emit('readMessages', {
+          groupId,
+          user,
+        });
       }
 
       return {
