@@ -225,7 +225,9 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
     let pinnedMessages = await this.cacheService.get(cacheKey);
 
     if (!pinnedMessages) {
-      const pinnedMsgFromCache = fullTimeoutMsg.filter((x) => !!x.pinned);
+      const pinnedMsgFromCache = fullTimeoutMsg?.length
+        ? fullTimeoutMsg.filter((x) => !!x.pinned)
+        : [];
 
       pinnedMessages = await this.chatMessageRepo
         .createQueryBuilder('chat_message')
