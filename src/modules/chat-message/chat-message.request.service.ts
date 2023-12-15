@@ -86,8 +86,12 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       finalTotal = 0;
 
     const fullTimeoutMsgCK = `Fullmessage_${groupChatId}`;
-    const fullTimeoutMsg = await this.cacheService.get(fullTimeoutMsgCK);
+    let fullTimeoutMsg = await this.cacheService.get(fullTimeoutMsgCK);
     if (fullTimeoutMsg?.length && page - 1 * limit <= fullTimeoutMsg?.length) {
+      if (!adminPermission) {
+        fullTimeoutMsg = fullTimeoutMsg.filter((x) => !x.deletedAt);
+      }
+
       finalTotal = fullTimeoutMsg?.length + 1;
       limit = limit * page - fullTimeoutMsg?.length;
       totalItems = fullTimeoutMsg
