@@ -73,10 +73,9 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         : query.searchBy,
       sortOrder = 'DESC',
       page = 1,
+      limit = 10,
       isGetAll = false,
     } = query;
-
-    const limit = 10;
 
     return this.cacheService.cacheServiceFunc(
       `GetAllGroupChat_${currentUser.id}_${JSON.stringify(query)}`,
