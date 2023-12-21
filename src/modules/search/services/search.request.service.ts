@@ -8,6 +8,7 @@ import { GroupChatRequestService } from '../../group-chat/services/group-chat.re
 import { SearchDto } from '../dto/search.dto';
 import { ESearchType } from '../dto/search.enum';
 import { GetAllUserDto } from '../../user/dto/get-all-user.dto';
+import { GetAllGroupChatDto } from '../../group-chat/dto/get-all-group-chat.dto';
 
 @Injectable({ scope: Scope.REQUEST })
 export class SearchService {
@@ -39,7 +40,7 @@ export class SearchService {
         ...query,
         limit: pagingLimit ? query.limit - pagingLimit : query.limit,
         searchBy: ['name'],
-      } as unknown as FilterDto);
+      } as unknown as GetAllGroupChatDto);
     }
 
     return {

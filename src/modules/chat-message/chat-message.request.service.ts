@@ -14,6 +14,7 @@ import { ERole } from '../../common/enums/role.enum';
 import { compact, omitBy, isNull } from 'lodash';
 import { CacheService } from '../cache/cache.service';
 import { UserGatewayService } from '../gateway/services/user.gateway.service';
+import { pick } from 'lodash';
 
 @Injectable({ scope: Scope.REQUEST })
 export class ChatMessageRequestService extends BaseService<ChatMessage> {
@@ -100,6 +101,34 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
           (page - 1) * limit,
           limit > 0 ? fullTimeoutMsg?.length : page * limit,
         );
+
+      totalItems = totalItems.map((x) =>
+        pick(x, [
+          'id',
+          'isActive',
+          'createdAt',
+          'updatedAt',
+          'deletedAt',
+          'message',
+          'imageUrls',
+          'documentUrls',
+          'isRead',
+          'unsent',
+          'pinned',
+          'isFriendRequest',
+          'sender',
+          'sender.id',
+          'sender.isActive',
+          'sender.email',
+          'sender.phoneNumber',
+          'sender.username',
+          'sender.profile',
+          'sender.profile.id',
+          'sender.profile.avatar',
+          'sender.profile.nickname',
+          'nameCard',
+        ]),
+      );
     }
 
     if (limit > 0) {

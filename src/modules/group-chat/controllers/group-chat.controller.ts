@@ -19,6 +19,7 @@ import { PermissionGuard } from '../../permission/permissison.guard';
 import { GroupChatRequestService } from '../services/group-chat.request.service';
 import { AddAdminDto } from '../dto/add-admin.dto';
 import { SendMessageDto } from '../../chat-message/dto/send-message.dto';
+import { GetAllGroupChatDto } from '../dto/get-all-group-chat.dto';
 
 @Controller('group-chat')
 @ApiTags('group-chat')
@@ -29,7 +30,7 @@ export class GroupChatController {
   constructor(private readonly requestService: GroupChatRequestService) {}
 
   @Get()
-  findAll(@Query() query: FilterDto) {
+  findAll(@Query() query: GetAllGroupChatDto) {
     return this.requestService.findAll(query);
   }
 

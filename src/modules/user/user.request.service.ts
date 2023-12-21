@@ -246,6 +246,8 @@ export class UserRequestService extends BaseService<User> {
         return omitBy(
           {
             ...item,
+            hashedPassword: null,
+            currentRefreshToken: null,
             friends: null,
             nickname: friend?.nickname ?? '',
             isFriend: !!friend,

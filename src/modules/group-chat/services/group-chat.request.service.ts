@@ -39,6 +39,7 @@ import { GroupChatService } from './group-chat.service';
 import { SendMessageDto } from '../../chat-message/dto/send-message.dto';
 import { AuthSocket } from '../../gateway/interfaces/auth.interface';
 import { ClientProxy } from '@nestjs/microservices';
+import { GetAllGroupChatDto } from '../dto/get-all-group-chat.dto';
 
 @Injectable({ scope: Scope.REQUEST })
 export class GroupChatRequestService extends BaseService<GroupChat> {
@@ -60,7 +61,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     super(groupChatRepo);
   }
 
-  override async findAll(query: FilterDto) {
+  override async findAll(query: GetAllGroupChatDto) {
     const currentUser = this.request.user as User;
     const isRootAdmin = currentUser.roles[0].type === ERole.ADMIN;
 
@@ -75,6 +76,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       page = 1,
       limit = 10,
       isGetAll = false,
+      unReadGroups = false,
     } = query;
 
     return this.cacheService.cacheServiceFunc(
@@ -122,6 +124,10 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
           .leftJoinAndSelect('group_chat.settings', 'group_chat_setting')
           .andWhere('group_chat_setting.groupChatId = group_chat.id')
           .orderBy('group_chat_setting.pinned', 'DESC');
+
+        if (!!unReadGroups) {
+          queryBuilder.andWhere('group_chat_setting.unReadMessages > 0');
+        }
 
         if (!isRootAdmin) {
           queryBuilder.andWhere(
