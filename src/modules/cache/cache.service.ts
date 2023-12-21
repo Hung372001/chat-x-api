@@ -94,7 +94,6 @@ export class CacheService {
   async cacheServiceFunc(cacheKey: string, callback: any): Promise<any> {
     const progressingCK = `Progressing_${cacheKey}`;
     const progressing = await this.get(progressingCK);
-    await this.set(progressingCK, false);
     let cacheData = await this.get(cacheKey);
     if (!progressing) {
       await this.set(progressingCK, true);
