@@ -122,10 +122,6 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         const queryBuilder = this.groupChatRepo
           .createQueryBuilder('group_chat')
           .leftJoinAndSelect('group_chat.settings', 'group_chat_setting')
-          .leftJoin('group_chat.owner', 'user as owners')
-          .addSelect('user as owners.id')
-          .leftJoin('group_chat.admins', 'user as admins')
-          .addSelect('user as admins.id')
           .andWhere('group_chat_setting.groupChatId = group_chat.id')
           .orderBy('group_chat_setting.pinned', 'DESC');
 
@@ -425,13 +421,14 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     );
 
     if (groupChat.type === EGroupChatType.GROUP) {
+      const owner = await this.groupChatService.getGroupOwner(groupChat.id);
       const admins = await this.groupChatService.getGroupAdmins(groupChat.id);
       return omitBy(
         {
           ...groupChat,
           isAdmin: admins?.some((x) => x.id === currentUser.id) ?? false,
-          isOwner: groupChat.owner?.id === currentUser.id ?? false,
-          admins: groupChat.owner?.id === currentUser.id ? admins : null,
+          isOwner: owner?.id === currentUser.id ?? false,
+          admins: owner?.id === currentUser.id ? admins : null,
           owner: null,
           members,
           latestMessage:
