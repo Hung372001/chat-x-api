@@ -38,9 +38,9 @@ export class UserGatewayService extends BaseService<User> {
         .andWhere('friendship.toUserId = :toUserId', { toUserId })
         .getOne();
 
-      await this.cacheService.set(cacheKey, cacheData);
+      await this.cacheService.set(cacheKey, cacheData ?? -1);
     }
 
-    return cacheData;
+    return cacheData !== -1 ? cacheData : null;
   }
 }

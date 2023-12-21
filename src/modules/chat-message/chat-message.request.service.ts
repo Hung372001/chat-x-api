@@ -97,12 +97,8 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
         fullTimeoutMsg = fullTimeoutMsg.filter((x) => !x.deletedAt);
       }
 
-      remainLimit = remainLimit * page - fullTimeoutMsg?.length;
+      remainLimit = limit * page - fullTimeoutMsg?.length;
       finalTotal = fullTimeoutMsg?.length;
-      if (remainLimit > 0) {
-        remainLimit = limit;
-        finalTotal = fullTimeoutMsg?.length + 1;
-      }
 
       totalItems = fullTimeoutMsg
         .reverse()
