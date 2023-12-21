@@ -6,6 +6,7 @@ import { ChatMessage } from '../chat-message/entities/chat-message.entity';
 import { GroupChatSetting } from '../group-chat/entities/group-chat-setting.entity';
 import { AllChatMessage } from '../chat-message/entities/all-chat-message.entity';
 import { ChatMessageScheduler } from './chat-message.scheduler';
+import { CustomeCacheModule } from '../cache/cache.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ChatMessageScheduler } from './chat-message.scheduler';
       AllChatMessage,
       GroupChatSetting,
     ]),
+    CustomeCacheModule,
   ],
   providers: [GroupChatScheduler, ChatMessageScheduler],
 })

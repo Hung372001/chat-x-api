@@ -1,9 +1,11 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { Connection, Repository } from 'typeorm';
 import { Cron } from '@nestjs/schedule';
 import moment from 'moment';
 import { InjectConnection, InjectRepository } from '@nestjs/typeorm';
 import { ChatMessage } from '../chat-message/entities/chat-message.entity';
+import { CacheService } from '../cache/cache.service';
+import { uniqBy } from 'lodash';
 
 const remainNumbers = +process.env.REMAIN_CHAT_MESSAGE_NUMBER ?? 250;
 @Injectable()
@@ -12,6 +14,7 @@ export class ChatMessageScheduler {
     @InjectRepository(ChatMessage)
     private chatMessageRepo: Repository<ChatMessage>,
     @InjectConnection() private readonly connection: Connection,
+    @Inject(CacheService) private cacheService: CacheService,
   ) {}
 
   @Cron('0 0 18 * * *', { utcOffset: 0 })
@@ -63,6 +66,54 @@ export class ChatMessageScheduler {
           .format(
             'dd - DD/MM/YYYY HH:mm:ss',
           )}] - [Job][End] - Save temp chat message`,
+      );
+    }
+  }
+
+  @Cron('0 30 */3 * * *', { utcOffset: 0 })
+  async saveChatMessage() {
+    console.log(
+      `[${moment
+        .utc()
+        .format(
+          'dd - DD/MM/YYYY HH:mm:ss',
+        )}] - [Job][Begin] - Save cache messages`,
+    );
+    try {
+      const allMsgCK = `AllMessage`;
+      const allMsg = await this.cacheService.get(allMsgCK);
+      if (allMsg?.length > 0) {
+        const uniqAllMsg = uniqBy(allMsg, 'groupChatId');
+        await Promise.all(
+          uniqAllMsg.map(async (msg) => {
+            const timeoutMsgCK = `TimeoutMsg_${msg.groupChatId}`;
+            const timeoutMsg = await this.cacheService.get(timeoutMsgCK);
+            const fullTimeoutMsgCK = `Fullmessage_${msg.groupChatId}`;
+            if (timeoutMsg?.length) {
+              await this.chatMessageRepo
+                .createQueryBuilder()
+                .insert()
+                .into(ChatMessage)
+                .values(timeoutMsg)
+                .onConflict('do nothing')
+                .execute();
+            }
+
+            await this.cacheService.set(timeoutMsgCK, []);
+            await this.cacheService.set(fullTimeoutMsgCK, []);
+            await this.cacheService.set(allMsgCK, []);
+          }),
+        );
+      }
+    } catch (e: any) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    } finally {
+      console.log(
+        `[${moment
+          .utc()
+          .format(
+            'dd - DD/MM/YYYY HH:mm:ss',
+          )}] - [Job][End] - Save cache messages`,
       );
     }
   }
