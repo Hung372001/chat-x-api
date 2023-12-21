@@ -70,10 +70,11 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       sortBy = 'createdAt',
       sortOrder = 'DESC',
       page = 1,
+      limit = 10,
       isGetAll = false,
     } = query;
 
-    let { limit = 10 } = query;
+    let remainLimit = limit;
 
     let chatSetting = null;
     if (!isRootAdmin) {
@@ -88,18 +89,26 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
 
     const fullTimeoutMsgCK = `Fullmessage_${groupChatId}`;
     let fullTimeoutMsg = await this.cacheService.get(fullTimeoutMsgCK);
-    if (fullTimeoutMsg?.length && page - 1 * limit <= fullTimeoutMsg?.length) {
+    if (
+      fullTimeoutMsg?.length &&
+      page - 1 * remainLimit <= fullTimeoutMsg?.length
+    ) {
       if (!adminPermission) {
         fullTimeoutMsg = fullTimeoutMsg.filter((x) => !x.deletedAt);
       }
 
-      finalTotal = fullTimeoutMsg?.length + 1;
-      limit = limit * page - fullTimeoutMsg?.length;
+      remainLimit = remainLimit * page - fullTimeoutMsg?.length;
+      finalTotal = fullTimeoutMsg?.length;
+      if (remainLimit > 0) {
+        remainLimit = limit;
+        finalTotal = fullTimeoutMsg?.length + 1;
+      }
+
       totalItems = fullTimeoutMsg
         .reverse()
         .slice(
-          (page - 1) * limit,
-          limit > 0 ? fullTimeoutMsg?.length : page * limit,
+          (page - 1) * remainLimit,
+          remainLimit > 0 ? fullTimeoutMsg?.length : page * remainLimit,
         );
 
       totalItems = totalItems.map((x) =>
@@ -131,7 +140,7 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       );
     }
 
-    if (limit > 0) {
+    if (remainLimit > 0) {
       const queryBuilder = this.chatMessageRepo
         .createQueryBuilder('chat_message')
         .leftJoin('chat_message.group', 'group_chat')
@@ -244,13 +253,13 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
 
       const [items, total] = await queryBuilder
         .orderBy(`chat_message.${sortBy}`, sortOrder)
-        .take(isGetAll ? null : limit)
-        .skip(isGetAll ? null : (page - 1) * limit)
+        .take(isGetAll ? null : remainLimit)
+        .skip(isGetAll ? null : (page - 1) * remainLimit)
         .getManyAndCount();
 
       if (items?.length) {
         totalItems = totalItems.concat(items);
-        finalTotal = total;
+        finalTotal += total;
       }
     }
 
