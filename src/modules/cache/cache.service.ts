@@ -20,6 +20,13 @@ export class CacheService {
     await this.cacheManager.del(keys);
   }
 
+  async delByPattern(key: string) {
+    const keys = await this.cacheManager.keys();
+    if (keys?.length) {
+      await this.cacheManager.del(keys.filter((x) => x.match(key)));
+    }
+  }
+
   async set(key: string, data: any, deleteRelative?: boolean) {
     const controller = key.split('_')[0];
 
@@ -87,6 +94,7 @@ export class CacheService {
   async cacheServiceFunc(cacheKey: string, callback: any): Promise<any> {
     const progressingCK = `Progressing_${cacheKey}`;
     const progressing = await this.get(progressingCK);
+    await this.set(progressingCK, false);
     let cacheData = await this.get(cacheKey);
     if (!progressing) {
       await this.set(progressingCK, true);

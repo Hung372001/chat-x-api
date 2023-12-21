@@ -122,6 +122,10 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         const queryBuilder = this.groupChatRepo
           .createQueryBuilder('group_chat')
           .leftJoinAndSelect('group_chat.settings', 'group_chat_setting')
+          .leftJoin('group_chat.owner', 'user as owners')
+          .addSelect('user as owners.id')
+          .leftJoin('group_chat.admins', 'user as admins')
+          .addSelect('user as admins.id')
           .andWhere('group_chat_setting.groupChatId = group_chat.id')
           .orderBy('group_chat_setting.pinned', 'DESC');
 
@@ -130,35 +134,22 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         }
 
         if (!isRootAdmin) {
-          queryBuilder.andWhere(
-            new Brackets((subQuery) => {
-              if (groupChatIds?.length) {
-                subQuery.where(
-                  new Brackets((andSubQuery) => {
-                    andSubQuery.where('group_chat.id In(:...groupChatIds)', {
-                      groupChatIds,
-                    });
-                    andSubQuery.andWhere(
-                      'group_chat_setting.userId = :userId',
-                      {
-                        userId: currentUser.id,
-                      },
-                    );
-                  }),
-                );
-              }
-
-              if (
-                (searchNameIndex !== -1 || andSearchNameIndex !== -1) &&
-                (keyword ||
-                  andKeyword ||
-                  keyword[searchNameIndex] ||
-                  andKeyword[andSearchNameIndex])
-              ) {
-                subQuery.orWhere('group_chat.isPublic = true');
-              }
-            }),
-          );
+          const getPublic =
+            (searchNameIndex !== -1 || andSearchNameIndex !== -1) &&
+            (keyword ||
+              andKeyword ||
+              keyword[searchNameIndex] ||
+              andKeyword[andSearchNameIndex]);
+          queryBuilder
+            .andWhere(
+              `(group_chat.id In(:...groupChatIds) AND group_chat_setting.userId = :userId) ${
+                getPublic ? 'OR ${group_chat.isPublic = true}' : ''
+              }`,
+            )
+            .setParameters({
+              groupChatIds,
+              userId: currentUser.id,
+            });
         } else {
           queryBuilder.withDeleted();
         }
@@ -251,7 +242,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
           .skip(isGetAll ? null : (page - 1) * limit)
           .getManyAndCount();
 
-        return {
+        const res = {
           items: await Promise.all(
             items.map(async (iterator) => {
               return await this.mappingGroup(iterator, currentUser);
@@ -259,6 +250,8 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
           ),
           total,
         };
+
+        return res;
       },
     );
   }
@@ -266,6 +259,13 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
   async getAllMember(id: string, query: FilterDto) {
     const currentUser = this.request.user as User;
     const { limit = 10, page = 1, isGetAll = false } = query;
+
+    const cacheKey = `GroupMember_${id}_${JSON.stringify(query)}`;
+    const cacheData = await this.cacheService.get(cacheKey);
+
+    if (cacheData) {
+      return cacheData;
+    }
 
     const members = await this.connection.query(
       `
@@ -337,10 +337,14 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
           `,
     );
 
-    return {
+    const resData = {
       items: mappingMembers,
       total: countRes?.length ? +countRes[0]?.count ?? 0 : 0,
     };
+
+    await this.cacheService.set(cacheKey, resData);
+
+    return resData;
   }
 
   override async findById(id: string): Promise<GroupChat> {
@@ -421,14 +425,13 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     );
 
     if (groupChat.type === EGroupChatType.GROUP) {
-      const owner = await this.groupChatService.getGroupOwner(groupChat.id);
       const admins = await this.groupChatService.getGroupAdmins(groupChat.id);
       return omitBy(
         {
           ...groupChat,
           isAdmin: admins?.some((x) => x.id === currentUser.id) ?? false,
-          isOwner: owner?.id === currentUser.id ?? false,
-          admins: owner?.id === currentUser.id ? admins : null,
+          isOwner: groupChat.owner?.id === currentUser.id ?? false,
+          admins: groupChat.owner?.id === currentUser.id ? admins : null,
           owner: null,
           members,
           latestMessage:
