@@ -1,5 +1,6 @@
 stages:
   - deploy development
+  - deploy production database
   - deploy production
 deploy development:
   stage: deploy development
@@ -26,6 +27,24 @@ deploy development:
     - chmod u+x ./deploy/develop/run.sh
     - ./deploy/develop/run.sh
 
+deploy production database:
+  stage: deploy production database
+  only:
+    - master
+  tags:
+    - production-db
+  variables:
+    DOCKER_IMAGE_NAME: avatarnice/api-chat-x-prod-db
+    DOCKER_IMAGE_TAG: ${CI_BUILD_TOKEN}
+    DOCKER_CONTAINER_NAME: api-chat-x-container-prod-db
+    POSTGRES_PASSWORD_PROD: ${POSTGRES_PASSWORD_PROD}
+    POSTGRES_DB_PROD: ${POSTGRES_DB_PROD}
+  before_script:
+    -  docker login -u ${DOCKER_HUB_REGISTRY_USER} -p ${DOCKER_HUB_REGISTRY_PASSWORD}
+  script:   
+    - chmod u+x ./deploy/production-db/run.sh
+    - ./deploy/production-db/run.sh
+
 deploy production:
   stage: deploy production
   only:
@@ -36,8 +55,6 @@ deploy production:
     DOCKER_IMAGE_NAME: avatarnice/api-chat-x-prod
     DOCKER_IMAGE_TAG: ${CI_BUILD_TOKEN}
     DOCKER_CONTAINER_NAME: api-chat-x-container-prod
-    POSTGRES_PASSWORD_PROD: ${POSTGRES_PASSWORD_PROD}
-    POSTGRES_DB_PROD: ${POSTGRES_DB_PROD}
     RABBITMQ_USER_PROD: ${RABBITMQ_USER_PROD}
     RABBITMQ_PASSWORD_PROD: ${RABBITMQ_PASSWORD_PROD}
     AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
