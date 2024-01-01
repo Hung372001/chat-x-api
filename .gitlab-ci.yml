@@ -30,7 +30,9 @@ deploy development:
 deploy production database:
   stage: deploy production database
   only:
-    - master
+    - tags
+  when:
+    manual
   tags:
     - production-db
   variables:
@@ -48,7 +50,9 @@ deploy production database:
 deploy production:
   stage: deploy production
   only:
-    - master
+    - tags
+  when:
+    manual
   tags:
     - production
   variables:
