@@ -25,27 +25,4 @@ export class NotificationConsumer {
     this.logger.debug('Send notification completed');
     this.rmqService.ack(context);
   }
-
-  @EventPattern('sendMultiNotification')
-  async sendMultiNotification(
-    @Payload() data: any,
-    @Ctx() context: RmqContext,
-  ) {
-    this.logger.debug('Start job send multi notification');
-
-    try {
-      if (data?.length) {
-        await Promise.all(
-          data.map(async (noti) => {
-            await this.notificationService.createAndSend(noti);
-          }),
-        );
-      }
-    } catch (e: any) {
-      this.logger.debug(e);
-    }
-
-    this.logger.debug('Send multi notification completed');
-    this.rmqService.ack(context);
-  }
 }

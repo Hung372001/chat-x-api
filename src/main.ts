@@ -54,12 +54,10 @@ async function bootstrap() {
       });
       break;
     case EServiceType.BACKGROUND_SERVICE:
-      queueConfigs.concat([
-        {
-          queueName: ERmqQueueName.NOTIFICATION,
-          prefetchCount: ERmqPrefetch.NOTIFICATION,
-        },
-      ]);
+      queueConfigs.push({
+        queueName: ERmqQueueName.NOTIFICATION,
+        prefetchCount: ERmqPrefetch.NOTIFICATION,
+      });
       break;
     default:
       queueConfigs.push({
