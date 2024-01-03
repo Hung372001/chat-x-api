@@ -334,7 +334,6 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
             LEFT JOIN "user" ON "user"."id" = "group_chat_members_user"."userId"
             LEFT JOIN "profile" ON "profile"."id" = "user"."profileId"
             WHERE "group_chat_members_user"."groupChatId" = '${id}'
-            ${!isRootAdmin ? 'AND "user"."deleted_at" IS NULL' : ''}
             ORDER BY "user"."username" ASC
             ${isGetAll ? '' : `LIMIT ${limit}`}
             ${isGetAll ? '' : `OFFSET ${(page - 1) * limit}`}
