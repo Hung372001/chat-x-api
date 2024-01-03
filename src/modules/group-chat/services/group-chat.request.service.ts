@@ -248,7 +248,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     const res = {
       items: await Promise.all(
         items.map(async (iterator) => {
-          return await this.mappingGroup(iterator, currentUser);
+          return await this.mappingGroup(iterator, currentUser, isRootAdmin);
         }),
       ),
       total,
@@ -257,11 +257,70 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     return res;
   }
 
-  async getAllMember(id: string, query: FilterDto) {
+  async mappingGroup(
+    groupChat: GroupChat,
+    currentUser: User,
+    isRootAdmin: boolean,
+  ) {
+    const { items: members, total } = await this.getAllMember(
+      groupChat.id,
+      {
+        limit: 3,
+        page: 1,
+      } as FilterDto,
+      isRootAdmin,
+    );
+
+    if (groupChat.type === EGroupChatType.GROUP) {
+      return omitBy(
+        {
+          ...groupChat,
+          isAdmin:
+            groupChat.admins?.some((x) => x.id === currentUser.id) ?? false,
+          isOwner: groupChat.owner?.id === currentUser.id ?? false,
+          admins:
+            groupChat.owner?.id === currentUser.id ? groupChat.admins : null,
+          owner: null,
+          members,
+          latestMessage:
+            groupChat?.settings?.length &&
+            moment(groupChat.latestMessage?.createdAt).isBefore(
+              moment(groupChat?.settings[0]?.deleteMessageFrom),
+            )
+              ? null
+              : groupChat?.latestMessage,
+          memberQty: total ?? 0,
+        },
+        isNull,
+      );
+    } else {
+      return omitBy(
+        {
+          ...groupChat,
+          admins: null,
+          owner: null,
+          members,
+          latestMessage:
+            groupChat?.settings?.length &&
+            moment(groupChat.latestMessage?.createdAt).isBefore(
+              moment(groupChat?.settings[0]?.deleteMessageFrom),
+            )
+              ? null
+              : groupChat?.latestMessage,
+          memberQty: total ?? 0,
+        },
+        isNull,
+      );
+    }
+  }
+
+  async getAllMember(id: string, query: FilterDto, isRootAdmin = false) {
     const currentUser = this.request.user as User;
     const { limit = 10, page = 1, isGetAll = false } = query;
 
-    const cacheKey = `GroupMember_${id}_${JSON.stringify(query)}`;
+    const cacheKey = `GroupMember_${id}_${JSON.stringify(
+      query,
+    )}_RootAdmin_${isRootAdmin}`;
     const cacheData = await this.cacheService.get(cacheKey);
 
     if (cacheData) {
@@ -275,7 +334,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
             LEFT JOIN "user" ON "user"."id" = "group_chat_members_user"."userId"
             LEFT JOIN "profile" ON "profile"."id" = "user"."profileId"
             WHERE "group_chat_members_user"."groupChatId" = '${id}'
-            AND "user"."deleted_at" IS NULL
+            ${!isRootAdmin ? 'AND "user"."deleted_at" IS NULL' : ''}
             ORDER BY "user"."username" ASC
             ${isGetAll ? '' : `LIMIT ${limit}`}
             ${isGetAll ? '' : `OFFSET ${(page - 1) * limit}`}
@@ -380,7 +439,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
         return null;
       }
 
-      return this.mappingGroup(groupChat, currentUser);
+      return this.mappingGroup(groupChat, currentUser, isRootAdmin);
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
@@ -412,55 +471,6 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       return this.findById(groupChat.id);
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
-    }
-  }
-
-  async mappingGroup(groupChat: GroupChat, currentUser: User) {
-    const { items: members, total } = await this.getAllMember(groupChat.id, {
-      limit: 3,
-      page: 1,
-    } as FilterDto);
-
-    if (groupChat.type === EGroupChatType.GROUP) {
-      return omitBy(
-        {
-          ...groupChat,
-          isAdmin:
-            groupChat.admins?.some((x) => x.id === currentUser.id) ?? false,
-          isOwner: groupChat.owner?.id === currentUser.id ?? false,
-          admins:
-            groupChat.owner?.id === currentUser.id ? groupChat.admins : null,
-          owner: null,
-          members,
-          latestMessage:
-            groupChat?.settings?.length &&
-            moment(groupChat.latestMessage?.createdAt).isBefore(
-              moment(groupChat?.settings[0]?.deleteMessageFrom),
-            )
-              ? null
-              : groupChat?.latestMessage,
-          memberQty: total ?? 0,
-        },
-        isNull,
-      );
-    } else {
-      return omitBy(
-        {
-          ...groupChat,
-          admins: null,
-          owner: null,
-          members,
-          latestMessage:
-            groupChat?.settings?.length &&
-            moment(groupChat.latestMessage?.createdAt).isBefore(
-              moment(groupChat?.settings[0]?.deleteMessageFrom),
-            )
-              ? null
-              : groupChat?.latestMessage,
-          memberQty: total ?? 0,
-        },
-        isNull,
-      );
     }
   }
 
