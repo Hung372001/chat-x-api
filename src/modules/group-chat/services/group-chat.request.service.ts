@@ -119,7 +119,6 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
 
     const queryBuilder = this.groupChatRepo
       .createQueryBuilder('group_chat')
-      .leftJoinAndSelect('group_chat.settings', 'group_chat_setting')
       .leftJoinAndSelect('group_chat.admins', 'user as admins')
       .leftJoinAndSelect('group_chat.owner', 'user as owner')
       .leftJoinAndSelect(
@@ -129,15 +128,17 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       .leftJoinAndSelect(
         'chat_message as latestMessages.nameCard',
         'user as nameCardUsers',
-      )
-      .andWhere('group_chat_setting.groupChatId = group_chat.id')
-      .orderBy('group_chat_setting.pinned', 'DESC');
+      );
 
     if (!!unReadGroups) {
       queryBuilder.andWhere('group_chat_setting.unReadMessages > 0');
     }
 
     if (!isRootAdmin) {
+      queryBuilder
+        .leftJoinAndSelect('group_chat.settings', 'group_chat_setting')
+        .andWhere('group_chat_setting.groupChatId = group_chat.id')
+        .orderBy('group_chat_setting.pinned', 'DESC');
       const getPublic =
         (searchNameIndex !== -1 || andSearchNameIndex !== -1) &&
         (keyword ||

@@ -42,9 +42,11 @@ export class UserService extends BaseService<User> {
 
   async setCurrentRefreshToken(id: string, hashedToken: string): Promise<void> {
     try {
-      await this.userRepository.update(id, {
-        currentRefreshToken: hashedToken,
-      });
+      await this.connection.query(`
+      update "user"
+      set "currentRefreshToken" = '${hashedToken}'
+      where "id" = '${id}'
+    `);
     } catch (error) {
       throw error;
     }
