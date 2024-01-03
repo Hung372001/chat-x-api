@@ -16,6 +16,7 @@ import { DeleteResult, Repository } from 'typeorm';
 import { User } from '../user/entities/user.entity';
 import { ClientProxy } from '@nestjs/microservices';
 import { RemoveFCMTokenDto } from './dto/remove-fcm-token.dto';
+import { ERmqQueueName } from '../../common/enums/rmq.enum';
 
 @Injectable({ scope: Scope.REQUEST })
 export class FCMTokenRequestService extends BaseService<FCMToken> {
@@ -23,7 +24,7 @@ export class FCMTokenRequestService extends BaseService<FCMToken> {
     @Inject(REQUEST) private request: Request,
     @InjectRepository(FCMToken)
     private readonly fcmTokenRepository: Repository<FCMToken>,
-    @Inject('NOTIFICATION_SERVICE') private rmqClient: ClientProxy,
+    @Inject(ERmqQueueName.NOTIFICATION) private rmqClient: ClientProxy,
   ) {
     super(fcmTokenRepository);
   }

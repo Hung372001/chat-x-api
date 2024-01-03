@@ -17,6 +17,7 @@ import { CacheService } from '../../cache/cache.service';
 import { TelegramLoggerService } from '../../logger/telegram.logger-service';
 import { v4 as uuidv4 } from 'uuid';
 import { OnlinesSessionManager } from '../sessions/onlines.session';
+import { ERmqQueueName } from '../../../common/enums/rmq.enum';
 
 @Injectable()
 export class ChatMessageGatewayService {
@@ -31,8 +32,8 @@ export class ChatMessageGatewayService {
     private userService: UserGatewayService,
     @Inject(GatewaySessionManager)
     private readonly insideGroupSessions: GatewaySessionManager<string>,
-    @Inject('CHAT-MESSAGE_SERVICE') private rmqClient: ClientProxy,
-    @Inject('NOTI_SERVICE') private notiRmqClient: ClientProxy,
+    @Inject(ERmqQueueName.CHAT_GATEWAY) private rmqClient: ClientProxy,
+    @Inject(ERmqQueueName.NOTIFICATION) private notiRmqClient: ClientProxy,
     @Inject(CacheService) private cacheService: CacheService,
     @Inject(OnlinesSessionManager)
     private readonly onlineSessions: OnlinesSessionManager,

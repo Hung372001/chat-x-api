@@ -16,6 +16,7 @@ import { Friendship } from '../friend/entities/friendship.entity';
 import { RmqModule } from '../rmq/rmq.module';
 import { ChatMessageConsumer } from './consumers/chat-message.consumer';
 import { CustomeCacheModule } from '../cache/cache.module';
+import { ERmqPrefetch, ERmqQueueName } from '../../common/enums/rmq.enum';
 
 @Module({
   imports: [
@@ -29,11 +30,14 @@ import { CustomeCacheModule } from '../cache/cache.module';
     JwtModule.register({}),
     NotificationModule,
     RmqModule.register({
-      name: 'CHAT-MESSAGE_SERVICE',
+      name: ERmqQueueName.CHAT_GATEWAY,
+      queueName: ERmqQueueName.CHAT_GATEWAY,
+      prefetchCount: ERmqPrefetch.CHAT_GATEWAY,
     }),
     RmqModule.register({
-      name: 'NOTI_SERVICE',
-      queueName: 'NOTI_QUEUE_NAME',
+      name: ERmqQueueName.NOTIFICATION,
+      queueName: ERmqQueueName.NOTIFICATION,
+      prefetchCount: ERmqPrefetch.NOTIFICATION,
     }),
     CustomeCacheModule,
   ],

@@ -2,17 +2,27 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RmqContext, RmqOptions, Transport } from '@nestjs/microservices';
 
+export interface RmqRegisterInput {
+  queueName: string;
+  prefetchCount?: number;
+  noAck?: boolean;
+}
+
 @Injectable()
 export class RmqService {
   constructor(private readonly configService: ConfigService) {}
 
-  getOptions(queue: string, noAck = false): RmqOptions {
+  getOptions({
+    queueName,
+    prefetchCount = 20,
+    noAck = false,
+  }: RmqRegisterInput): RmqOptions {
     return {
       transport: Transport.RMQ,
       options: {
         urls: [this.configService.get('RABBITMQ_URI').toString()],
-        queue: queue,
-        prefetchCount: 20,
+        queue: queueName,
+        prefetchCount,
         noAck,
         persistent: true,
         queueOptions: {

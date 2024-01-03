@@ -95,79 +95,22 @@ export class ChatMessageConsumer {
           `${moment.utc().toISOString()} - ${id} - Begin save message`,
         ];
 
-        const timeoutMsgCK = `TimeoutMsg_${data.groupChat.id}`;
-        let timeoutMsg = await this.cacheService.get(timeoutMsgCK);
-        const fullTimeoutMsgCK = `Fullmessage_${data.groupChat.id}`;
-        let fullTimeoutMsg = await this.cacheService.get(fullTimeoutMsgCK);
         const latestMessageCK = `LatestMsg_${data.groupChat.id}`;
-        const allMsgCK = `AllMessage`;
-        let allMsg = await this.cacheService.get(allMsgCK);
 
-        if (timeoutMsg?.length && fullTimeoutMsg?.length && allMsg?.length) {
-          timeoutMsg.push({
-            ...data.newMessage,
-            sender: {
-              id: data.sender.id,
-            },
-            group: { id: data.groupChat.id },
-            nameCard: data.nameCard ? { id: data.nameCard.id } : null,
-          });
+        await this.chatMessageRepo
+          .createQueryBuilder()
+          .insert()
+          .into(ChatMessage)
+          .values(data.newMessage)
+          .onConflict('do nothing')
+          .execute();
 
-          fullTimeoutMsg.push({
-            ...data.newMessage,
-            sender: data.sender,
-            group: { id: data.groupChat.id },
-            nameCard: data.nameCard,
-          });
+        logs.push(
+          `${moment.utc().toISOString()} - ${id} - Begin save group chat`,
+        );
 
-          allMsg.push({
-            groupChatId: data.groupChat.id,
-            chatMessageId: data.newMessage.id,
-          });
-        } else {
-          timeoutMsg = [
-            {
-              ...data.newMessage,
-              sender: {
-                id: data.sender.id,
-              },
-              group: { id: data.groupChat.id },
-              nameCard: data.nameCard ? { id: data.nameCard.id } : null,
-            },
-          ];
-
-          fullTimeoutMsg = [
-            {
-              ...data.newMessage,
-              sender: data.sender,
-              group: { id: data.groupChat.id },
-              nameCard: data.nameCard,
-            },
-          ];
-
-          allMsg = [
-            {
-              groupChatId: data.groupChat.id,
-              chatMessageId: data.newMessage.id,
-            },
-          ];
-        }
-
-        if (timeoutMsg.length > this.cacheMessageParallel) {
-          await this.chatMessageRepo
-            .createQueryBuilder()
-            .insert()
-            .into(ChatMessage)
-            .values(timeoutMsg)
-            .onConflict('do nothing')
-            .execute();
-
-          logs.push(
-            `${moment.utc().toISOString()} - ${id} - Begin save group chat`,
-          );
-
-          // Save latest message for group
-          await this.connection.query(`
+        // Save latest message for group
+        await this.connection.query(`
                 update "group_chat"
                 set "latestMessageId" = '${
                   data.newMessage.id
@@ -175,25 +118,9 @@ export class ChatMessageConsumer {
                 where "id" = '${data.groupChat.id}'
               `);
 
-          await this.cacheService.set(timeoutMsgCK, []);
-          await this.cacheService.set(fullTimeoutMsgCK, []);
-          await this.cacheService.set(allMsgCK, []);
-        } else {
-          // Save latest message for group
-          await this.connection.query(`
-            update "group_chat"
-            set "updated_at" = '${moment.utc().toISOString()}'
-            where "id" = '${data.groupChat.id}'
-          `);
-          await this.cacheService.set(timeoutMsgCK, timeoutMsg);
-          await this.cacheService.set(fullTimeoutMsgCK, fullTimeoutMsg);
-          await this.cacheService.set(allMsgCK, allMsg);
-        }
-
         await this.cacheService.set(latestMessageCK, {
           ...data.newMessage,
           nameCard: data.nameCard,
-          group: { id: data.groupChat.id },
         });
 
         logs.push(`${moment.utc().toISOString()} - ${id} - End send message`);
@@ -328,7 +255,7 @@ export class ChatMessageConsumer {
       content = `${messageContent}`;
     }
 
-    this.notifyService.sendWithoutQueue({
+    this.notifyService.send({
       title,
       content,
       userId: receiver.id,

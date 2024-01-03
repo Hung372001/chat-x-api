@@ -19,6 +19,7 @@ import { UpdateNicknameDto } from './dto/update-nickname.dto';
 import { Friendship } from './entities/friendship.entity';
 import { CacheService } from '../cache/cache.service';
 import { ClientProxy } from '@nestjs/microservices';
+import { ERmqQueueName } from '../../common/enums/rmq.enum';
 
 @Injectable({ scope: Scope.REQUEST })
 export class FriendRequestService {
@@ -30,10 +31,9 @@ export class FriendRequestService {
     private friendRequestRepository: Repository<FriendRequest>,
     @InjectRepository(Friendship)
     private friendshipRepository: Repository<Friendship>,
-    @Inject(AppGateway) private readonly gateway: AppGateway,
     @Inject(CacheService) private cacheService: CacheService,
     @InjectConnection() private readonly connection: Connection,
-    @Inject('CHAT_GATEWAY') private rmqClient: ClientProxy,
+    @Inject(ERmqQueueName.CHAT_GATEWAY) private rmqClient: ClientProxy,
   ) {}
 
   async findOneWithFriends() {

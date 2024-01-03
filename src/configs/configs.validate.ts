@@ -23,7 +23,6 @@ export const configsValidator = Joi.object({
 
   // RabbitMQ
   RABBITMQ_URI: Joi.string().required(),
-  RABBITMQ_QUEUE_NAME: Joi.string().required(),
 
   // Roll call
   ACTIVITY_SCORE_PER_ROLL_CALL: Joi.number().required(),

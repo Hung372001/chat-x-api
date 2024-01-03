@@ -6,12 +6,15 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { FCMTokenRequestService } from './fcm-token.request.service';
 import { RmqModule } from '../rmq/rmq.module';
 import { FCMTokenConsumer } from './consumers/fcm-token.consumer';
+import { ERmqPrefetch, ERmqQueueName } from '../../common/enums/rmq.enum';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([FCMToken]),
     RmqModule.register({
-      name: 'NOTIFICATION_SERVICE',
+      name: ERmqQueueName.NOTIFICATION,
+      queueName: ERmqQueueName.NOTIFICATION,
+      prefetchCount: ERmqPrefetch.NOTIFICATION,
     }),
   ],
   controllers: [FCMTokenController, FCMTokenConsumer],

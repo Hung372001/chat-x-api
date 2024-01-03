@@ -5,15 +5,16 @@ services:
     image: '${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}'
     ports:
       - '3000:3000'
+    environment:
+      - TZ=Asia/Bangkok
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - SERVICE_TYPE=MainService
     volumes:
       - /home/chat-x-api/.env:/app/.env
       - /home/chat-x-api/files:/app/files
       - /home/chat-x-api/secure:/app/secure
       - /home/chat-x-api/ormlogs.log:/app/ormlogs.log
-    environment:
-      - TZ=Asia/Bangkok
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
     dns:
       - 8.8.8.8
     deploy:
@@ -32,15 +33,44 @@ services:
     image: '${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}'
     ports:
       - '3001:3000'
+    environment:
+      - TZ=Asia/Bangkok
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - SERVICE_TYPE=SocketGatewayService
     volumes:
       - /home/chat-x-api/.socket-env:/app/.env
       - /home/chat-x-api/files:/app/files
       - /home/chat-x-api/secure:/app/secure
       - /home/chat-x-api/ormlogs.log:/app/ormlogs.log
+    dns:
+      - 8.8.8.8
+    deploy:
+      mode: replicated
+      placement:
+        constraints: [node.role == manager]
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: any
+    networks:
+      - chat-x_net
+  background-service:
+    image: '${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}'
+    ports:
+      - '9000:3000'
     environment:
       - TZ=Asia/Bangkok
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - SERVICE_TYPE=BackgroundService
+    volumes:
+      - /home/chat-x-api/.socket-env:/app/.env
+      - /home/chat-x-api/files:/app/files
+      - /home/chat-x-api/secure:/app/secure
+      - /home/chat-x-api/ormlogs.log:/app/ormlogs.log
     dns:
       - 8.8.8.8
     deploy:

@@ -6,6 +6,7 @@ import { RmqService } from './rmq.service';
 interface RmqModuleOptions {
   name: string;
   queueName?: string;
+  prefetchCount?: number;
 }
 
 @Module({
@@ -13,7 +14,11 @@ interface RmqModuleOptions {
   exports: [RmqService],
 })
 export class RmqModule {
-  static register({ name, queueName }: RmqModuleOptions): DynamicModule {
+  static register({
+    name,
+    queueName,
+    prefetchCount = 20,
+  }: RmqModuleOptions): DynamicModule {
     return {
       module: RmqModule,
       imports: [
@@ -24,11 +29,9 @@ export class RmqModule {
               transport: Transport.RMQ,
               options: {
                 urls: [configService.get('RABBITMQ_URI').toString()],
-                queue: queueName
-                  ? configService.get(queueName)
-                  : configService.get('RABBITMQ_QUEUE_NAME'),
+                queue: queueName ?? configService.get('RABBITMQ_QUEUE_NAME'),
                 noAck: false,
-                prefetchCount: 20,
+                prefetchCount,
                 queueOptions: {
                   durable: true,
                 },

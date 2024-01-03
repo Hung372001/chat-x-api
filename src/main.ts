@@ -7,9 +7,10 @@ import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
 import { initSwagger } from './swagger';
 import * as AWS from 'aws-sdk';
-import { RmqService } from './modules/rmq/rmq.service';
+import { RmqRegisterInput, RmqService } from './modules/rmq/rmq.service';
 import { MicroserviceOptions } from '@nestjs/microservices';
 import { EServiceType } from './common/enums/service-type.enum';
+import { ERmqPrefetch, ERmqQueueName } from './common/enums/rmq.enum';
 
 async function bootstrap() {
   const logger = new Logger(bootstrap.name);
@@ -44,16 +45,38 @@ async function bootstrap() {
 
   // Init rabbitMQ microservice
   const rmqService = app.get<RmqService>(RmqService);
-  app.connectMicroservice<MicroserviceOptions>(
-    rmqService.getOptions(appConfigs.get('RABBITMQ_QUEUE_NAME')),
-  );
-  app.connectMicroservice<MicroserviceOptions>(
-    rmqService.getOptions(appConfigs.get('NOTI_QUEUE_NAME')),
-  );
+  const queueConfigs = [];
+  switch (appConfigs.get('SERVICE_TYPE')) {
+    case EServiceType.SOCKET_GATEWAY:
+      queueConfigs.push({
+        queueName: ERmqQueueName.CHAT_GATEWAY,
+        prefetchCount: ERmqPrefetch.CHAT_GATEWAY,
+      });
+      break;
+    case EServiceType.BACKGROUND_SERVICE:
+      queueConfigs.concat([
+        {
+          queueName: ERmqQueueName.NOTIFICATION,
+          prefetchCount: ERmqPrefetch.NOTIFICATION,
+        },
+      ]);
+      break;
+    default:
+      queueConfigs.push({
+        queueName: ERmqQueueName.SYSTEM,
+        prefetchCount: ERmqPrefetch.SYSTEM,
+      });
+      break;
+  }
 
-  if (appConfigs.get('SERVICE_TYPE') == EServiceType.SOCKET_GATEWAY) {
-    app.connectMicroservice<MicroserviceOptions>(
-      rmqService.getOptions(appConfigs.get('CHAT_GATEWAY_QUEUE_NAME')),
+  // Create rmq consumers
+  if (queueConfigs?.length) {
+    await Promise.all(
+      queueConfigs.map(async (config: RmqRegisterInput) => {
+        await app.connectMicroservice<MicroserviceOptions>(
+          rmqService.getOptions(config),
+        );
+      }),
     );
   }
 
