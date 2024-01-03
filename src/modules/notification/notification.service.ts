@@ -3,7 +3,6 @@ import { Notification } from './entities/notification.entity';
 import { SendNotificationDto } from './dto/send-notification.dto';
 import * as firebase from 'firebase-admin';
 import { CreateNotificationDto } from './dto/create-notification.dto';
-import { pick } from 'lodash';
 import { ICreateNotificationResponse } from './interfaces/create-notification.interface';
 import { ClientProxy } from '@nestjs/microservices';
 import { ChatXFirebase } from '../../configs/firebase';
@@ -14,6 +13,7 @@ import { UserService } from '../user/user.service';
 import { omitBy, isNull } from 'lodash';
 import { GroupChatSetting } from '../group-chat/entities/group-chat-setting.entity';
 import { ConfigService } from '@nestjs/config';
+import { ERmqQueueName } from '../../common/enums/rmq.enum';
 
 firebase.initializeApp({
   credential: firebase.credential.cert({
@@ -34,7 +34,7 @@ export class NotificationService {
     private readonly groupSettingRepo: Repository<GroupChatSetting>,
     @Inject(UserService) private userService: UserService,
     @Inject(FCMTokenService) private fcmTokenService: FCMTokenService,
-    @Inject('NOTIFICATION_SERVICE') private rmqClient: ClientProxy,
+    @Inject(ERmqQueueName.NOTIFICATION) private rmqClient: ClientProxy,
   ) {
     this.turnOnNoti = this.configService.get('TURN_ON_NOTIFICATION') === 'true';
   }
@@ -59,24 +59,12 @@ export class NotificationService {
         }
       }
 
-      // const newNotification = await this.notificationRepository.create({
-      //   ...pick(dto, Object.keys(dto)),
-      // } as Notification);
-
-      // await this.notificationRepository.save(newNotification);
-
       return {
         notification: dto as unknown as Notification,
         fcmTokens: await this.fcmTokenService.findByUser(dto.user.id),
       };
     } catch (e: any) {
       throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
-    }
-  }
-
-  sendWithoutQueue(dto: CreateNotificationDto) {
-    if (this.turnOnNoti) {
-      return this.createAndSend(dto);
     }
   }
 

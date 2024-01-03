@@ -9,12 +9,15 @@ import { NotificationService } from './notification.service';
 import { NotificationRequestService } from './notification.request.service';
 import { FCMTokenModule } from '../fcm-token/fcm-token.module';
 import { GroupChatSetting } from '../group-chat/entities/group-chat-setting.entity';
+import { ERmqPrefetch, ERmqQueueName } from '../../common/enums/rmq.enum';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Notification, GroupChatSetting]),
     RmqModule.register({
-      name: 'NOTIFICATION_SERVICE',
+      name: ERmqQueueName.NOTIFICATION,
+      queueName: ERmqQueueName.NOTIFICATION,
+      prefetchCount: ERmqPrefetch.NOTIFICATION,
     }),
     UserModule,
     FCMTokenModule,

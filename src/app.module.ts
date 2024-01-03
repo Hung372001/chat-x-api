@@ -33,6 +33,8 @@ import { SearchModule } from './modules/search/search.module';
 import { LoggerModule } from './modules/logger/logger.module';
 import { SocketModule } from './modules/socket/socket.module';
 import { AllExceptionsFilter } from './interceptors/all-exception.filter';
+import { EServiceType } from './common/enums/service-type.enum';
+import { compact } from 'lodash';
 
 const apiV1Modules = [
   UserModule,
@@ -48,7 +50,7 @@ const apiV1Modules = [
 ];
 
 @Module({
-  imports: [
+  imports: compact([
     RouterModule.register([
       {
         path: 'api/v1',
@@ -68,7 +70,9 @@ const apiV1Modules = [
       pingInterval: 1000,
     }),
     LoggerModule.forRoot(),
-    ScheduleModule.forRoot(),
+    process.env.SERVICE_TYPE === EServiceType.BACKGROUND_SERVICE
+      ? ScheduleModule.forRoot()
+      : null,
     SchedulerModule,
     DatabaseModule,
     AuthModule,
@@ -77,7 +81,7 @@ const apiV1Modules = [
     RmqModule,
     SocketModule,
     ...apiV1Modules,
-  ],
+  ]),
   controllers: [AppController],
   providers: [
     AppService,

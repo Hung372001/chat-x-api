@@ -12,6 +12,7 @@ import { GatewaySessionManager } from '../sessions/gateway.session';
 import { UserGatewayService } from './user.gateway.service';
 import { CacheService } from '../../cache/cache.service';
 import { ClientProxy } from '@nestjs/microservices';
+import { ERmqQueueName } from '../../../common/enums/rmq.enum';
 
 @Injectable()
 export class GroupChatGatewayService extends BaseService<GroupChat> {
@@ -23,7 +24,7 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     @Inject(GatewaySessionManager)
     private readonly insideGroupSessions: GatewaySessionManager<string>,
     @Inject(CacheService) private cacheService: CacheService,
-    @Inject('CHAT-MESSAGE_SERVICE') private rmqClient: ClientProxy,
+    @Inject(ERmqQueueName.CHAT_GATEWAY) private rmqClient: ClientProxy,
     @InjectConnection() private readonly connection: Connection,
   ) {
     super(groupChatRepo);

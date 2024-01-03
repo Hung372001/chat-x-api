@@ -74,8 +74,6 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       isGetAll = false,
     } = query;
 
-    let remainLimit = limit;
-
     let chatSetting = null;
     if (!isRootAdmin) {
       chatSetting = await this.groupSettingService.getGroupSetting(
@@ -84,189 +82,126 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
       );
     }
 
-    let totalItems = [],
-      finalTotal = 0;
+    const queryBuilder = this.chatMessageRepo
+      .createQueryBuilder('chat_message')
+      .leftJoin('chat_message.group', 'group_chat')
+      .leftJoin('chat_message.sender', 'user')
+      .addSelect([
+        'user.id',
+        'user.isActive',
+        'user.deletedAt',
+        'user.email',
+        'user.phoneNumber',
+        'user.username',
+      ])
+      .leftJoin('user.profile', 'profile')
+      .addSelect(['profile.id', 'profile.avatar'])
+      .leftJoinAndSelect('chat_message.nameCard', 'user as nameCardUser')
+      .leftJoinAndSelect(
+        'user as nameCardUser.profile',
+        'profile as nameCardProfile',
+      )
+      .where('group_chat.id = :groupChatId', { groupChatId });
 
-    const fullTimeoutMsgCK = `Fullmessage_${groupChatId}`;
-    let fullTimeoutMsg = await this.cacheService.get(fullTimeoutMsgCK);
-    if (
-      fullTimeoutMsg?.length &&
-      page - 1 * remainLimit <= fullTimeoutMsg?.length
-    ) {
-      if (!adminPermission) {
-        fullTimeoutMsg = fullTimeoutMsg.filter((x) => !x.deletedAt);
+    if (!isRootAdmin) {
+      if (chatSetting?.deleteMessageFrom) {
+        queryBuilder.andWhere('chat_message.created_at >= :fromDate', {
+          fromDate: chatSetting.deleteMessageFrom,
+        });
+      }
+    }
+
+    if (adminPermission) {
+      queryBuilder.withDeleted();
+    }
+
+    if (keyword) {
+      if (searchAndBy) {
+        searchAndBy.forEach((item, index) => {
+          const whereParams = {};
+          whereParams[`keyword_${index}`] = !Array.isArray(keyword)
+            ? `%${keyword}%`
+            : `%${keyword[index]}%`;
+
+          queryBuilder.andWhere(
+            `cast(${
+              !item.includes('.') ? `chat_message.${item}` : item
+            } as text) ilike :keyword_${index} `,
+            whereParams,
+          );
+        });
       }
 
-      remainLimit = limit * page - fullTimeoutMsg?.length;
-      finalTotal = fullTimeoutMsg?.length;
+      if (searchBy) {
+        queryBuilder.andWhere(
+          new Brackets((subQuery) => {
+            searchBy.forEach((item, index) => {
+              const whereParams = {};
+              whereParams[`keyword_${index}`] = !Array.isArray(keyword)
+                ? `%${keyword}%`
+                : `%${keyword[index]}%`;
 
-      totalItems = fullTimeoutMsg
-        .reverse()
-        .slice(
-          (page - 1) * remainLimit,
-          remainLimit > 0 ? fullTimeoutMsg?.length : page * remainLimit,
+              subQuery.orWhere(
+                `cast(${
+                  !item.includes('.') ? `chat_message.${item}` : item
+                } as text) ilike :keyword_${index} `,
+                whereParams,
+              );
+            });
+          }),
         );
-
-      totalItems = totalItems.map((x) =>
-        pick(x, [
-          'id',
-          'isActive',
-          'createdAt',
-          'updatedAt',
-          'deletedAt',
-          'message',
-          'imageUrls',
-          'documentUrls',
-          'isRead',
-          'unsent',
-          'pinned',
-          'isFriendRequest',
-          'sender',
-          'sender.id',
-          'sender.isActive',
-          'sender.email',
-          'sender.phoneNumber',
-          'sender.username',
-          'sender.profile',
-          'sender.profile.id',
-          'sender.profile.avatar',
-          'sender.profile.nickname',
-          'nameCard',
-        ]),
-      );
-    }
-
-    if (remainLimit > 0) {
-      const queryBuilder = this.chatMessageRepo
-        .createQueryBuilder('chat_message')
-        .leftJoin('chat_message.group', 'group_chat')
-        .leftJoin('chat_message.sender', 'user')
-        .addSelect([
-          'user.id',
-          'user.isActive',
-          'user.deletedAt',
-          'user.email',
-          'user.phoneNumber',
-          'user.username',
-        ])
-        .leftJoin('user.profile', 'profile')
-        .addSelect(['profile.id', 'profile.avatar'])
-        .leftJoinAndSelect('chat_message.nameCard', 'user as nameCardUser')
-        .leftJoinAndSelect(
-          'user as nameCardUser.profile',
-          'profile as nameCardProfile',
-        )
-        .where('group_chat.id = :groupChatId', { groupChatId });
-
-      if (!isRootAdmin) {
-        if (chatSetting?.deleteMessageFrom) {
-          queryBuilder.andWhere('chat_message.created_at >= :fromDate', {
-            fromDate: chatSetting.deleteMessageFrom,
-          });
-        }
-      }
-
-      if (adminPermission) {
-        queryBuilder.withDeleted();
-      }
-
-      if (keyword) {
-        if (searchAndBy) {
-          searchAndBy.forEach((item, index) => {
-            const whereParams = {};
-            whereParams[`keyword_${index}`] = !Array.isArray(keyword)
-              ? `%${keyword}%`
-              : `%${keyword[index]}%`;
-
-            queryBuilder.andWhere(
-              `cast(${
-                !item.includes('.') ? `chat_message.${item}` : item
-              } as text) ilike :keyword_${index} `,
-              whereParams,
-            );
-          });
-        }
-
-        if (searchBy) {
-          queryBuilder.andWhere(
-            new Brackets((subQuery) => {
-              searchBy.forEach((item, index) => {
-                const whereParams = {};
-                whereParams[`keyword_${index}`] = !Array.isArray(keyword)
-                  ? `%${keyword}%`
-                  : `%${keyword[index]}%`;
-
-                subQuery.orWhere(
-                  `cast(${
-                    !item.includes('.') ? `chat_message.${item}` : item
-                  } as text) ilike :keyword_${index} `,
-                  whereParams,
-                );
-              });
-            }),
-          );
-        }
-      }
-
-      // search ilike
-      if (andKeyword) {
-        if (searchAndBy) {
-          searchAndBy.forEach((item, index) => {
-            const whereParams = {};
-            whereParams[`andKeyword_${index}`] = !Array.isArray(andKeyword)
-              ? `${andKeyword}`
-              : `${andKeyword[index]}`;
-
-            queryBuilder.andWhere(
-              `cast(${
-                !item.includes('.') ? `chat_message.${item}` : item
-              } as text) ilike :andKeyword_${index} `,
-              whereParams,
-            );
-          });
-        }
-
-        if (searchBy) {
-          queryBuilder.andWhere(
-            new Brackets((subQuery) => {
-              searchBy.forEach((item, index) => {
-                const whereParams = {};
-                whereParams[`andKeyword_${index}`] = !Array.isArray(andKeyword)
-                  ? `${andKeyword}`
-                  : `${andKeyword[index]}`;
-
-                subQuery.orWhere(
-                  `cast(${
-                    !item.includes('.') ? `chat_message.${item}` : item
-                  } as text) ilike :andKeyword_${index} `,
-                  whereParams,
-                );
-              });
-            }),
-          );
-        }
-      }
-
-      const [items, total] = await queryBuilder
-        .orderBy(`chat_message.${sortBy}`, sortOrder)
-        .take(isGetAll ? null : remainLimit)
-        .skip(isGetAll ? null : (page - 1) * remainLimit)
-        .getManyAndCount();
-
-      if (items?.length) {
-        totalItems = totalItems.concat(items);
-        finalTotal += total;
       }
     }
+
+    // search ilike
+    if (andKeyword) {
+      if (searchAndBy) {
+        searchAndBy.forEach((item, index) => {
+          const whereParams = {};
+          whereParams[`andKeyword_${index}`] = !Array.isArray(andKeyword)
+            ? `${andKeyword}`
+            : `${andKeyword[index]}`;
+
+          queryBuilder.andWhere(
+            `cast(${
+              !item.includes('.') ? `chat_message.${item}` : item
+            } as text) ilike :andKeyword_${index} `,
+            whereParams,
+          );
+        });
+      }
+
+      if (searchBy) {
+        queryBuilder.andWhere(
+          new Brackets((subQuery) => {
+            searchBy.forEach((item, index) => {
+              const whereParams = {};
+              whereParams[`andKeyword_${index}`] = !Array.isArray(andKeyword)
+                ? `${andKeyword}`
+                : `${andKeyword[index]}`;
+
+              subQuery.orWhere(
+                `cast(${
+                  !item.includes('.') ? `chat_message.${item}` : item
+                } as text) ilike :andKeyword_${index} `,
+                whereParams,
+              );
+            });
+          }),
+        );
+      }
+    }
+
+    const [items, total] = await queryBuilder
+      .orderBy(`chat_message.${sortBy}`, sortOrder)
+      .take(isGetAll ? null : limit)
+      .skip(isGetAll ? null : (page - 1) * limit)
+      .getManyAndCount();
 
     const cacheKey = `PinnedMessage_${groupChatId}`;
     let pinnedMessages = await this.cacheService.get(cacheKey);
 
     if (!pinnedMessages) {
-      const pinnedMsgFromCache = fullTimeoutMsg?.length
-        ? fullTimeoutMsg.filter((x) => !!x.pinned)
-        : [];
-
       pinnedMessages = await this.chatMessageRepo
         .createQueryBuilder('chat_message')
         .leftJoin('chat_message.group', 'group_chat')
@@ -291,10 +226,6 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
         .orderBy(`chat_message.updated_at`, 'DESC')
         .getMany();
 
-      pinnedMessages = [
-        ...(pinnedMsgFromCache?.length ? pinnedMsgFromCache.reverse() : []),
-        ...(pinnedMessages?.length ? pinnedMessages : []),
-      ];
       if (pinnedMessages?.length) {
         pinnedMessages = await Promise.all(
           pinnedMessages.map(
@@ -310,7 +241,7 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
     return {
       items: compact(
         await Promise.all(
-          totalItems.map(async (iterator) =>
+          items.map(async (iterator) =>
             iterator?.sender
               ? adminPermission || !iterator.unsent
                 ? await this.mappingFriendship(iterator, currentUser)
@@ -329,7 +260,7 @@ export class ChatMessageRequestService extends BaseService<ChatMessage> {
         ),
       ),
       pinnedMessages,
-      total: finalTotal,
+      total,
     };
   }
 

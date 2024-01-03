@@ -14,6 +14,7 @@ import { Friendship } from '../friend/entities/friendship.entity';
 import { CustomeCacheModule } from '../cache/cache.module';
 import { ChatMessage } from '../chat-message/entities/chat-message.entity';
 import { RmqModule } from '../rmq/rmq.module';
+import { ERmqPrefetch, ERmqQueueName } from '../../common/enums/rmq.enum';
 
 @Module({
   imports: [
@@ -27,8 +28,9 @@ import { RmqModule } from '../rmq/rmq.module';
     GatewayModule,
     CustomeCacheModule,
     RmqModule.register({
-      name: 'CHAT_GATEWAY',
-      queueName: 'CHAT_GATEWAY_QUEUE_NAME',
+      name: ERmqQueueName.CHAT_GATEWAY,
+      queueName: ERmqQueueName.CHAT_GATEWAY,
+      prefetchCount: ERmqPrefetch.CHAT_GATEWAY,
     }),
   ],
   controllers: [GroupChatController, GroupChatSettingController],

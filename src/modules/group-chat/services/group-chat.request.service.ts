@@ -40,6 +40,7 @@ import { SendMessageDto } from '../../chat-message/dto/send-message.dto';
 import { AuthSocket } from '../../gateway/interfaces/auth.interface';
 import { ClientProxy } from '@nestjs/microservices';
 import { GetAllGroupChatDto } from '../dto/get-all-group-chat.dto';
+import { ERmqQueueName } from '../../../common/enums/rmq.enum';
 
 @Injectable({ scope: Scope.REQUEST })
 export class GroupChatRequestService extends BaseService<GroupChat> {
@@ -56,7 +57,7 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     private readonly groupChatService: GroupChatService,
     @Inject(CacheService) private readonly cacheService: CacheService,
     @InjectConnection() private readonly connection: Connection,
-    @Inject('CHAT_GATEWAY') private rmqClient: ClientProxy,
+    @Inject(ERmqQueueName.CHAT_GATEWAY) private rmqClient: ClientProxy,
   ) {
     super(groupChatRepo);
   }
@@ -79,177 +80,180 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       unReadGroups = false,
     } = query;
 
-    return this.cacheService.cacheServiceFunc(
-      `GetAllGroupChat_${currentUser.id}_${JSON.stringify(query)}`,
-      async () => {
-        let { sortBy = 'createdAt' } = query;
+    let { sortBy = 'createdAt' } = query;
 
-        let groupChatIds = [];
-        const searchNameIndex = searchBy?.indexOf('name') ?? -1;
-        const andSearchNameIndex = searchAndBy?.indexOf('name') ?? -1;
+    let groupChatIds = [];
+    const searchNameIndex = searchBy?.indexOf('name') ?? -1;
+    const andSearchNameIndex = searchAndBy?.indexOf('name') ?? -1;
 
-        if (!isRootAdmin) {
-          const cacheKey = `GroupChatIds_${currentUser.id}`;
-          groupChatIds = await this.cacheService.get(cacheKey);
+    if (!isRootAdmin) {
+      const cacheKey = `GroupChatIds_${currentUser.id}`;
+      groupChatIds = await this.cacheService.get(cacheKey);
 
-          if (!groupChatIds?.length) {
-            groupChatIds = await this.connection.query(`
+      if (!groupChatIds?.length) {
+        groupChatIds = await this.connection.query(`
           select distinct "groupChatId"
           from "group_chat_members_user"
           where "userId" = '${currentUser.id}'
         `);
 
-            if (
-              !groupChatIds?.length &&
-              ((!keyword && !andKeyword) ||
-                (searchNameIndex === -1 && andSearchNameIndex === -1))
-            ) {
-              return {
-                items: [],
-                total: 0,
-              };
-            } else {
-              groupChatIds = groupChatIds.map((x) => x.groupChatId);
-              this.cacheService.set(cacheKey, groupChatIds);
-            }
-          }
-        }
-
-        if (sortBy === 'chat_message as latestMessages.createdAt') {
-          sortBy = 'updatedAt';
-        }
-
-        const queryBuilder = this.groupChatRepo
-          .createQueryBuilder('group_chat')
-          .leftJoinAndSelect('group_chat.settings', 'group_chat_setting')
-          .andWhere('group_chat_setting.groupChatId = group_chat.id')
-          .orderBy('group_chat_setting.pinned', 'DESC');
-
-        if (!!unReadGroups) {
-          queryBuilder.andWhere('group_chat_setting.unReadMessages > 0');
-        }
-
-        if (!isRootAdmin) {
-          const getPublic =
-            (searchNameIndex !== -1 || andSearchNameIndex !== -1) &&
-            (keyword ||
-              andKeyword ||
-              keyword[searchNameIndex] ||
-              andKeyword[andSearchNameIndex]);
-          queryBuilder
-            .andWhere(
-              `(group_chat.id In(:...groupChatIds) AND group_chat_setting.userId = :userId) ${
-                getPublic ? 'OR ${group_chat.isPublic = true}' : ''
-              }`,
-            )
-            .setParameters({
-              groupChatIds,
-              userId: currentUser.id,
-            });
+        if (
+          !groupChatIds?.length &&
+          ((!keyword && !andKeyword) ||
+            (searchNameIndex === -1 && andSearchNameIndex === -1))
+        ) {
+          return {
+            items: [],
+            total: 0,
+          };
         } else {
-          queryBuilder.withDeleted();
+          groupChatIds = groupChatIds.map((x) => x.groupChatId);
+          this.cacheService.set(cacheKey, groupChatIds);
         }
+      }
+    }
 
-        if (keyword) {
-          if (searchAndBy) {
-            searchAndBy.forEach((item, index) => {
+    if (sortBy === 'chat_message as latestMessages.createdAt') {
+      sortBy = 'updatedAt';
+    }
+
+    const queryBuilder = this.groupChatRepo
+      .createQueryBuilder('group_chat')
+      .leftJoinAndSelect('group_chat.settings', 'group_chat_setting')
+      .leftJoinAndSelect('group_chat.admins', 'user as admins')
+      .leftJoinAndSelect('group_chat.owner', 'user as owner')
+      .leftJoinAndSelect(
+        'group_chat.latestMessage',
+        'chat_message as latestMessages',
+      )
+      .leftJoinAndSelect(
+        'chat_message as latestMessages.nameCard',
+        'user as nameCardUsers',
+      )
+      .andWhere('group_chat_setting.groupChatId = group_chat.id')
+      .orderBy('group_chat_setting.pinned', 'DESC');
+
+    if (!!unReadGroups) {
+      queryBuilder.andWhere('group_chat_setting.unReadMessages > 0');
+    }
+
+    if (!isRootAdmin) {
+      const getPublic =
+        (searchNameIndex !== -1 || andSearchNameIndex !== -1) &&
+        (keyword ||
+          andKeyword ||
+          keyword[searchNameIndex] ||
+          andKeyword[andSearchNameIndex]);
+      queryBuilder
+        .andWhere(
+          `(group_chat.id In(:...groupChatIds) AND group_chat_setting.userId = :userId) ${
+            getPublic ? 'OR ${group_chat.isPublic = true}' : ''
+          }`,
+        )
+        .setParameters({
+          groupChatIds,
+          userId: currentUser.id,
+        });
+    } else {
+      queryBuilder.withDeleted();
+    }
+
+    if (keyword) {
+      if (searchAndBy) {
+        searchAndBy.forEach((item, index) => {
+          const whereParams = {};
+          whereParams[`keyword_${index}`] = !Array.isArray(keyword)
+            ? `%${keyword}%`
+            : `%${keyword[index]}%`;
+
+          queryBuilder.andWhere(
+            `cast(${
+              !item.includes('.') ? `group_chat.${item}` : item
+            } as text) ilike :keyword_${index} `,
+            whereParams,
+          );
+        });
+      }
+
+      if (searchBy) {
+        queryBuilder.andWhere(
+          new Brackets((subQuery) => {
+            searchBy.forEach((item, index) => {
               const whereParams = {};
               whereParams[`keyword_${index}`] = !Array.isArray(keyword)
                 ? `%${keyword}%`
                 : `%${keyword[index]}%`;
 
-              queryBuilder.andWhere(
+              subQuery.orWhere(
                 `cast(${
                   !item.includes('.') ? `group_chat.${item}` : item
                 } as text) ilike :keyword_${index} `,
                 whereParams,
               );
             });
-          }
+          }),
+        );
+      }
+    }
 
-          if (searchBy) {
-            queryBuilder.andWhere(
-              new Brackets((subQuery) => {
-                searchBy.forEach((item, index) => {
-                  const whereParams = {};
-                  whereParams[`keyword_${index}`] = !Array.isArray(keyword)
-                    ? `%${keyword}%`
-                    : `%${keyword[index]}%`;
+    // search ilike
+    if (andKeyword) {
+      if (searchAndBy) {
+        searchAndBy.forEach((item, index) => {
+          const whereParams = {};
+          whereParams[`andKeyword_${index}`] = !Array.isArray(andKeyword)
+            ? `${andKeyword}`
+            : `${andKeyword[index]}`;
 
-                  subQuery.orWhere(
-                    `cast(${
-                      !item.includes('.') ? `group_chat.${item}` : item
-                    } as text) ilike :keyword_${index} `,
-                    whereParams,
-                  );
-                });
-              }),
-            );
-          }
-        }
+          queryBuilder.andWhere(
+            `cast(${
+              !item.includes('.') ? `group_chat.${item}` : item
+            } as text) ilike :andKeyword_${index} `,
+            whereParams,
+          );
+        });
+      }
 
-        // search ilike
-        if (andKeyword) {
-          if (searchAndBy) {
-            searchAndBy.forEach((item, index) => {
+      if (searchBy) {
+        queryBuilder.andWhere(
+          new Brackets((subQuery) => {
+            searchBy.forEach((item, index) => {
               const whereParams = {};
               whereParams[`andKeyword_${index}`] = !Array.isArray(andKeyword)
                 ? `${andKeyword}`
                 : `${andKeyword[index]}`;
 
-              queryBuilder.andWhere(
+              subQuery.orWhere(
                 `cast(${
                   !item.includes('.') ? `group_chat.${item}` : item
                 } as text) ilike :andKeyword_${index} `,
                 whereParams,
               );
             });
-          }
+          }),
+        );
+      }
+    }
 
-          if (searchBy) {
-            queryBuilder.andWhere(
-              new Brackets((subQuery) => {
-                searchBy.forEach((item, index) => {
-                  const whereParams = {};
-                  whereParams[`andKeyword_${index}`] = !Array.isArray(
-                    andKeyword,
-                  )
-                    ? `${andKeyword}`
-                    : `${andKeyword[index]}`;
+    const [items, total] = await queryBuilder
+      .addOrderBy(
+        sortBy.includes('.') ? sortBy : `group_chat.${sortBy}`,
+        sortOrder,
+      )
+      .take(isGetAll ? null : limit)
+      .skip(isGetAll ? null : (page - 1) * limit)
+      .getManyAndCount();
 
-                  subQuery.orWhere(
-                    `cast(${
-                      !item.includes('.') ? `group_chat.${item}` : item
-                    } as text) ilike :andKeyword_${index} `,
-                    whereParams,
-                  );
-                });
-              }),
-            );
-          }
-        }
+    const res = {
+      items: await Promise.all(
+        items.map(async (iterator) => {
+          return await this.mappingGroup(iterator, currentUser);
+        }),
+      ),
+      total,
+    };
 
-        const [items, total] = await queryBuilder
-          .addOrderBy(
-            sortBy.includes('.') ? sortBy : `group_chat.${sortBy}`,
-            sortOrder,
-          )
-          .take(isGetAll ? null : limit)
-          .skip(isGetAll ? null : (page - 1) * limit)
-          .getManyAndCount();
-
-        const res = {
-          items: await Promise.all(
-            items.map(async (iterator) => {
-              return await this.mappingGroup(iterator, currentUser);
-            }),
-          ),
-          total,
-        };
-
-        return res;
-      },
-    );
+    return res;
   }
 
   async getAllMember(id: string, query: FilterDto) {
@@ -416,19 +420,15 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
       page: 1,
     } as FilterDto);
 
-    groupChat.latestMessage = await this.groupChatService.getLatestMessage(
-      groupChat.id,
-    );
-
     if (groupChat.type === EGroupChatType.GROUP) {
-      const owner = await this.groupChatService.getGroupOwner(groupChat.id);
-      const admins = await this.groupChatService.getGroupAdmins(groupChat.id);
       return omitBy(
         {
           ...groupChat,
-          isAdmin: admins?.some((x) => x.id === currentUser.id) ?? false,
-          isOwner: owner?.id === currentUser.id ?? false,
-          admins: owner?.id === currentUser.id ? admins : null,
+          isAdmin:
+            groupChat.admins?.some((x) => x.id === currentUser.id) ?? false,
+          isOwner: groupChat.owner?.id === currentUser.id ?? false,
+          admins:
+            groupChat.owner?.id === currentUser.id ? groupChat.admins : null,
           owner: null,
           members,
           latestMessage:
