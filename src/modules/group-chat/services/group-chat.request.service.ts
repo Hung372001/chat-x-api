@@ -119,16 +119,33 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
 
     const queryBuilder = this.groupChatRepo
       .createQueryBuilder('group_chat')
-      .leftJoinAndSelect('group_chat.admins', 'user as admins')
-      .leftJoinAndSelect('group_chat.owner', 'user as owner')
+      .leftJoin('group_chat.admins', 'user as admins')
+      .addSelect(['user as admins.id', 'user as admins.username'])
+      .leftJoin('user as admins.profile', 'profile as adminProfiles')
+      .addSelect([
+        'profile as adminProfiles.id',
+        'profile as adminProfiles.avatar',
+      ])
+      .leftJoin('group_chat.owner', 'user as owner')
+      .addSelect(['user as owner.id', 'user as owner.username'])
       .leftJoinAndSelect(
         'group_chat.latestMessage',
         'chat_message as latestMessages',
       )
-      .leftJoinAndSelect(
+      .leftJoin('chat_message as latestMessages.sender', 'user as sender')
+      .addSelect(['user as sender.id', 'user as sender.username'])
+      .leftJoin('user as sender.profile', 'profile')
+      .addSelect(['profile.id', 'profile.avatar'])
+      .leftJoin(
         'chat_message as latestMessages.nameCard',
         'user as nameCardUsers',
-      );
+      )
+      .addSelect(['user as nameCardUsers.id', 'user as nameCardUsers.username'])
+      .leftJoin('user as nameCardUsers.profile', 'profile as nameCardProfiles')
+      .addSelect([
+        'profile as nameCardProfiles.id',
+        'profile as nameCardProfiles.avatar',
+      ]);
 
     if (!!unReadGroups) {
       queryBuilder.andWhere('group_chat_setting.unReadMessages > 0');
@@ -411,31 +428,36 @@ export class GroupChatRequestService extends BaseService<GroupChat> {
     const isRootAdmin = currentUser.roles[0].type === ERole.ADMIN;
 
     try {
-      const groupChat = await this.groupChatRepo
+      const queryBuilder = this.groupChatRepo
         .createQueryBuilder('group_chat')
-        .leftJoinAndSelect('group_chat.members', 'user')
-        .leftJoinAndSelect('user.friends', 'friendship')
-        .leftJoinAndSelect('friendship.fromUser', 'user as friends')
-        .leftJoinAndSelect(
-          'user.groupChatSettings',
-          'group_chat_setting as userSetting',
-        )
-        .leftJoinAndSelect('user.profile', 'profile')
-        .leftJoinAndSelect('group_chat.latestMessage', 'chat_message')
-        .leftJoinAndSelect('group_chat.settings', 'group_chat_setting')
-        .where('group_chat_setting as userSetting.groupChatId = group_chat.id')
+        .leftJoin('group_chat.admins', 'user as admins')
+        .addSelect(['user as admins.id', 'user as admins.username'])
+        .leftJoin('user as admins.profile', 'profile as adminProfiles')
+        .addSelect([
+          'profile as adminProfiles.id',
+          'profile as adminProfiles.avatar',
+        ])
+        .leftJoin('group_chat.owner', 'user as owner')
+        .addSelect(['user as owner.id', 'user as owner.username'])
         .andWhere('group_chat.id = :groupChatId', { groupChatId: id })
+        .leftJoinAndSelect('group_chat.settings', 'group_chat_setting')
+        .andWhere('group_chat_setting.groupChatId = group_chat.id')
         .andWhere('group_chat_setting.userId = :userId', {
           userId: currentUser.id,
         })
-        .orderBy('group_chat_setting.pinned', 'DESC')
-        .getOne();
+        .orderBy('group_chat_setting.pinned', 'DESC');
 
-      if (
-        !isRootAdmin &&
-        (!groupChat || !groupChat.members.some((x) => x.id === currentUser.id))
-      ) {
-        return null;
+      const groupChat = await queryBuilder.getOne();
+
+      if (!isRootAdmin) {
+        const isMember = await this.groupChatService.isGroupMember(
+          id,
+          currentUser.id,
+        );
+
+        if (!groupChat || !isMember) {
+          return null;
+        }
       }
 
       return this.mappingGroup(groupChat, currentUser, isRootAdmin);
