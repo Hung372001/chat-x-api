@@ -14,15 +14,12 @@ export class NotificationConsumer {
 
   @EventPattern('sendNotification')
   async sendNotification(@Payload() data: any, @Ctx() context: RmqContext) {
-    this.logger.debug('Start job send notification');
+    this.rmqService.ack(context);
 
     try {
       await this.notificationService.createAndSend(data);
     } catch (e: any) {
       this.logger.debug(e);
     }
-
-    this.logger.debug('Send notification completed');
-    this.rmqService.ack(context);
   }
 }
