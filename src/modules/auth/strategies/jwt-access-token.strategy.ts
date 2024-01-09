@@ -4,10 +4,14 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { TokenPayload } from '../interfaces/token.interface';
 import { access_token_public_key } from 'src/constraints/jwt.constraint';
 import { UserService } from '../../user/user.service';
+import { CacheService } from '../../cache/cache.service';
 
 @Injectable()
 export class JwtAccessTokenStrategy extends PassportStrategy(Strategy) {
-  constructor(private userService: UserService) {
+  constructor(
+    private userService: UserService,
+    private cacheService: CacheService,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -16,6 +20,7 @@ export class JwtAccessTokenStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: TokenPayload) {
-    return await this.userService.findOne({ id: payload.id });
+    const user = await this.cacheService.get(`User_${payload.id}`);
+    return user ? user : await this.userService.findOne({ id: payload.id });
   }
 }

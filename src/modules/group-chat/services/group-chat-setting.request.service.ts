@@ -35,10 +35,8 @@ export class GroupChatSettingRequestService extends BaseService<GroupChatSetting
     try {
       const setting = await this.groupSettingRepo
         .createQueryBuilder('group_chat_setting')
-        .leftJoin('group_chat_setting.groupChat', 'group_chat')
-        .leftJoin('group_chat_setting.user', 'user')
-        .where('group_chat.id = :groupChatId', { groupChatId })
-        .andWhere('user.id = :userId', { userId })
+        .where('group_chat_setting.groupChatId = :groupChatId', { groupChatId })
+        .andWhere('group_chat_setting.userId = :userId', { userId })
         .getOne();
 
       if (!setting) {
