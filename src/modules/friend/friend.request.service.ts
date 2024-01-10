@@ -87,26 +87,10 @@ export class FriendRequestService {
           where "id" = '${friendship.id}'
       `);
 
-        await this.cacheService.del(`Friendship_${currentUser.id}_${friendId}`);
-
-        const groupChats = await this.connection.query(`
-        select "group_chat"."id"
-        from "group_chat"
-        left join "group_chat_members_user"
-        on "group_chat_members_user"."groupChatId" = "group_chat"."id"
-        where "group_chat_members_user"."userId" = '${currentUser.id}'
-      `);
-
-        if (groupChats?.length) {
-          await Promise.all(
-            groupChats.map(async (group) => {
-              await this.cacheService.del(
-                `PinnedMessage_${JSON.stringify(group.id)}`,
-              );
-              await this.cacheService.delByPattern(`GroupMember_${group.id}_`);
-            }),
-          );
-        }
+        await this.rmqClient.emit('clearFriendCache', {
+          currentUser,
+          friendId,
+        });
       }
 
       return friendship;

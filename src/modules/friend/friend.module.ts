@@ -9,6 +9,7 @@ import { Friendship } from './entities/friendship.entity';
 import { CustomeCacheModule } from '../cache/cache.module';
 import { RmqModule } from '../rmq/rmq.module';
 import { ERmqPrefetch, ERmqQueueName } from '../../common/enums/rmq.enum';
+import { FriendConsumer } from './consumers/chat-message.consumer';
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import { ERmqPrefetch, ERmqQueueName } from '../../common/enums/rmq.enum';
       prefetchCount: ERmqPrefetch.CHAT_GATEWAY,
     }),
   ],
-  controllers: [FriendController],
+  controllers: [FriendController, FriendConsumer],
   providers: [FriendRequestService],
   exports: [FriendRequestService],
 })
