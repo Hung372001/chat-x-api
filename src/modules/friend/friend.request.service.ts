@@ -103,6 +103,7 @@ export class FriendRequestService {
               await this.cacheService.del(
                 `PinnedMessage_${JSON.stringify(group.id)}`,
               );
+              await this.cacheService.delByPattern(`GroupMember_${group.id}_`);
             }),
           );
         }
