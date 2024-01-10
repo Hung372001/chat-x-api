@@ -81,9 +81,11 @@ export class FriendRequestService {
 
       if (friendship.nickname !== dto.nickname) {
         friendship.nickname = dto.nickname;
-        await this.friendshipRepository.update(friendship.id, {
-          nickname: friendship.nickname,
-        });
+        await this.connection.query(`
+          update "friendship"
+          set "nickname" = '${friendship.nickname}'
+          where "id" = '${friendship.id}'
+      `);
 
         await this.cacheService.del(`Friendship_${currentUser.id}_${friendId}`);
 
