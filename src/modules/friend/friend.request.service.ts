@@ -53,7 +53,7 @@ export class FriendRequestService {
     const cacheKey = `Friendship_${fromUserId}_${toUserId}`;
     let cacheData = await this.cacheService.get(cacheKey);
 
-    if (!cacheData) {
+    if (!cacheData || cacheData === -1) {
       cacheData = await this.friendshipRepository
         .createQueryBuilder('friendship')
         .where('friendship.fromUserId = :fromUserId', { fromUserId })
