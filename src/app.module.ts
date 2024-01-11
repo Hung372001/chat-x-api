@@ -1,5 +1,10 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
-import { ClassSerializerInterceptor, Module } from '@nestjs/common';
+import {
+  CACHE_MANAGER,
+  ClassSerializerInterceptor,
+  Inject,
+  Module,
+} from '@nestjs/common';
 import { CacheModule } from '@nestjs/cache-manager';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -35,6 +40,7 @@ import { SocketModule } from './modules/socket/socket.module';
 import { AllExceptionsFilter } from './interceptors/all-exception.filter';
 import { EServiceType } from './common/enums/service-type.enum';
 import { compact } from 'lodash';
+import { TelegramLoggerService } from './modules/logger/telegram.logger-service';
 
 const apiV1Modules = [
   UserModule,
@@ -95,4 +101,15 @@ const apiV1Modules = [
     },
   ],
 })
-export class AppModule {}
+export class AppModule {
+  constructor(
+    @Inject(CACHE_MANAGER) cacheManager,
+    @Inject(TelegramLoggerService) teleLogger,
+  ) {
+    const client = cacheManager.store.getClient();
+
+    client.on('error', (error) => {
+      teleLogger.error(error);
+    });
+  }
+}
