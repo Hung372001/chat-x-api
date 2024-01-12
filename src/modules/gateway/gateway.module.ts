@@ -17,6 +17,7 @@ import { RmqModule } from '../rmq/rmq.module';
 import { ChatMessageConsumer } from './consumers/chat-message.consumer';
 import { CustomeCacheModule } from '../cache/cache.module';
 import { ERmqPrefetch, ERmqQueueName } from '../../common/enums/rmq.enum';
+import { UserGroupSessionManager } from './sessions/user-group.session';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { ERmqPrefetch, ERmqQueueName } from '../../common/enums/rmq.enum';
   providers: [
     AppGateway,
     GatewaySessionManager,
+    UserGroupSessionManager,
     OnlinesSessionManager,
     GroupChatGatewayService,
     ChatMessageGatewayService,
@@ -53,6 +55,7 @@ import { ERmqPrefetch, ERmqQueueName } from '../../common/enums/rmq.enum';
   exports: [
     AppGateway,
     GatewaySessionManager,
+    UserGroupSessionManager,
     OnlinesSessionManager,
     GroupChatGatewayService,
     ChatMessageGatewayService,

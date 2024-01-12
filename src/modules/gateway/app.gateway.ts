@@ -27,6 +27,7 @@ import { NotificationService } from '../notification/notification.service';
 import { ENotificationType } from '../notification/dto/enum-notification';
 import { compact } from 'lodash';
 import { CacheService } from '../cache/cache.service';
+import { UserGroupSessionManager } from './sessions/user-group.session';
 
 @WebSocketGateway({
   namespace: 'socket/chats',
@@ -54,6 +55,8 @@ export class AppGateway
     private readonly socketSessions: GatewaySessionManager<AuthSocket>,
     @Inject(GatewaySessionManager)
     private readonly insideGroupSessions: GatewaySessionManager<string>,
+    @Inject(UserGroupSessionManager)
+    private readonly userGroupSessions: UserGroupSessionManager<string>,
     @Inject(OnlinesSessionManager)
     private readonly onlineSessions: OnlinesSessionManager,
     @Inject(JwtService) private jwtService: JwtService,
@@ -177,6 +180,7 @@ export class AppGateway
     @ConnectedSocket() client: AuthSocket,
   ) {
     this.insideGroupSessions.setUserSession(groupId, client?.user?.id);
+    this.userGroupSessions.setUserSession(client?.user?.id, groupId);
     client.emit('enterGroupChat', true);
   }
 
@@ -186,6 +190,7 @@ export class AppGateway
     @ConnectedSocket() client: AuthSocket,
   ) {
     this.insideGroupSessions.removeUserSession(groupId, client?.user?.id);
+    this.userGroupSessions.removeUserSession(client?.user?.id, groupId);
     client.emit('outGroupChat', true);
   }
 

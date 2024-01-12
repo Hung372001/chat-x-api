@@ -13,6 +13,7 @@ import { UserGatewayService } from './user.gateway.service';
 import { CacheService } from '../../cache/cache.service';
 import { ClientProxy } from '@nestjs/microservices';
 import { ERmqQueueName } from '../../../common/enums/rmq.enum';
+import { UserGroupSessionManager } from '../sessions/user-group.session';
 
 @Injectable()
 export class GroupChatGatewayService extends BaseService<GroupChat> {
@@ -23,6 +24,8 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     @Inject(UserGatewayService) private userService: UserGatewayService,
     @Inject(GatewaySessionManager)
     private readonly insideGroupSessions: GatewaySessionManager<string>,
+    @Inject(UserGroupSessionManager)
+    private readonly userGroupSessions: UserGroupSessionManager<string>,
     @Inject(CacheService) private cacheService: CacheService,
     @Inject(ERmqQueueName.CHAT_GATEWAY) private rmqClient: ClientProxy,
     @InjectConnection() private readonly connection: Connection,
@@ -213,7 +216,7 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     member: User,
     joinGroup = true,
   ) {
-    const groupChatIds = await this.getJoinedGroups(member.id);
+    const groupChatIds = await this.userGroupSessions.getUserSession(member.id);
 
     // Join socket to all group
     if (groupChatIds?.length > 0) {
@@ -241,7 +244,7 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     member: User,
     leaveGroup = true,
   ) {
-    const groupChatIds = await this.getJoinedGroups(member.id);
+    const groupChatIds = await this.userGroupSessions.getUserSession(member.id);
 
     // Leave all joined group
     if (groupChatIds?.length > 0) {
