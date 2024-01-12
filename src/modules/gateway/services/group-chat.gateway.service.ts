@@ -13,7 +13,6 @@ import { UserGatewayService } from './user.gateway.service';
 import { CacheService } from '../../cache/cache.service';
 import { ClientProxy } from '@nestjs/microservices';
 import { ERmqQueueName } from '../../../common/enums/rmq.enum';
-import { UserGroupSessionManager } from '../sessions/user-group.session';
 
 @Injectable()
 export class GroupChatGatewayService extends BaseService<GroupChat> {
@@ -24,8 +23,6 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     @Inject(UserGatewayService) private userService: UserGatewayService,
     @Inject(GatewaySessionManager)
     private readonly insideGroupSessions: GatewaySessionManager<string>,
-    @Inject(UserGroupSessionManager)
-    private readonly userGroupSessions: UserGroupSessionManager<string>,
     @Inject(CacheService) private cacheService: CacheService,
     @Inject(ERmqQueueName.CHAT_GATEWAY) private rmqClient: ClientProxy,
     @InjectConnection() private readonly connection: Connection,
@@ -200,8 +197,10 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
         from "group_chat_members_user"
         where "userId" = '${userId}'
         `);
-        groupChatIds = groupChatIds.map((x) => x.groupChatId);
-        this.cacheService.set(cacheKey, groupChatIds);
+        if (groupChatIds?.length) {
+          groupChatIds = groupChatIds.map((x) => x.groupChatId);
+          this.cacheService.set(cacheKey, groupChatIds);
+        }
       }
 
       return groupChatIds;
@@ -216,13 +215,7 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     member: User,
     joinGroup = true,
   ) {
-    let groupChatIds = await this.userGroupSessions.getUserSession(member.id);
-    if (!groupChatIds?.length) {
-      groupChatIds = await this.getJoinedGroups(member.id);
-      if (groupChatIds?.length) {
-        this.userGroupSessions.setAllDataSession(member.id, groupChatIds);
-      }
-    }
+    const groupChatIds = await this.getJoinedGroups(member.id);
 
     // Join socket to all group
     if (groupChatIds?.length) {
@@ -250,7 +243,7 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     member: User,
     leaveGroup = true,
   ) {
-    const groupChatIds = await this.userGroupSessions.getUserSession(member.id);
+    const groupChatIds = await this.getJoinedGroups(member.id);
 
     // Leave all joined group
     if (groupChatIds?.length > 0) {

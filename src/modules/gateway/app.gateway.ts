@@ -27,7 +27,6 @@ import { NotificationService } from '../notification/notification.service';
 import { ENotificationType } from '../notification/dto/enum-notification';
 import { compact } from 'lodash';
 import { CacheService } from '../cache/cache.service';
-import { UserGroupSessionManager } from './sessions/user-group.session';
 
 @WebSocketGateway({
   namespace: 'socket/chats',
@@ -55,8 +54,6 @@ export class AppGateway
     private readonly socketSessions: GatewaySessionManager<AuthSocket>,
     @Inject(GatewaySessionManager)
     private readonly insideGroupSessions: GatewaySessionManager<string>,
-    @Inject(UserGroupSessionManager)
-    private readonly userGroupSessions: UserGroupSessionManager<string>,
     @Inject(OnlinesSessionManager)
     private readonly onlineSessions: OnlinesSessionManager,
     @Inject(JwtService) private jwtService: JwtService,
@@ -266,7 +263,6 @@ export class AppGateway
           groupChat.members.map(async (x) => {
             const cacheKey = `GroupChatIds_${x.id}`;
             await this.cacheService.del(cacheKey);
-            await this.userGroupSessions.setUserSession(x.id, groupChat.id);
           }),
         );
       } catch (e) {}
@@ -288,7 +284,6 @@ export class AppGateway
           groupChat.members.map(async (x) => {
             const cacheKey = `GroupChatIds_${x.id}`;
             await this.cacheService.del(cacheKey);
-            await this.userGroupSessions.removeUserSession(x.id, groupChat.id);
           }),
         );
       } catch (e) {}
@@ -410,7 +405,6 @@ export class AppGateway
             const cacheKey = `GroupChatIds_${x.id}`;
             await this.cacheService.del(cacheKey);
             await this.cacheService.del(`GroupSetting_${x.id}_${groupChat.id}`);
-            await this.userGroupSessions.setUserSession(x.id, groupChat.id);
           }),
         );
       } catch (e) {}
@@ -436,7 +430,6 @@ export class AppGateway
             const cacheKey = `GroupChatIds_${x.id}`;
             await this.cacheService.del(cacheKey);
             await this.cacheService.del(`GroupSetting_${x.id}_${groupChat.id}`);
-            await this.userGroupSessions.removeUserSession(x.id, groupChat.id);
           }),
         );
       } catch (e) {}
