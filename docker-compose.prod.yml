@@ -39,7 +39,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - SERVICE_TYPE=SocketGatewayService
     volumes:
-      - /home/chat-x-api/.socket-env:/app/.env
+      - /home/chat-x-api/.env:/app/.env
       - /home/chat-x-api/files:/app/files
       - /home/chat-x-api/secure:/app/secure
       - /home/chat-x-api/ormlogs.log:/app/ormlogs.log
@@ -67,7 +67,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - SERVICE_TYPE=BackgroundService
     volumes:
-      - /home/chat-x-api/.socket-env:/app/.env
+      - /home/chat-x-api/.env:/app/.env
       - /home/chat-x-api/files:/app/files
       - /home/chat-x-api/secure:/app/secure
       - /home/chat-x-api/ormlogs.log:/app/ormlogs.log
