@@ -216,10 +216,16 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
     member: User,
     joinGroup = true,
   ) {
-    const groupChatIds = await this.userGroupSessions.getUserSession(member.id);
+    let groupChatIds = await this.userGroupSessions.getUserSession(member.id);
+    if (!groupChatIds?.length) {
+      groupChatIds = await this.getJoinedGroups(member.id);
+      if (groupChatIds?.length) {
+        this.userGroupSessions.setAllDataSession(member.id, groupChatIds);
+      }
+    }
 
     // Join socket to all group
-    if (groupChatIds?.length > 0) {
+    if (groupChatIds?.length) {
       Promise.all(
         groupChatIds.map(async (groupId) => {
           if (joinGroup) {

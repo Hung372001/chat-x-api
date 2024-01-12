@@ -180,7 +180,6 @@ export class AppGateway
     @ConnectedSocket() client: AuthSocket,
   ) {
     this.insideGroupSessions.setUserSession(groupId, client?.user?.id);
-    this.userGroupSessions.setUserSession(client?.user?.id, groupId);
     client.emit('enterGroupChat', true);
   }
 
@@ -190,7 +189,6 @@ export class AppGateway
     @ConnectedSocket() client: AuthSocket,
   ) {
     this.insideGroupSessions.removeUserSession(groupId, client?.user?.id);
-    this.userGroupSessions.removeUserSession(client?.user?.id, groupId);
     client.emit('outGroupChat', true);
   }
 
@@ -268,6 +266,7 @@ export class AppGateway
           groupChat.members.map(async (x) => {
             const cacheKey = `GroupChatIds_${x.id}`;
             await this.cacheService.del(cacheKey);
+            await this.userGroupSessions.setUserSession(x.id, groupChat.id);
           }),
         );
       } catch (e) {}
@@ -289,6 +288,7 @@ export class AppGateway
           groupChat.members.map(async (x) => {
             const cacheKey = `GroupChatIds_${x.id}`;
             await this.cacheService.del(cacheKey);
+            await this.userGroupSessions.removeUserSession(x.id, groupChat.id);
           }),
         );
       } catch (e) {}
@@ -410,6 +410,7 @@ export class AppGateway
             const cacheKey = `GroupChatIds_${x.id}`;
             await this.cacheService.del(cacheKey);
             await this.cacheService.del(`GroupSetting_${x.id}_${groupChat.id}`);
+            await this.userGroupSessions.setUserSession(x.id, groupChat.id);
           }),
         );
       } catch (e) {}
@@ -435,6 +436,7 @@ export class AppGateway
             const cacheKey = `GroupChatIds_${x.id}`;
             await this.cacheService.del(cacheKey);
             await this.cacheService.del(`GroupSetting_${x.id}_${groupChat.id}`);
+            await this.userGroupSessions.removeUserSession(x.id, groupChat.id);
           }),
         );
       } catch (e) {}

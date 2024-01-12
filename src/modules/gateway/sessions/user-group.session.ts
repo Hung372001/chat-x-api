@@ -4,6 +4,7 @@ import { differenceBy } from 'lodash';
 export interface IUserGroupSessionManager<T> {
   getUserSession(id: string): T[];
   setUserSession(id: string, data: T): void;
+  setAllDataSession(id: string, data: T[]): void;
   removeUserSession(id: string, data: T): void;
   getSession(): Map<string, T[]>;
 }
@@ -23,6 +24,12 @@ export class UserGroupSessionManager<T> implements IUserGroupSessionManager<T> {
     } else {
       userSession = [data];
     }
+    this.sessions.set(id, userSession);
+  }
+
+  setAllDataSession(id: string, data: T[]) {
+    let userSession = this.sessions.get(id);
+    userSession = data;
     this.sessions.set(id, userSession);
   }
 
