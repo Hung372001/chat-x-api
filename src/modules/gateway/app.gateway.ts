@@ -399,7 +399,7 @@ export class AppGateway
     if (groupChat && newMembers?.length > 0) {
       try {
         await this.cacheService.del(`GroupChat_${groupChat.id}`);
-        await this.cacheService.delByPattern(`GroupMember_`);
+        await this.cacheService.delByPattern(`GroupMember_${groupChat.id}_`);
         await Promise.all(
           newMembers.map(async (x) => {
             const cacheKey = `GroupChatIds_${x.id}`;
@@ -424,7 +424,7 @@ export class AppGateway
       try {
         await this.cacheService.del(`GroupChatAdmins_${groupChat.id}`);
         await this.cacheService.del(`GroupChat_${groupChat.id}`);
-        await this.cacheService.delByPattern(`GroupMember_`);
+        await this.cacheService.delByPattern(`GroupMember_${groupChat.id}_`);
         await Promise.all(
           removeMembers.map(async (x) => {
             const cacheKey = `GroupChatIds_${x.id}`;
