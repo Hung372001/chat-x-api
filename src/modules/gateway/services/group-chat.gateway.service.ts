@@ -194,12 +194,17 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
   }
 
   async getJoinedGroups(userId: string) {
+    let groupChatIds;
+    const cacheKey = `GroupChatIds_${userId}`;
     try {
-      const cacheKey = `GroupChatIds_${userId}`;
-      let groupChatIds = await this.cacheService.get(cacheKey);
+      try {
+        groupChatIds = await this.cacheService.get(cacheKey);
+      } catch (e: any) {
+        this.logger.error(e.message);
+      }
 
       if (!groupChatIds?.length) {
-        groupChatIds = await this.connection.query(`
+        let groupChatIds = await this.connection.query(`
         select distinct "groupChatId"
         from "group_chat_members_user"
         where "userId" = '${userId}'
