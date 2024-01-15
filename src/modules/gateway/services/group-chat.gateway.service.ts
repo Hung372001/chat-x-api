@@ -1,4 +1,10 @@
-import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { BaseService } from '../../../common/services/base.service';
 import { InjectConnection, InjectRepository } from '@nestjs/typeorm';
 import { Connection, FindOptionsWhere, In, Repository } from 'typeorm';
@@ -16,6 +22,7 @@ import { ERmqQueueName } from '../../../common/enums/rmq.enum';
 
 @Injectable()
 export class GroupChatGatewayService extends BaseService<GroupChat> {
+  private logger = new Logger(GroupChatGatewayService.name);
   constructor(
     @InjectRepository(GroupChat) private groupChatRepo: Repository<GroupChat>,
     @InjectRepository(GroupChatSetting)
@@ -205,8 +212,10 @@ export class GroupChatGatewayService extends BaseService<GroupChat> {
 
       return groupChatIds;
     } catch (e: any) {
-      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+      this.logger.error(e.message);
     }
+
+    return null;
   }
 
   async emitOnlineGroupMember(
