@@ -106,9 +106,9 @@ export class AppGateway
   // Online and offile status of group member
   @SubscribeMessage('online')
   async handleMemberOnline(@ConnectedSocket() client: AuthSocket) {
-    this.logger.log(`Online ${client?.user?.id}`);
     const isOnline = this.onlineSessions.getUserSession(client?.user?.id);
     if (!isOnline) {
+      this.logger.log(`Online ${client?.user?.id}`);
       this.onlineSessions.setUserSession(client?.user?.id, true);
       this.groupChatService.emitOnlineGroupMember(
         this.server,
@@ -121,9 +121,9 @@ export class AppGateway
 
   @SubscribeMessage('offline')
   async handleMemberOffline(@ConnectedSocket() client: AuthSocket) {
-    this.logger.log(`Offline ${client?.user?.id}`);
     const isOnline = this.onlineSessions.getUserSession(client?.user?.id);
     if (isOnline) {
+      this.logger.log(`Offline ${client?.user?.id}`);
       this.onlineSessions.setUserSession(client?.user?.id, false);
       this.groupChatService.emitOfflineGroupMember(
         this.server,
@@ -135,11 +135,11 @@ export class AppGateway
   }
 
   async offline(user: User) {
-    const clients = this.socketSessions.getUserSession(user?.id);
-    if (clients?.length) {
+    const isOnline = this.onlineSessions.getUserSession(user?.id);
+    if (isOnline) {
       this.logger.log(`Offline ${user?.id}`);
-      const isOnline = this.onlineSessions.getUserSession(user?.id);
-      if (isOnline) {
+      const clients = this.socketSessions.getUserSession(user?.id);
+      if (clients?.length) {
         this.onlineSessions.setUserSession(user?.id, false);
         await Promise.all(
           clients.map(async (client) => {
