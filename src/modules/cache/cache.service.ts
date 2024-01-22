@@ -28,36 +28,40 @@ export class CacheService {
   }
 
   async set(key: string, data: any, deleteRelative?: boolean) {
-    const controller = key.split('_')[0];
+    let res = null;
+    try {
+      const controller = key.split('_')[0];
 
-    if (deleteRelative) {
-      const relatives = relativeKeys[controller];
-      const keys = uniq(
-        flattenDeep(
-          await Promise.all(
-            [controller, ...(relatives || [])].map((item) => {
-              return this.get(item);
-            }),
+      if (deleteRelative) {
+        const relatives = relativeKeys[controller];
+        const keys = uniq(
+          flattenDeep(
+            await Promise.all(
+              [controller, ...(relatives || [])].map((item) => {
+                return this.get(item);
+              }),
+            ),
           ),
-        ),
-      );
+        );
 
-      await Promise.all(
-        keys.map((key) => {
-          return this.del(key);
-        }),
-      );
-    }
-    const res = await Promise.all([
-      this.cacheManager.set(controller, [key]),
-      this.cacheManager.set(key, JSON.stringify(data)),
-    ]);
+        await Promise.all(
+          keys.map((key) => {
+            return this.del(key);
+          }),
+        );
+      }
+      res = await Promise.all([
+        this.cacheManager.set(controller, [key]),
+        this.cacheManager.set(key, JSON.stringify(data)),
+      ]);
+    } catch (e: any) {}
     return res;
   }
 
   async get(key: string): Promise<any> {
-    let res: string = await this.cacheManager.get(key);
+    let res = null;
     try {
+      res = await this.cacheManager.get(key);
       res = JSON.parse(res);
     } catch (error) {}
 
@@ -65,7 +69,10 @@ export class CacheService {
   }
 
   async del(key: string) {
-    const res = await this.cacheManager.del(key);
+    let res = null;
+    try {
+      res = await this.cacheManager.del(key);
+    } catch (error) {}
     return res;
   }
 
@@ -92,15 +99,18 @@ export class CacheService {
   }
 
   async cacheServiceFunc(cacheKey: string, callback: any): Promise<any> {
-    const progressingCK = `Progressing_${cacheKey}`;
-    const progressing = await this.get(progressingCK);
-    let cacheData = await this.get(cacheKey);
-    if (!progressing) {
-      await this.set(progressingCK, true);
-      cacheData = await callback();
-      await this.set(cacheKey, cacheData);
-      await this.set(progressingCK, false);
-    }
+    let cacheData = null;
+    try {
+      const progressingCK = `Progressing_${cacheKey}`;
+      const progressing = await this.get(progressingCK);
+      cacheData = await this.get(cacheKey);
+      if (!progressing) {
+        await this.set(progressingCK, true);
+        cacheData = await callback();
+        await this.set(cacheKey, cacheData);
+        await this.set(progressingCK, false);
+      }
+    } catch (error) {}
 
     return cacheData;
   }
