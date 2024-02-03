@@ -29,6 +29,10 @@ services:
       - /home/chat-x-api/bitnami-postgres:/bitnami/postgresql
       - /home/chat-x-api/bitnami-postgres/db.sql:/docker-entrypoint-initdb.d/db.sql
       - /home/chat-x-api/postgresql.conf:/bitnami/postgresql/conf/postgresql.conf
+      - type: tmpfs
+        target: /dev/shm
+    tmpfs:
+      - /tmp:size=8gb
     ports:
       - "5433:5432"
     environment:
@@ -40,6 +44,21 @@ services:
       - POSTGRESQL_USERNAME=postgres
       - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD_PROD}
       - POSTGRESQL_DATABASE=${POSTGRES_DB_PROD}
+    deploy:
+      mode: replicated
+      placement:
+        constraints: [node.role == manager]
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: any
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"   # number of files or file count
+        max-size: "10m" # file size
     networks:
       - chat-x_net
   postgres-server-slave:
@@ -49,6 +68,10 @@ services:
       - postgres-server-master
     volumes:
       - /home/chat-x-api/slave-postgresql.conf:/bitnami/postgresql/conf/postgresql.conf
+      - type: tmpfs
+        target: /dev/shm
+    tmpfs:
+      - /tmp:size=8gb
     ports:
       - "5434:5432"
     environment:
@@ -60,6 +83,21 @@ services:
       - POSTGRESQL_REPLICATION_USER=repl_postgres
       - POSTGRESQL_REPLICATION_PASSWORD=${POSTGRES_PASSWORD_PROD}
       - POSTGRESQL_MASTER_PORT_NUMBER=5432
+    deploy:
+      mode: replicated
+      placement:
+        constraints: [node.role == manager]
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: any
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"   # number of files or file count
+        max-size: "10m" # file size
     networks:
       - chat-x_net
   postgres-server-slave-2:
@@ -69,6 +107,10 @@ services:
       - postgres-server-master
     volumes:
       - /home/chat-x-api/slave-postgresql.conf:/bitnami/postgresql/conf/postgresql.conf
+      - type: tmpfs
+        target: /dev/shm
+    tmpfs:
+      - /tmp:size=8gb
     ports:
       - "5435:5432"
     environment:
@@ -80,6 +122,21 @@ services:
       - POSTGRESQL_REPLICATION_USER=repl_postgres
       - POSTGRESQL_REPLICATION_PASSWORD=${POSTGRES_PASSWORD_PROD}
       - POSTGRESQL_MASTER_PORT_NUMBER=5432
+    deploy:
+      mode: replicated
+      placement:
+        constraints: [node.role == manager]
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: any
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"   # number of files or file count
+        max-size: "10m" # file size
     networks:
       - chat-x_net
   postgres-server-slave-3:
@@ -89,6 +146,10 @@ services:
       - postgres-server-master
     volumes:
       - /home/chat-x-api/slave-postgresql.conf:/bitnami/postgresql/conf/postgresql.conf
+      - type: tmpfs
+        target: /dev/shm
+    tmpfs:
+      - /tmp:size=8gb
     ports:
       - "5436:5432"
     environment:
@@ -100,6 +161,21 @@ services:
       - POSTGRESQL_REPLICATION_USER=repl_postgres
       - POSTGRESQL_REPLICATION_PASSWORD=${POSTGRES_PASSWORD_PROD}
       - POSTGRESQL_MASTER_PORT_NUMBER=5432
+    deploy:
+      mode: replicated
+      placement:
+        constraints: [node.role == manager]
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: any
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"   # number of files or file count
+        max-size: "10m" # file size
     networks:
       - chat-x_net
 networks:
