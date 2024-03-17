@@ -1,121 +1,121 @@
-version: '3'
-
-services:
-  api-service:
-    image: '${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}'
-    ports:
-      - '3000:3000'
-    environment:
-      - TZ=Asia/Bangkok
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - SERVICE_TYPE=MainService
-    volumes:
-      - /home/chat-x-api/.env:/app/.env
-      - /home/chat-x-api/files:/app/files
-      - /home/chat-x-api/secure:/app/secure
-      - /home/chat-x-api/ormlogs.log:/app/ormlogs.log
-    dns:
-      - 8.8.8.8
-    deploy:
-      mode: replicated
-      placement:
-        constraints: [node.role == manager]
-      replicas: 8
-      update_config:
-        parallelism: 1
-        delay: 10s
-      restart_policy:
-        condition: any
-    networks:
-      - chat-x_net
-  socket-gateway:
-    image: '${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}'
-    ports:
-      - '3001:3000'
-    environment:
-      - TZ=Asia/Bangkok
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - SERVICE_TYPE=SocketGatewayService
-    volumes:
-      - /home/chat-x-api/.env:/app/.env
-      - /home/chat-x-api/files:/app/files
-      - /home/chat-x-api/secure:/app/secure
-      - /home/chat-x-api/ormlogs.log:/app/ormlogs.log
-    dns:
-      - 8.8.8.8
-    deploy:
-      mode: replicated
-      placement:
-        constraints: [node.role == manager]
-      replicas: 1
-      update_config:
-        parallelism: 1
-        delay: 10s
-      restart_policy:
-        condition: any
-    networks:
-      - chat-x_net
-  background-service:
-    image: '${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}'
-    ports:
-      - '9000:3000'
-    environment:
-      - TZ=Asia/Bangkok
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - SERVICE_TYPE=BackgroundService
-    volumes:
-      - /home/chat-x-api/.env:/app/.env
-      - /home/chat-x-api/files:/app/files
-      - /home/chat-x-api/secure:/app/secure
-      - /home/chat-x-api/ormlogs.log:/app/ormlogs.log
-    dns:
-      - 8.8.8.8
-    deploy:
-      mode: replicated
-      placement:
-        constraints: [node.role == manager]
-      replicas: 1
-      update_config:
-        parallelism: 1
-        delay: 10s
-      restart_policy:
-        condition: any
-    networks:
-      - chat-x_net
-  redis-server:
-    image: 'redis:6.0-alpine'
-    volumes:
-      - /home/chat-x-api/redis:/data
-      - /home/chat-x-api/redis/redis.conf:/usr/local/etc/redis/redis.conf
-    ports:
-      - '6379:6379'
-    deploy:
-      placement:
-        constraints: [node.role == manager]
-      update_config:
-        parallelism: 1
-        delay: 10s
-      restart_policy:
-        condition: any
-    networks:
-      - chat-x_net
-  rabbitmq:
-    image: rabbitmq:3-management-alpine
-    container_name: 'rabbitmq'
-    environment:
-        - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER_PROD}
-        - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD_PROD}
-    ports:
-        - 5672:5672
-        - 15672:15672
-    volumes:
-        - /home/chat-x-api/rabbitmq/data/:/var/lib/rabbitmq/
-        - /home/chat-x-api/rabbitmq/log/:/var/log/rabbitmq
-    networks:
-        - chat-x_net
-networks:
-  chat-x_net:
-    driver: overlay
+#version: '3'
+#
+#services:
+#  api-service:
+#    image: '${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}'
+#    ports:
+#      - '3000:3000'
+#    environment:
+#      - TZ=Asia/Bangkok
+#      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+#      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+#      - SERVICE_TYPE=MainService
+#    volumes:
+#      - /home/chat-x-api/.env:/app/.env
+#      - /home/chat-x-api/files:/app/files
+#      - /home/chat-x-api/secure:/app/secure
+#      - /home/chat-x-api/ormlogs.log:/app/ormlogs.log
+#    dns:
+#      - 8.8.8.8
+#    deploy:
+#      mode: replicated
+#      placement:
+#        constraints: [node.role == manager]
+#      replicas: 8
+#      update_config:
+#        parallelism: 1
+#        delay: 10s
+#      restart_policy:
+#        condition: any
+#    networks:
+#      - chat-x_net
+#  socket-gateway:
+#    image: '${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}'
+#    ports:
+#      - '3001:3000'
+#    environment:
+#      - TZ=Asia/Bangkok
+#      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+#      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+#      - SERVICE_TYPE=SocketGatewayService
+#    volumes:
+#      - /home/chat-x-api/.env:/app/.env
+#      - /home/chat-x-api/files:/app/files
+#      - /home/chat-x-api/secure:/app/secure
+#      - /home/chat-x-api/ormlogs.log:/app/ormlogs.log
+#    dns:
+#      - 8.8.8.8
+#    deploy:
+#      mode: replicated
+#      placement:
+#        constraints: [node.role == manager]
+#      replicas: 1
+#      update_config:
+#        parallelism: 1
+#        delay: 10s
+#      restart_policy:
+#        condition: any
+#    networks:
+#      - chat-x_net
+#  background-service:
+#    image: '${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}'
+#    ports:
+#      - '9000:3000'
+#    environment:
+#      - TZ=Asia/Bangkok
+#      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+#      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+#      - SERVICE_TYPE=BackgroundService
+#    volumes:
+#      - /home/chat-x-api/.env:/app/.env
+#      - /home/chat-x-api/files:/app/files
+#      - /home/chat-x-api/secure:/app/secure
+#      - /home/chat-x-api/ormlogs.log:/app/ormlogs.log
+#    dns:
+#      - 8.8.8.8
+#    deploy:
+#      mode: replicated
+#      placement:
+#        constraints: [node.role == manager]
+#      replicas: 1
+#      update_config:
+#        parallelism: 1
+#        delay: 10s
+#      restart_policy:
+#        condition: any
+#    networks:
+#      - chat-x_net
+#  redis-server:
+#    image: 'redis:6.0-alpine'
+#    volumes:
+#      - /home/chat-x-api/redis:/data
+#      - /home/chat-x-api/redis/redis.conf:/usr/local/etc/redis/redis.conf
+#    ports:
+#      - '6379:6379'
+#    deploy:
+#      placement:
+#        constraints: [node.role == manager]
+#      update_config:
+#        parallelism: 1
+#        delay: 10s
+#      restart_policy:
+#        condition: any
+#    networks:
+#      - chat-x_net
+#  rabbitmq:
+#    image: rabbitmq:3-management-alpine
+#    container_name: 'rabbitmq'
+#    environment:
+#        - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER_PROD}
+#        - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD_PROD}
+#    ports:
+#        - 5672:5672
+#        - 15672:15672
+#    volumes:
+#        - /home/chat-x-api/rabbitmq/data/:/var/lib/rabbitmq/
+#        - /home/chat-x-api/rabbitmq/log/:/var/log/rabbitmq
+#    networks:
+#        - chat-x_net
+#networks:
+#  chat-x_net:
+#    driver: overlay

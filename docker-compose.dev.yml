@@ -1,100 +1,100 @@
-version: '3'
-
-services:
-  api-service:
-    image: '${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}'
-    ports:
-      - '3002:3000'
-    volumes:
-      - /home/chat-x-api/.env:/app/.env
-      - /home/chat-x-api/files:/app/files
-      - /home/chat-x-api/secure:/app/secure
-    environment:
-      - TZ=Asia/Bangkok
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-    dns:
-      - 8.8.8.8
-    deploy:
-      mode: replicated
-      placement:
-        constraints: [node.role == manager]
-      replicas: 1
-      update_config:
-        parallelism: 1
-        delay: 10s
-      restart_policy:
-        condition: any
-    networks:
-      - chat-x_net
-  postgres-server-master:
-    image: "bitnami/postgresql"
-    restart: always
-    volumes: 
-      - /home/chat-x-api/bitnami-postgres:/bitnami/postgresql
-      - /home/chat-x-api/bitnami-postgres/db.sql:/docker-entrypoint-initdb.d/db.sql
-    ports:
-      - "5436:5432"
-    environment:
-      - POSTGRESQL_PGAUDIT_LOG=READ,WRITE
-      - POSTGRESQL_LOG_HOSTNAME=true
-      - POSTGRESQL_REPLICATION_MODE=master
-      - POSTGRESQL_REPLICATION_USER=repl_postgres
-      - POSTGRESQL_REPLICATION_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRESQL_USERNAME=postgres
-      - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRESQL_DATABASE=${POSTGRES_DB}
-    networks:
-      - chat-x_net
-  postgres-server-slave:
-    image: "bitnami/postgresql"
-    restart: always
-    depends_on:
-      - postgres-server-master
-    ports:
-      - "5437:5432"
-    environment:
-      - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRESQL_MASTER_HOST=postgres-server-master
-      - POSTGRESQL_PGAUDIT_LOG=READ
-      - POSTGRESQL_LOG_HOSTNAME=true
-      - POSTGRESQL_REPLICATION_MODE=slave
-      - POSTGRESQL_REPLICATION_USER=repl_postgres
-      - POSTGRESQL_REPLICATION_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRESQL_MASTER_PORT_NUMBER=5432
-    networks:
-      - chat-x_net
-  redis-server:
-    image: 'redis:6.0-alpine'
-    volumes:
-      - /home/chat-x-api/redis:/data
-      - /home/chat-x-api/redis/redis.conf:/usr/local/etc/redis/redis.conf
-    ports:
-      - '6380:6379'
-    deploy:
-      placement:
-        constraints: [node.role == manager]
-      update_config:
-        parallelism: 1
-        delay: 10s
-      restart_policy:
-        condition: any
-    networks:
-      - chat-x_net
-  rabbitmq:
-    image: rabbitmq:3-management-alpine
-    container_name: 'rabbitmq'
-    environment:
-        - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
-        - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
-    ports:
-        - 5674:5672
-        - 15674:15672
-    volumes:
-        - /home/chat-x-api/rabbitmq/data/:/var/lib/rabbitmq/
-        - /home/chat-x-api/rabbitmq/log/:/var/log/rabbitmq
-    networks:
-        - chat-x_net
-networks:
-  chat-x_net:
-    driver: overlay
+#version: '3'
+#
+#services:
+#  api-service:
+#    image: '${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}'
+#    ports:
+#      - '3002:3000'
+#    volumes:
+#      - /home/chat-x-api/.env:/app/.env
+#      - /home/chat-x-api/files:/app/files
+#      - /home/chat-x-api/secure:/app/secure
+#    environment:
+#      - TZ=Asia/Bangkok
+#      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+#      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+#    dns:
+#      - 8.8.8.8
+#    deploy:
+#      mode: replicated
+#      placement:
+#        constraints: [node.role == manager]
+#      replicas: 1
+#      update_config:
+#        parallelism: 1
+#        delay: 10s
+#      restart_policy:
+#        condition: any
+#    networks:
+#      - chat-x_net
+#  postgres-server-master:
+#    image: "bitnami/postgresql"
+#    restart: always
+#    volumes:
+#      - /home/chat-x-api/bitnami-postgres:/bitnami/postgresql
+#      - /home/chat-x-api/bitnami-postgres/db.sql:/docker-entrypoint-initdb.d/db.sql
+#    ports:
+#      - "5436:5432"
+#    environment:
+#      - POSTGRESQL_PGAUDIT_LOG=READ,WRITE
+#      - POSTGRESQL_LOG_HOSTNAME=true
+#      - POSTGRESQL_REPLICATION_MODE=master
+#      - POSTGRESQL_REPLICATION_USER=repl_postgres
+#      - POSTGRESQL_REPLICATION_PASSWORD=${POSTGRES_PASSWORD}
+#      - POSTGRESQL_USERNAME=postgres
+#      - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD}
+#      - POSTGRESQL_DATABASE=${POSTGRES_DB}
+#    networks:
+#      - chat-x_net
+#  postgres-server-slave:
+#    image: "bitnami/postgresql"
+#    restart: always
+#    depends_on:
+#      - postgres-server-master
+#    ports:
+#      - "5437:5432"
+#    environment:
+#      - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD}
+#      - POSTGRESQL_MASTER_HOST=postgres-server-master
+#      - POSTGRESQL_PGAUDIT_LOG=READ
+#      - POSTGRESQL_LOG_HOSTNAME=true
+#      - POSTGRESQL_REPLICATION_MODE=slave
+#      - POSTGRESQL_REPLICATION_USER=repl_postgres
+#      - POSTGRESQL_REPLICATION_PASSWORD=${POSTGRES_PASSWORD}
+#      - POSTGRESQL_MASTER_PORT_NUMBER=5432
+#    networks:
+#      - chat-x_net
+#  redis-server:
+#    image: 'redis:6.0-alpine'
+#    volumes:
+#      - /home/chat-x-api/redis:/data
+#      - /home/chat-x-api/redis/redis.conf:/usr/local/etc/redis/redis.conf
+#    ports:
+#      - '6380:6379'
+#    deploy:
+#      placement:
+#        constraints: [node.role == manager]
+#      update_config:
+#        parallelism: 1
+#        delay: 10s
+#      restart_policy:
+#        condition: any
+#    networks:
+#      - chat-x_net
+#  rabbitmq:
+#    image: rabbitmq:3-management-alpine
+#    container_name: 'rabbitmq'
+#    environment:
+#        - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+#        - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+#    ports:
+#        - 5674:5672
+#        - 15674:15672
+#    volumes:
+#        - /home/chat-x-api/rabbitmq/data/:/var/lib/rabbitmq/
+#        - /home/chat-x-api/rabbitmq/log/:/var/log/rabbitmq
+#    networks:
+#        - chat-x_net
+#networks:
+#  chat-x_net:
+#    driver: overlay
